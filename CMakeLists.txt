@@ -1,0 +1,97 @@
+cmake_minimum_required(VERSION 3.18)
+project(TFFInfer CXX)
+
+set(CMAKE_CURRENT_SOURCE_DIR .)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(BUILD_SHARED_LIBS ON)
+SET(CMAKE_CUDA_ARCHITECTURES "86")
+enable_language(CUDA)
+find_package(CUDAToolkit REQUIRED)
+
+
+
+include(FetchContent)
+set(BUILD_SHARED_LIBS ON)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+find_package(nlohmann_json)
+if (NOT nlohmann_json_FOUND)
+    #json
+    FetchContent_Declare(
+            nlohmann_json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.0
+    )
+    FetchContent_MakeAvailable(nlohmann_json)
+    get_target_property(json_include_dirs nlohmann_json::nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Include directories for nlohmann_json: ${json_include_dirs}")
+endif ()
+
+find_package(glog)
+if (NOT glog_FOUND)
+    #glog
+    FetchContent_Declare(
+            glog
+            GIT_REPOSITORY https://github.com/google/glog.git
+            GIT_TAG v0.7.1
+    )
+    FetchContent_MakeAvailable(glog)
+    get_target_property(GLOG_INCLUDE_DIRS glog::glog INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Glog include directories: ${GLOG_INCLUDE_DIRS}")
+endif ()
+
+set(${PROJECT_NAME}_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/)
+add_subdirectory(test)
+
+file(GLOB ${PROJECT_NAME}_SOURCE_LIST
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/log/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/log/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/cuda/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/cuda/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/mem/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/mem/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/factory/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/factory/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/op/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/op/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
+
+message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
+        src/core/graph/GraphNode.cpp
+        src/core/graph/GraphNode.h
+        src/core/graph/DAGGraph.cpp
+        src/core/graph/DAGGraph.h
+        src/core/model/LLAMADefine.h)
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/core)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/model)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/factory)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
+target_include_directories(${PROJECT_NAME} PUBLIC ${json_include_dirs})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart nlohmann_json::nlohmann_json glog::glog)
+
+
+
