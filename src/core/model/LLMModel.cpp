@@ -15,10 +15,6 @@ namespace tff::core::model {
 
     void LLMModel::load_hparams() {
         const auto &ctx = _model_loader->get_gguf_ctx();
-#define LOAD_KEY_VALUES(DataType, key_value, dst) \
-        dst = get_value<tff::core::model::ModelMetaKV,GGUFContext::BasicType, DataType>(key_value, ctx)
-#define LOAD_KEY_VALUE(DataType, key_value, dst) \
-        dst = LOAD_KEY_VALUES(DataType, key_value, dst)[0]
 
         LOAD_KEY_VALUE(std::string,tff::core::model::ModelMetaKV::LLM_KV_GENERAL_NAME,            this->_name);
         LOAD_KEY_VALUE(uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,        this->_head_params._n_embd);
@@ -34,7 +30,9 @@ namespace tff::core::model {
         LOAD_KEY_VALUES(uint32_t,  tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,    this->_head_params._n_head_arr);
         LOAD_KEY_VALUES(uint32_t,  tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV, this->_head_params._n_head_kv_arr);
 
-#undef LOAD_KEY_VALUE
-#undef LOAD_KEY_VALUES
+    }
+
+    void LLMModel::load_vocab() const {
+        this->_vocabulary_ptr->load_vocabulary(_model_loader);
     }
 }

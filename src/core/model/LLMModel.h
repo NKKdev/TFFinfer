@@ -41,7 +41,7 @@ namespace tff::core::model {
 
         void load_hparams();
 
-        void load_vocab();
+        void load_vocab() const;
 
         bool load_tensors();
 
@@ -53,7 +53,7 @@ namespace tff::core::model {
         tff::core::model::ModelArchitecture _architecture;
 
         tff::core::model::ModelHeadParams _head_params;
-        tff::core::model::LLMVocabulary _vocabulary;
+        std::unique_ptr<tff::core::model::LLMLLaMaVocabulary> _vocabulary_ptr;
 
         std::unordered_map<std::string, std::shared_ptr<tff::core::memory::Tensor> > _tensor_map;
 

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include "BaseDefine.h"
 #include "op/BaseDefine.h"
+
 namespace tff::core::model {
     static const std::unordered_map<tff::core::model::ModelArchitecture, const char *> LLM_ARCH_NAMES = {
         {TFF_MODEL_ARCH_UNKNOWN, "unknow"},
@@ -366,7 +367,112 @@ namespace tff::core::model {
         {LLM_TENSOR_NEXTN_SHARED_HEAD_HEAD, {LLM_TENSOR_LAYER_OUTPUT, op::TFF_OP_MUL_MAT}},
         {LLM_TENSOR_NEXTN_SHARED_HEAD_NORM, {LLM_TENSOR_LAYER_OUTPUT, op::TFF_OP_MUL}},
     };
+    static std::unordered_map<ModelMetaKV, uint32_t> LLM_SPECIAL_TOKENS = {
+        {LLM_KV_TOKENIZER_BOS_ID, 1},
+        {LLM_KV_TOKENIZER_EOS_ID, 2},
+        {LLM_KV_TOKENIZER_EOT_ID, -1},
+        {LLM_KV_TOKENIZER_EOM_ID, -1},
+        {LLM_KV_TOKENIZER_UNK_ID, 0},
+        {LLM_KV_TOKENIZER_SEP_ID, -1},
+        {LLM_KV_TOKENIZER_PAD_ID, -1},
+        {LLM_KV_TOKENIZER_MASK_ID, -1},
+        {LLM_KV_TOKENIZER_FIM_PRE_ID, 13},
+        {LLM_KV_TOKENIZER_FIM_SUF_ID, -1},
+        {LLM_KV_TOKENIZER_FIM_MID_ID, -1},
+        {LLM_KV_TOKENIZER_FIM_PAD_ID, -1},
+        {LLM_KV_TOKENIZER_FIM_REP_ID, -1},
+        {LLM_KV_TOKENIZER_FIM_SEP_ID, -1},
+    };
     //
+    inline constexpr std::array<std::string_view, static_cast<size_t>(VocabType::FF_VOCAB_TYPE_COUNT)>
+    LLM_TOKENIZER_NAMES = {
+        "NONE", "SPM", "BPE", "WPM", "UGM", "RWKV", "PLAMO2"
+    };
+
+    inline static std::string_view get_tokenizer_name(tff::core::model::VocabType type) {
+        return LLM_TOKENIZER_NAMES.at(type);
+    }
+
+    static const std::unordered_map<std::string, VocabType> LLM_TOKENIZER_MODEL_VOCAB_TYPE = {
+        {"gpt2", tff::core::model::VocabType::TFF_VOCAB_TYPE_BPE},
+    };
+    //
+    static const std::unordered_map<ModelMetaKV, std::vector<std::string> > LLM_SPECIAL_TOKEN_STRING = {
+        {
+            LLM_KV_TOKENIZER_EOT_ID, std::vector<std::string>({
+                "<|eot_id|>",
+                "<|im_end|>",
+                "<|end|>",
+                "<end_of_turn>",
+                "<|endoftext|>",
+                "<EOT>",
+                "_<EOT>",
+                "<｜end▁of▁sentence｜>",
+                "<end_of_utterance>",
+            })
+        },
+        {
+            LLM_KV_TOKENIZER_EOM_ID, std::vector<std::string>({
+                "<|eom_id|>",
+            })
+        },
+        {
+            LLM_KV_TOKENIZER_FIM_PRE_ID, std::vector<std::string>({
+                "<|fim_prefix|>",
+                "<fim-prefix>",
+                "<fim_prefix>",
+                "<｜fim▁begin｜>",
+                "<PRE>",
+                "▁<PRE>",
+                "<|code_prefix|>",
+            })
+        },
+        {
+            LLM_KV_TOKENIZER_FIM_SUF_ID, std::vector<std::string>({
+                "<|fim_suffix|>",
+                "<fim-suffix>",
+                "<fim_suffix>",
+                "<｜fim▁hole｜>",
+                "<SUF>",
+                "▁<SUF>",
+                "<|code_suffix|>",
+            })
+        },
+        {
+            LLM_KV_TOKENIZER_FIM_MID_ID, std::vector<std::string>({
+                "<|fim_middle|>",
+                "<fim-middle>",
+                "<fim_middle>",
+                "<｜fim▁end｜>",
+                "<MID>",
+                "▁<MID>",
+                "<|code_middle|>",
+            })
+        },
+        {
+            LLM_KV_TOKENIZER_FIM_PAD_ID, std::vector<std::string>({
+                "<|fim_pad|>",
+                "<fim-pad>",
+                "<fim_pad>",
+                "<PAD>",
+            })
+        },
+        {
+            LLM_KV_TOKENIZER_FIM_REP_ID, std::vector<std::string>({
+                "<|fim_repo|>",
+                "<|repo_name|>",
+                "<fim-repo>",
+                "<REPO>",
+                "<reponame>",
+            })
+        },
+        {
+            LLM_KV_TOKENIZER_FIM_SEP_ID, std::vector<std::string>({
+                "<|file_sep|>",
+            })
+        },
+    };
+
     template<class Key, class ValueType, class DataType>
     std::vector<DataType> get_value(Key key_value, const std::unique_ptr<tff::core::model::GGUFContext> &ctx) {
         std::vector<DataType> value;
@@ -374,9 +480,9 @@ namespace tff::core::model {
             tff::core::model::LLM_KV_NAMES.find(key_value)->second);
         if (std::is_same<ValueType, GGUFContext::BasicType>::value) {
             value.push_back(std::get<DataType>(
-           std::get<ValueType>(ctx->_kv.find(key_name)->second)));
-        }else {
-            value = std::get<std::vector<DataType>>(ctx->_kv.find(key_name)->second);
+                std::get<ValueType>(ctx->_kv.find(key_name)->second)));
+        } else {
+            value = std::get<std::vector<DataType> >(ctx->_kv.find(key_name)->second);
         }
 
         return value;

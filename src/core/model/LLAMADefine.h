@@ -6,5 +6,6 @@
 #define TFFINFER_LLAMADEFINE_H
 namespace tff::core::model {
 #define LLAMA_MAX_LAYERS  512
+#define LLAMA_TOKEN_NULL -1
 }
 #endif //TFFINFER_LLAMADEFINE_H

@@ -71,6 +71,8 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/op/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/factory/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/factory/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
@@ -79,7 +81,11 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/core/graph/GraphNode.h
         src/core/graph/DAGGraph.cpp
         src/core/graph/DAGGraph.h
-        src/core/model/LLAMADefine.h)
+        src/core/model/LLAMADefine.h
+        src/core/model/LLMTokenizerBase.cpp
+        src/core/model/LLMTokenizerBase.h
+        src/factory/ModuleFactory.cpp
+        src/factory/ModuleObject.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)

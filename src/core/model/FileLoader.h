@@ -200,7 +200,7 @@ namespace tff::core::model {
             _mapped_fragments.emplace_back(0, file_loader->size());
         }
 
-        ~FileMMap();
+        ~FileMMap() = default;
 
         [[nodiscard]] size_t size() const;
 
@@ -272,9 +272,9 @@ namespace tff::core::model {
     //file lock
     class FileLock {
     public:
-        FileLock();
+        FileLock() = default;
 
-        ~FileLock();
+        ~FileLock() = default;
 
     public:
         void init(void *ptr);

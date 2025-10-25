@@ -11,54 +11,73 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-namespace tff::factory {
-  class DEEP_TFF_API ModuleFactory {
-  public:
-    // 单例访问
-    static std::shared_ptr<ModuleFactory> instance();
 
-  public:
-    using ptr_type = std::shared_ptr<tff::module::ModuleObject>;
-    template <typename T> class FactoryRegister_t {
+namespace tff::factory {
+    class DEEP_TFF_API ModuleFactory : public std::enable_shared_from_this<ModuleFactory>{
+    public:
+        // 单例访问
+        static std::shared_ptr<ModuleFactory> &instance();
 
     public:
-      FactoryRegister_t(const std::string &_module_type, const std::string &key) {
-        ModuleFactory::instance()->m_module_func_map[_module_type].emplace(
-          key, [] { return ptr_type(new T()); });
-      }
+        using Creator = std::function<std::shared_ptr<tff::module::ModuleObject>()>;
+        using ModuleMap = std::unordered_map<std::string, Creator>;
+        using TypeMap = std::unordered_map<std::string, ModuleMap>;
 
-      template <typename... Args>
-      FactoryRegister_t(const std::string &_module_type, const std::string &key,
-                        Args... args) {
-        ModuleFactory::instance()->m_module_func_map[_module_type].emplace(
-          key, [=] { return ptr_type(new T(args...)); });
-      }
+        template<typename T>
+        static void register_module(const std::string &type, const std::string &key) {
+            instance()->m_module_func_map[type][key] = []() {
+                return std::make_shared<tff::module::ModuleObject>(
+                    std::make_shared<T>()
+                );
+            };
+        }
+
+        template<typename T, typename... Args>
+        static void register_module(const std::string &type, const std::string &key, Args &&... args) {
+            instance()->m_module_func_map[type][key] = [args...]() mutable {
+                return std::make_shared<tff::module::ModuleObject>(
+                    std::make_shared<T>(args...)
+                );
+            };
+        }
+
+        std::shared_ptr<tff::module::ModuleObject> create_shared(const std::string &_module_type,
+                                                                 const std::string &key) {
+            auto type_it = m_module_func_map.find(_module_type);
+            if (type_it == m_module_func_map.end()) return nullptr;
+            auto creator_it = type_it->second.find(key);
+            if (creator_it == type_it->second.end()) return nullptr;
+            return creator_it->second();
+        }
+
+    private:
+        ModuleFactory() = default;
+
+    public:
+        ModuleFactory(const ModuleFactory &) = delete;
+
+        ModuleFactory(ModuleFactory &&) = delete;
+
+    public:
+        // std::unordered_map<std::string, std::function<ptr_type()>> map_;
+        TypeMap m_module_func_map;
     };
 
-    ptr_type create(const std::string &_module_type, const std::string &key);
-    std::unique_ptr<tff::module::ModuleObject> create_unique(const std::string &_module_type,
-                                                             const std::string &key);
-    std::shared_ptr<tff::module::ModuleObject> create_shared(const std::string &_module_type,
-                                                             const std::string &key);
+// #define REGISTER_MODULE_OBJECT_NAME(T) reg_msg_##T##_
+// #define REGISTER_MODULE_OBJECT(T, type, key, ...)                              \
+//   static tff::factory::ModuleFactory::FactoryRegister_t<void, T> REGISTER_MODULE_OBJECT_NAME(T)(  \
+//       type, key, ##__VA_ARGS__);
+//
+// #define REGISTER_MODULE_OBJECT_BASE(BaseT, T, type, key, ...)                              \
+// static tff::factory::ModuleFactory::FactoryRegister_t<BaseT, T> REGISTER_MODULE_OBJECT_NAME(T)(  \
+// type, key, ##__VA_ARGS__);
 
-  private:
-    ModuleFactory() = default;
-  public:
-    ModuleFactory(const ModuleFactory &) = delete;
-    ModuleFactory(ModuleFactory &&) = delete;
 
-  public:
-    // std::unordered_map<std::string, std::function<ptr_type()>> map_;
-    std::unordered_map<std::string,
-      std::unordered_map<std::string, std::function<ptr_type()>>>
-    m_module_func_map;
-    //
-    std::unordered_map<std::string, std::unordered_map<std::string, ptr_type>>
-    m_module_map;
-  };
-#define REGISTER_MODULE_OBJECT_NAME(T) reg_msg_##T##_
-#define REGISTER_MODULE_OBJECT(T, type, key, ...)                              \
-  static tff::factory::ModuleFactory::FactoryRegister_t<T> REGISTER_MODULE_OBJECT_NAME(T)(  \
-      type, key, ##__VA_ARGS__);
+#define REGISTER_MODULE_OBJECT(T, type, key, ...) \
+    static struct reg_##T##_##__COUNTER__ { \
+            reg_##T##_##__COUNTER__() { \
+                ::tff::factory::ModuleFactory::register_module<T>(type, key, ##__VA_ARGS__); \
+            } \
+    } reg_##T##_##__COUNTER__##_instance;
 }
 #endif // DEEP_TFF_MODULEFACTORY_H

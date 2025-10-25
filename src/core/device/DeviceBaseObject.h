@@ -12,9 +12,9 @@
 namespace tff::core::device {
     class DEEP_TFF_API DeviceBaseObject : public tff::module::ModuleObject {
     public:
-        DeviceBaseObject();
+        DeviceBaseObject() = default;
 
-        ~DeviceBaseObject() override;
+        ~DeviceBaseObject() override = default;
 
     public:
         virtual void get_device_id(std::vector<int> &_device_list) = 0;

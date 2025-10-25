@@ -14,6 +14,10 @@
 #include "LLAMADefine.h"
 namespace tff::core::model {
 #define TFF_TENSOR_MAX_DIMS 4
+#define LOAD_KEY_VALUES(DataType, key_value, dst) \
+    dst = get_value<tff::core::model::ModelMetaKV,GGUFContext::BasicType, DataType>(key_value, ctx)
+#define LOAD_KEY_VALUE(DataType, key_value, dst) \
+    dst = LOAD_KEY_VALUES(DataType, key_value, dst)[0]
 
     enum ModelType {
         TFF_MODEL_TYPE_UNKNOWN = 0,
@@ -76,7 +80,67 @@ namespace tff::core::model {
         TFF_TOKEN_ATTR_RSTRIP = 1 << 8,
         TFF_TOKEN_ATTR_SINGLE_WORD = 1 << 9,
     };
+    // pre-tokenization types
+    enum VocabPreType {
+        TFF_VOCAB_PRE_TYPE_DEFAULT        = 0,
+        TFF_VOCAB_PRE_TYPE_LLAMA3         = 1,
+        TFF_VOCAB_PRE_TYPE_DEEPSEEK_LLM   = 2,
+        TFF_VOCAB_PRE_TYPE_DEEPSEEK_CODER = 3,
+        TFF_VOCAB_PRE_TYPE_FALCON         = 4,
+        TFF_VOCAB_PRE_TYPE_MPT            = 5,
+        TFF_VOCAB_PRE_TYPE_STARCODER      = 6,
+        TFF_VOCAB_PRE_TYPE_GPT2           = 7,
+        TFF_VOCAB_PRE_TYPE_REFACT         = 8,
+        TFF_VOCAB_PRE_TYPE_COMMAND_R      = 9,
+        TFF_VOCAB_PRE_TYPE_STABLELM2      = 10,
+        TFF_VOCAB_PRE_TYPE_QWEN2          = 11,
+        TFF_VOCAB_PRE_TYPE_OLMO           = 12,
+        TFF_VOCAB_PRE_TYPE_DBRX           = 13,
+        TFF_VOCAB_PRE_TYPE_SMAUG          = 14,
+        TFF_VOCAB_PRE_TYPE_PORO           = 15,
+        TFF_VOCAB_PRE_TYPE_CHATGLM3       = 16,
+        TFF_VOCAB_PRE_TYPE_CHATGLM4       = 17,
+        TFF_VOCAB_PRE_TYPE_VIKING         = 18,
+        TFF_VOCAB_PRE_TYPE_JAIS           = 19,
+        TFF_VOCAB_PRE_TYPE_TEKKEN         = 20,
+        TFF_VOCAB_PRE_TYPE_SMOLLM         = 21,
+        TFF_VOCAB_PRE_TYPE_CODESHELL      = 22,
+        TFF_VOCAB_PRE_TYPE_BLOOM          = 23,
+        TFF_VOCAB_PRE_TYPE_GPT3_FINNISH   = 24,
+        TFF_VOCAB_PRE_TYPE_EXAONE         = 25,
+        TFF_VOCAB_PRE_TYPE_CHAMELEON      = 26,
+        TFF_VOCAB_PRE_TYPE_MINERVA        = 27,
+        TFF_VOCAB_PRE_TYPE_DEEPSEEK3_LLM  = 28,
+        TFF_VOCAB_PRE_TYPE_GPT4O          = 29,
+        TFF_VOCAB_PRE_TYPE_SUPERBPE       = 30,
+        TFF_VOCAB_PRE_TYPE_TRILLION       = 31,
+        TFF_VOCAB_PRE_TYPE_BAILINGMOE     = 32,
+        TFF_VOCAB_PRE_TYPE_LLAMA4         = 33,
+        TFF_VOCAB_PRE_TYPE_PIXTRAL        = 34,
+        TFF_VOCAB_PRE_TYPE_SEED_CODER     = 35,
+        TFF_VOCAB_PRE_TYPE_HUNYUAN        = 36,
+        TFF_VOCAB_PRE_TYPE_KIMI_K2        = 37,
+        TFF_VOCAB_PRE_TYPE_HUNYUAN_DENSE  = 38,
+        TFF_VOCAB_PRE_TYPE_GROK_2         = 39,
+    };
+    enum VocabType {
+        TFF_VOCAB_TYPE_NONE   = 0, // For models without vocab
+        TFF_VOCAB_TYPE_SPM    = 1, // LLaMA tokenizer based on byte-level BPE with byte fallback
+        TFF_VOCAB_TYPE_BPE    = 2, // GPT-2 tokenizer based on byte-level BPE
+        TFF_VOCAB_TYPE_WPM    = 3, // BERT tokenizer based on WordPiece
+        TFF_VOCAB_TYPE_UGM    = 4, // T5 tokenizer based on Unigram
+        TFF_VOCAB_TYPE_RWKV   = 5, // RWKV tokenizer based on greedy tokenization
+        TFF_VOCAB_TYPE_PLAMO2 = 6, // PLaMo-2 tokenizer based on Aho-Corasick with dynamic programming
+        FF_VOCAB_TYPE_COUNT  // 用于数组大小
+    };
 
+    enum RopeType {
+        TFF_ROPE_TYPE_NONE   = -1,
+        TFF_ROPE_TYPE_NORM   = 0,
+        TFF_ROPE_TYPE_NEOX   = 1,
+        TFF_ROPE_TYPE_MROPE  = 2,
+        TFF_ROPE_TYPE_VISION = 3,
+    };
     struct TokenData {
         std::string _text;
         TokenAttribute _attribute;
