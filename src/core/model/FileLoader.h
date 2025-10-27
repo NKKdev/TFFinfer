@@ -57,7 +57,10 @@ namespace tff::core::model {
         void write_raw(const void *ptr, const size_t &len) const;
 
         void write_u32(const uint32_t &val) const;
-
+        //
+        inline bool read(void * dst, const size_t size) const {
+            return fread(dst, 1, size, _fp) == size;
+        }
         template<typename T>
         inline bool read(T &dst) const {
             return fread(&dst, 1, sizeof(dst), _fp) == sizeof(dst);
@@ -166,7 +169,7 @@ namespace tff::core::model {
     public:
         FileMMap(const FileMMap &) = delete;
 
-        explicit FileMMap(const std::shared_ptr<FileLoader> &file_loader,
+        explicit FileMMap(const std::unique_ptr<FileLoader> &file_loader,
                           size_t prefetch = static_cast<size_t>(-1), bool numa = false) {
             _size = file_loader->size();
             const int fd = file_loader->file_id();

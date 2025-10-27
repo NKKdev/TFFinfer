@@ -13,8 +13,8 @@ namespace tff::core::memory {
     public:
         explicit Memory() = default;
 
-        explicit Memory(size_t byte_size, std::shared_ptr<MemBufferAllocatorBaseObject> allocator = nullptr,
-                        void* ptr = nullptr, bool use_external = false) {
+        explicit Memory(size_t byte_size, void* ptr = nullptr,bool use_external = false,
+            std::shared_ptr<MemBufferAllocatorBaseObject> allocator = nullptr) {
             this->byte_size_ = byte_size;
             this->allocator_ = std::move(allocator);
             if (use_external) {

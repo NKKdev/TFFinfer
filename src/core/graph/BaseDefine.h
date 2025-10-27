@@ -1,12 +1,13 @@
 //
-// Created by nkk on 2025/10/24.
+// Created by nkk on 2025/10/26.
 //
 
-#ifndef TFFINFER_BASEDEFINE_H
-#define TFFINFER_BASEDEFINE_H
-namespace tff::core::op {
-    enum OpType {
+#ifndef TFFINFER_GRAPH_BASEDEFINE_H
+#define TFFINFER_GRAPH_BASEDEFINE_H
+namespace tff::core::graph {
+    enum TffOpType {
         TFF_OP_NONE = 0,
+
         TFF_OP_DUP,
         TFF_OP_ADD,
         TFF_OP_ADD_ID,
@@ -34,9 +35,11 @@ namespace tff::core::op {
         TFF_OP_RMS_NORM_BACK,
         TFF_OP_GROUP_NORM,
         TFF_OP_L2_NORM,
+
         TFF_OP_MUL_MAT,
         TFF_OP_MUL_MAT_ID,
         TFF_OP_OUT_PROD,
+
         TFF_OP_SCALE,
         TFF_OP_SET,
         TFF_OP_CPY,
@@ -75,6 +78,7 @@ namespace tff::core::op {
         TFF_OP_TIMESTEP_EMBEDDING,
         TFF_OP_ARGSORT,
         TFF_OP_LEAKY_RELU,
+
         TFF_OP_FLASH_ATTN_EXT,
         TFF_OP_FLASH_ATTN_BACK,
         TFF_OP_SSM_CONV,
@@ -86,16 +90,22 @@ namespace tff::core::op {
         TFF_OP_RWKV_WKV6,
         TFF_OP_GATED_LINEAR_ATTN,
         TFF_OP_RWKV_WKV7,
+
         TFF_OP_UNARY,
+
         TFF_OP_MAP_CUSTOM1,
         TFF_OP_MAP_CUSTOM2,
         TFF_OP_MAP_CUSTOM3,
+
         TFF_OP_CUSTOM,
+
         TFF_OP_CROSS_ENTROPY_LOSS,
         TFF_OP_CROSS_ENTROPY_LOSS_BACK,
         TFF_OP_OPT_STEP_ADAMW,
         TFF_OP_OPT_STEP_SGD,
+
         TFF_OP_GLU,
+
         TFF_OP_COUNT,
     };
 }

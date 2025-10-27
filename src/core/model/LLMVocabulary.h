@@ -9,7 +9,7 @@
 #include "ModuleFactory.h"
 #include "ModuleObject.h"
 #include "mem/Tensor.h"
-#include "LLMModelLoader.h"
+#include "model/base/ModelLoaderBase.h"
 #include "LLMTokenizerBase.h"
 #include "util.h"
 #include <set>
@@ -27,7 +27,7 @@ namespace tff::core::model {
         ~LLMLLaMaVocabulary() override = default;
 
     public:
-        bool load_vocabulary(const std::shared_ptr<tff::core::model::LLMModelLoader> &_model_loader);
+        bool load_vocabulary(const std::shared_ptr<tff::core::model::ModelLoaderBase> &_model_loader);
 
         int32_t get_rank(const std::string &token_left, const std::string &token_right) const;
         //
@@ -56,6 +56,11 @@ namespace tff::core::model {
         //
         void process_user_defined_tokens();
 
+        std::string token_to_string(const int32_t &token, bool special);
+
+        //
+        int32_t token_to_string(int32_t token, char *buf, int32_t length, int32_t lstrip, bool special = true);
+
     protected:
         //
         std::string _tokenizer_model;
@@ -77,7 +82,7 @@ namespace tff::core::model {
         tff::core::model::VocabType _vaocabulary_type;
         tff::core::model::VocabPreType _vacabulary_pre_type;
         //
-        std::shared_ptr<tff::core::model::LLMModelLoader> _model_loader;
+        std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
         //
         std::shared_ptr<tff::core::model::LLMTokenizerBase> _tokenizer;
         //

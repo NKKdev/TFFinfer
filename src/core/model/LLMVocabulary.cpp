@@ -11,9 +11,9 @@
 
 namespace tff::core::model {
     bool tff::core::model::LLMLLaMaVocabulary::load_vocabulary(
-        const std::shared_ptr<tff::core::model::LLMModelLoader> &_model_loader) {
+        const std::shared_ptr<tff::core::model::ModelLoaderBase> &_model_loader) {
         bool bRet = true;
-        const auto &ctx = _model_loader->get_gguf_ctx();
+        const auto &ctx = _model_loader->get_model_context();
         LOAD_KEY_VALUE(std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MODEL, this->_tokenizer_model);
         LOAD_KEY_VALUE(std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_PRE, this->_tokenizer_pre);
         LOAD_KEY_VALUE(uint32_t, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_TOKEN_TYPE_COUNT,
@@ -47,7 +47,7 @@ namespace tff::core::model {
     }
 
     bool LLMLLaMaVocabulary::load_bpe() {
-        const auto &ctx = _model_loader->get_gguf_ctx();
+        const auto &ctx = _model_loader->get_model_context();
         //
         std::vector<std::string> merge_vector;
         LOAD_KEY_VALUES(std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MERGES, merge_vector);
@@ -69,7 +69,7 @@ namespace tff::core::model {
     }
 
     bool LLMLLaMaVocabulary::load_token_data() {
-        const auto &ctx = _model_loader->get_gguf_ctx();
+        const auto &ctx = _model_loader->get_model_context();
         //
         std::vector<std::string> token_data;
         LOAD_KEY_VALUES(std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_LIST, token_data);
@@ -94,8 +94,15 @@ namespace tff::core::model {
         }
         //special_token
         this->process_special_tokens();
-        //token_cache ToDo
+        //token_cache
+        size_t size_cache = 0;
+        std::vector<std::string> cache(this->_id_to_token.size());
 
+        for (uint32_t id = 0; id < cache.size(); ++id) {
+            cache[id] = this->token_to_string(id, true);
+            size_cache += cache[id].size();
+        }
+        std::swap(this->_cache_token_to_piece, cache);
 
         return true;
     }
@@ -110,7 +117,7 @@ namespace tff::core::model {
     }
 
     void LLMLLaMaVocabulary::process_special_tokens() {
-        const auto &ctx = _model_loader->get_gguf_ctx();
+        const auto &ctx = _model_loader->get_model_context();
         for (auto &pair: LLM_SPECIAL_TOKENS) {
             //
             LOAD_KEY_VALUE(uint32_t, pair.first, pair.second);
@@ -166,7 +173,6 @@ namespace tff::core::model {
         std::vector<int32_t> token_vec;
         this->tokenize(std::string("\n"), token_vec, false, false);
 
-        //GGML_ASSERT(!ids.empty() && "model vocab missing newline token");
         if (token_vec.empty()) {
             tff::log::Logger::info("%s: model vocab missing newline token, using special_pad_id instead\n", __func__);
             this->_linefeed_id = LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_PAD_ID];
@@ -252,7 +258,7 @@ namespace tff::core::model {
                 __func__);
         }
     }
-
+    //
     void LLMLLaMaVocabulary::process_user_defined_tokens() {
         for (const auto &t: this->_token_to_id) {
             if (t.first == "<|channel|>" || t.first == "<|message|>" || t.first == "<|start|>" || t.first ==
@@ -260,5 +266,67 @@ namespace tff::core::model {
                 this->_id_to_token[t.second]._attribute = TFF_TOKEN_ATTR_USER_DEFINED;
             }
         }
+    }
+    static int32_t check_space(const char * token, size_t size,int32_t length, int32_t lstrip) {
+        for (size_t i = 0; i < lstrip && size && *token == ' '; i++) {
+            token++;
+            size--;
+            if (length < static_cast<int32_t>(size)) {
+                return -static_cast<int32_t>(size);
+            }
+        }
+        return length;
+    }
+    //
+    std::string LLMLLaMaVocabulary::token_to_string(const int32_t &token, bool special) {
+        std::string piece;
+        piece.resize(piece.capacity());  // using string internal cache
+        const int n_chars = this->token_to_string(token, &piece[0], piece.size(), 0, special);
+        if (n_chars < 0) {
+            piece.resize(-n_chars);
+            int check = this->token_to_string(token, &piece[0], piece.size(), 0, special);
+            if (check < 0) {
+                return "";
+            }
+        }
+        else {
+            piece.resize(n_chars);
+        }
+
+        return piece;
+    }
+    //
+    int32_t LLMLLaMaVocabulary::token_to_string(int32_t token, char *buf, int32_t length, int32_t lstrip, bool special) {
+        int32_t nCheckRet = 0;
+        const auto &attr = this->_id_to_token[token]._attribute;
+        const auto &text = this->_id_to_token[token]._text;
+        if (!special && (attr & (TFF_TOKEN_ATTR_UNKNOWN | TFF_TOKEN_ATTR_CONTROL))) {
+            return nCheckRet;
+        }
+#define CHECK_SPACE(token_data, size) \
+        nCheckRet = check_space(token_data, size, length, lstrip);\
+        if (nCheckRet < 0) {\
+            return nCheckRet;\
+        }\
+        memcpy(buf, token_data, size);
+
+        auto *text_data = text.data();
+        auto size = text.size();
+        //
+        if (!this->_cache_token_to_piece.empty()) {
+            const auto &cache_token = this->_cache_token_to_piece.at(token);
+            CHECK_SPACE(text_data, size);
+            return size;
+        }
+        //
+        if (attr & (TFF_TOKEN_ATTR_UNKNOWN | TFF_TOKEN_ATTR_CONTROL | TFF_TOKEN_ATTR_USER_DEFINED)) {
+            CHECK_SPACE(text_data, size);
+        }
+        if (attr & TFF_TOKEN_ATTR_NORMAL) {
+            std::string result = decode_text(text);
+            CHECK_SPACE(result.data(), result.size());
+            return result.size();
+        }
+        return nCheckRet;
     }
 };

@@ -5,9 +5,11 @@
 #ifndef TFFINFER_DAGGRAPH_H
 #define TFFINFER_DAGGRAPH_H
 
+namespace tff::core::graph {
+    class Graph {
+    };
+}
 
-class DAGGraph {
-};
 
 
 #endif //TFFINFER_DAGGRAPH_H

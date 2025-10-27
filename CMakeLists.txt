@@ -59,6 +59,8 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/mem/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/mem/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/global/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/global/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/factory/*.h
@@ -67,6 +69,10 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/base/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/base/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/llama/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/llama/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/op/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/op/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.h
@@ -76,16 +82,7 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        src/core/graph/GraphNode.cpp
-        src/core/graph/GraphNode.h
-        src/core/graph/DAGGraph.cpp
-        src/core/graph/DAGGraph.h
-        src/core/model/LLAMADefine.h
-        src/core/model/LLMTokenizerBase.cpp
-        src/core/model/LLMTokenizerBase.h
-        src/factory/ModuleFactory.cpp
-        src/factory/ModuleObject.cpp)
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)

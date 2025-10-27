@@ -12,28 +12,55 @@
 #include "GGUFDef.h"
 #include "Logger.h"
 #include "LLAMADefine.h"
+
 namespace tff::core::model {
 #define TFF_TENSOR_MAX_DIMS 4
 #define LOAD_KEY_VALUES(DataType, key_value, dst) \
-    dst = get_value<tff::core::model::ModelMetaKV,GGUFContext::BasicType, DataType>(key_value, ctx)
+    dst = get_value<tff::core::model::ModelMetaKV,ModelContext::BasicType, DataType>(key_value, ctx)
 #define LOAD_KEY_VALUE(DataType, key_value, dst) \
     dst = LOAD_KEY_VALUES(DataType, key_value, dst)[0]
+
+    // model_list.h
+#define FOR_EACH_MODEL(X) \
+X(TFF_MODEL_ARCH_UNKNOWN, "unknown")\
+X(TFF_MODEL_ARCH_LLAMA,   "LlamaForCausalLM") \
+X(TFF_MODEL_ARCH_QWEN,    "QWenLMHeadModel") \
+X(TFF_MODEL_ARCH_MISTRAL, "MistralForCausalLM") \
+X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
+
+    enum class ModelArchitectureType {
+#define DEFINE_ENUM(name, type_str) name,
+        FOR_EACH_MODEL(DEFINE_ENUM)
+#undef DEFINE_ENUM
+        TFF_MODEL_ARCH_COUNT
+    };
 
     enum ModelType {
         TFF_MODEL_TYPE_UNKNOWN = 0,
         TFF_MODEL_TYPE_8B = 1,
     };
 
-    enum ModelArchitecture {
-        TFF_MODEL_ARCH_UNKNOWN = 0,
-        TFF_MODEL_ARCH_LLAMA = 1,
+    enum ModelAttentionSWAType {
+        TFF_SWA_TYPE_NONE = 0,
+        TFF_SWA_TYPE_STANDARD = 1,
+        TFF_SWA_TYPE_CHUNKED = 2,
+        TFF_SWA_TYPE_SYMMETRIC = 3,
     };
 
-    struct ModelHeadParams {
+    struct ModelConfig {
+        // 架构相关参数
+        std::string _arch_name;
+        std::vector<std::string> _architectures;
+        //
         bool _vocab_only{};
         bool _rope_fine_tuned{};
+        bool _use_mmap; // use mmap if possible
+        bool _use_mlock; // force system to keep model in RAM
+        bool _check_tensors; // validate model tensor data
+        int32_t n_gpu_layers;
 
 
+        uint32_t _n_ctx_train = 0;
         uint32_t _n_embd{};
         uint32_t _n_embd_features = 0;
         uint32_t _n_layer{};
@@ -47,14 +74,10 @@ namespace tff::core::model {
         std::vector<uint32_t> _n_head_arr;
         std::vector<uint32_t> _n_head_kv_arr;
         std::vector<uint32_t> _n_ff_arr;
-    };
 
-    struct ModelParams {
-        bool _vocab_only; // only load the vocabulary, no weights
-        bool _use_mmap; // use mmap if possible
-        bool _use_mlock; // force system to keep model in RAM
-        bool _check_tensors; // validate model tensor data
-        int32_t n_gpu_layers;
+        ModelAttentionSWAType _swa_type = TFF_SWA_TYPE_NONE;
+        uint32_t _n_swa = 0;
+        std::unordered_map<uint32_t, bool> _swa_layers;
     };
 
     enum TokenType {
@@ -80,67 +103,70 @@ namespace tff::core::model {
         TFF_TOKEN_ATTR_RSTRIP = 1 << 8,
         TFF_TOKEN_ATTR_SINGLE_WORD = 1 << 9,
     };
+
     // pre-tokenization types
     enum VocabPreType {
-        TFF_VOCAB_PRE_TYPE_DEFAULT        = 0,
-        TFF_VOCAB_PRE_TYPE_LLAMA3         = 1,
-        TFF_VOCAB_PRE_TYPE_DEEPSEEK_LLM   = 2,
+        TFF_VOCAB_PRE_TYPE_DEFAULT = 0,
+        TFF_VOCAB_PRE_TYPE_LLAMA3 = 1,
+        TFF_VOCAB_PRE_TYPE_DEEPSEEK_LLM = 2,
         TFF_VOCAB_PRE_TYPE_DEEPSEEK_CODER = 3,
-        TFF_VOCAB_PRE_TYPE_FALCON         = 4,
-        TFF_VOCAB_PRE_TYPE_MPT            = 5,
-        TFF_VOCAB_PRE_TYPE_STARCODER      = 6,
-        TFF_VOCAB_PRE_TYPE_GPT2           = 7,
-        TFF_VOCAB_PRE_TYPE_REFACT         = 8,
-        TFF_VOCAB_PRE_TYPE_COMMAND_R      = 9,
-        TFF_VOCAB_PRE_TYPE_STABLELM2      = 10,
-        TFF_VOCAB_PRE_TYPE_QWEN2          = 11,
-        TFF_VOCAB_PRE_TYPE_OLMO           = 12,
-        TFF_VOCAB_PRE_TYPE_DBRX           = 13,
-        TFF_VOCAB_PRE_TYPE_SMAUG          = 14,
-        TFF_VOCAB_PRE_TYPE_PORO           = 15,
-        TFF_VOCAB_PRE_TYPE_CHATGLM3       = 16,
-        TFF_VOCAB_PRE_TYPE_CHATGLM4       = 17,
-        TFF_VOCAB_PRE_TYPE_VIKING         = 18,
-        TFF_VOCAB_PRE_TYPE_JAIS           = 19,
-        TFF_VOCAB_PRE_TYPE_TEKKEN         = 20,
-        TFF_VOCAB_PRE_TYPE_SMOLLM         = 21,
-        TFF_VOCAB_PRE_TYPE_CODESHELL      = 22,
-        TFF_VOCAB_PRE_TYPE_BLOOM          = 23,
-        TFF_VOCAB_PRE_TYPE_GPT3_FINNISH   = 24,
-        TFF_VOCAB_PRE_TYPE_EXAONE         = 25,
-        TFF_VOCAB_PRE_TYPE_CHAMELEON      = 26,
-        TFF_VOCAB_PRE_TYPE_MINERVA        = 27,
-        TFF_VOCAB_PRE_TYPE_DEEPSEEK3_LLM  = 28,
-        TFF_VOCAB_PRE_TYPE_GPT4O          = 29,
-        TFF_VOCAB_PRE_TYPE_SUPERBPE       = 30,
-        TFF_VOCAB_PRE_TYPE_TRILLION       = 31,
-        TFF_VOCAB_PRE_TYPE_BAILINGMOE     = 32,
-        TFF_VOCAB_PRE_TYPE_LLAMA4         = 33,
-        TFF_VOCAB_PRE_TYPE_PIXTRAL        = 34,
-        TFF_VOCAB_PRE_TYPE_SEED_CODER     = 35,
-        TFF_VOCAB_PRE_TYPE_HUNYUAN        = 36,
-        TFF_VOCAB_PRE_TYPE_KIMI_K2        = 37,
-        TFF_VOCAB_PRE_TYPE_HUNYUAN_DENSE  = 38,
-        TFF_VOCAB_PRE_TYPE_GROK_2         = 39,
+        TFF_VOCAB_PRE_TYPE_FALCON = 4,
+        TFF_VOCAB_PRE_TYPE_MPT = 5,
+        TFF_VOCAB_PRE_TYPE_STARCODER = 6,
+        TFF_VOCAB_PRE_TYPE_GPT2 = 7,
+        TFF_VOCAB_PRE_TYPE_REFACT = 8,
+        TFF_VOCAB_PRE_TYPE_COMMAND_R = 9,
+        TFF_VOCAB_PRE_TYPE_STABLELM2 = 10,
+        TFF_VOCAB_PRE_TYPE_QWEN2 = 11,
+        TFF_VOCAB_PRE_TYPE_OLMO = 12,
+        TFF_VOCAB_PRE_TYPE_DBRX = 13,
+        TFF_VOCAB_PRE_TYPE_SMAUG = 14,
+        TFF_VOCAB_PRE_TYPE_PORO = 15,
+        TFF_VOCAB_PRE_TYPE_CHATGLM3 = 16,
+        TFF_VOCAB_PRE_TYPE_CHATGLM4 = 17,
+        TFF_VOCAB_PRE_TYPE_VIKING = 18,
+        TFF_VOCAB_PRE_TYPE_JAIS = 19,
+        TFF_VOCAB_PRE_TYPE_TEKKEN = 20,
+        TFF_VOCAB_PRE_TYPE_SMOLLM = 21,
+        TFF_VOCAB_PRE_TYPE_CODESHELL = 22,
+        TFF_VOCAB_PRE_TYPE_BLOOM = 23,
+        TFF_VOCAB_PRE_TYPE_GPT3_FINNISH = 24,
+        TFF_VOCAB_PRE_TYPE_EXAONE = 25,
+        TFF_VOCAB_PRE_TYPE_CHAMELEON = 26,
+        TFF_VOCAB_PRE_TYPE_MINERVA = 27,
+        TFF_VOCAB_PRE_TYPE_DEEPSEEK3_LLM = 28,
+        TFF_VOCAB_PRE_TYPE_GPT4O = 29,
+        TFF_VOCAB_PRE_TYPE_SUPERBPE = 30,
+        TFF_VOCAB_PRE_TYPE_TRILLION = 31,
+        TFF_VOCAB_PRE_TYPE_BAILINGMOE = 32,
+        TFF_VOCAB_PRE_TYPE_LLAMA4 = 33,
+        TFF_VOCAB_PRE_TYPE_PIXTRAL = 34,
+        TFF_VOCAB_PRE_TYPE_SEED_CODER = 35,
+        TFF_VOCAB_PRE_TYPE_HUNYUAN = 36,
+        TFF_VOCAB_PRE_TYPE_KIMI_K2 = 37,
+        TFF_VOCAB_PRE_TYPE_HUNYUAN_DENSE = 38,
+        TFF_VOCAB_PRE_TYPE_GROK_2 = 39,
     };
+
     enum VocabType {
-        TFF_VOCAB_TYPE_NONE   = 0, // For models without vocab
-        TFF_VOCAB_TYPE_SPM    = 1, // LLaMA tokenizer based on byte-level BPE with byte fallback
-        TFF_VOCAB_TYPE_BPE    = 2, // GPT-2 tokenizer based on byte-level BPE
-        TFF_VOCAB_TYPE_WPM    = 3, // BERT tokenizer based on WordPiece
-        TFF_VOCAB_TYPE_UGM    = 4, // T5 tokenizer based on Unigram
-        TFF_VOCAB_TYPE_RWKV   = 5, // RWKV tokenizer based on greedy tokenization
+        TFF_VOCAB_TYPE_NONE = 0, // For models without vocab
+        TFF_VOCAB_TYPE_SPM = 1, // LLaMA tokenizer based on byte-level BPE with byte fallback
+        TFF_VOCAB_TYPE_BPE = 2, // GPT-2 tokenizer based on byte-level BPE
+        TFF_VOCAB_TYPE_WPM = 3, // BERT tokenizer based on WordPiece
+        TFF_VOCAB_TYPE_UGM = 4, // T5 tokenizer based on Unigram
+        TFF_VOCAB_TYPE_RWKV = 5, // RWKV tokenizer based on greedy tokenization
         TFF_VOCAB_TYPE_PLAMO2 = 6, // PLaMo-2 tokenizer based on Aho-Corasick with dynamic programming
-        FF_VOCAB_TYPE_COUNT  // 用于数组大小
+        FF_VOCAB_TYPE_COUNT // 用于数组大小
     };
 
     enum RopeType {
-        TFF_ROPE_TYPE_NONE   = -1,
-        TFF_ROPE_TYPE_NORM   = 0,
-        TFF_ROPE_TYPE_NEOX   = 1,
-        TFF_ROPE_TYPE_MROPE  = 2,
+        TFF_ROPE_TYPE_NONE = -1,
+        TFF_ROPE_TYPE_NORM = 0,
+        TFF_ROPE_TYPE_NEOX = 1,
+        TFF_ROPE_TYPE_MROPE = 2,
         TFF_ROPE_TYPE_VISION = 3,
     };
+
     struct TokenData {
         std::string _text;
         TokenAttribute _attribute;
@@ -148,7 +174,7 @@ namespace tff::core::model {
     };
 
     //
-    struct ModelWeights {
+    struct ModelWeight {
         uint16_t _idx;
         size_t _offs;
         std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
@@ -162,7 +188,7 @@ namespace tff::core::model {
     };
 
     //
-    struct GGUFContext {
+    struct ModelContext {
         uint32_t _version = GGUF_VERSION;
 
         using BasicType = std::variant<
@@ -189,7 +215,7 @@ namespace tff::core::model {
         size_t _offset = 0;
         size_t _size = 0;
 
-        void *_data = nullptr;
+        std::shared_ptr<tff::core::memory::Memory> _data_memory_ptr;
 
         bool check_version() const {
             if ((_version & 0x0000FFFF) == 0x00000000) {
@@ -549,7 +575,7 @@ namespace tff::core::model {
         LLM_TENSOR_LAYER_REPEATING,
         LLM_TENSOR_LAYER_OUTPUT,
     };
-    //
 
+    //
 }
 #endif //TFFINFER_MODEL_BASEDEFINE_H

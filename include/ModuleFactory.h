@@ -19,26 +19,26 @@ namespace tff::factory {
         static std::shared_ptr<ModuleFactory> &instance();
 
     public:
-        using Creator = std::function<std::shared_ptr<tff::module::ModuleObject>()>;
+        using Creator = std::vector<std::function<std::shared_ptr<tff::module::ModuleObject>()>>;
         using ModuleMap = std::unordered_map<std::string, Creator>;
         using TypeMap = std::unordered_map<std::string, ModuleMap>;
 
         template<typename T>
         static void register_module(const std::string &type, const std::string &key) {
-            instance()->m_module_func_map[type][key] = []() {
+            instance()->m_module_func_map[type][key].push_back([]() {
                 return std::make_shared<tff::module::ModuleObject>(
                     std::make_shared<T>()
                 );
-            };
+            });
         }
 
         template<typename T, typename... Args>
         static void register_module(const std::string &type, const std::string &key, Args &&... args) {
-            instance()->m_module_func_map[type][key] = [args...]() mutable {
+            instance()->m_module_func_map[type][key].push_back([args...]() mutable {
                 return std::make_shared<tff::module::ModuleObject>(
                     std::make_shared<T>(args...)
                 );
-            };
+            });
         }
 
         std::shared_ptr<tff::module::ModuleObject> create_shared(const std::string &_module_type,
@@ -47,7 +47,14 @@ namespace tff::factory {
             if (type_it == m_module_func_map.end()) return nullptr;
             auto creator_it = type_it->second.find(key);
             if (creator_it == type_it->second.end()) return nullptr;
-            return creator_it->second();
+            return creator_it->second.front()();
+        }
+        //
+        ModuleMap create_shared_list(const std::string &_module_type) {
+            const auto type_it = m_module_func_map.find(_module_type);
+            if (type_it == m_module_func_map.end()) return {};
+
+            return type_it->second;
         }
 
     private:
