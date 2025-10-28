@@ -8,7 +8,7 @@
 #include <memory>
 #include "BaseDefine.h"
 #include "LLMVocabulary.h"
-#include "mem/Tensor.h"
+#include "mem/BaseDefine.h"
 #include "device/DeviceBaseObject.h"
 #include "model/base/ModelLoaderBase.h"
 #include "ModuleFactory.h"
@@ -19,36 +19,32 @@ namespace tff::core::model {
     class LLMModel {
     public:
         LLMModel() : _type(), _architecture() {
-            _model_loader = std::dynamic_pointer_cast<tff::core::model::ModelLoaderBase>(
-                tff::factory::ModuleFactory::instance()->create_shared("MODEL", "LLAMA"));
-            auto device_list = tff::factory::ModuleFactory::instance()->create_shared_list("DEVICE");
-            auto gpu_device_list = device_list["GPU"];
-            for (auto &device: gpu_device_list) {
-                this->_devices.push_back(std::dynamic_pointer_cast<tff::core::device::DeviceBaseObject>(device()));
-            }
+            auto device_list = tff::factory::ModuleFactory::instance()->create_shared_list<
+                tff::core::device::DeviceBaseObject>(DEVICE_BACKEND_FLAG);
+            auto gpu_device_list = device_list[DEVICE_BACKEND_TYPE_CUDA];
+            this->_devices.push_back(std::dynamic_pointer_cast<tff::core::device::DeviceBaseObject>(gpu_device_list()));
             //
-            auto cpu_device_list = device_list["CPU"];
-            for (auto &device: cpu_device_list) {
-                this->_devices.push_back(std::dynamic_pointer_cast<tff::core::device::DeviceBaseObject>(device()));
-            }
+            auto cpu_device_list = device_list[DEVICE_BACKEND_TYPE_CPU];
+            this->_devices.push_back(std::dynamic_pointer_cast<tff::core::device::DeviceBaseObject>(cpu_device_list()));
         }
 
-        ~LLMModel()= default;
+        ~LLMModel() = default;
 
     public:
         //
         bool load_model(const std::vector<std::string> &model_files_path,
                         const tff::core::model::ModelConfig &params);
+
         //
-        bool load_model_config(const std::string &model_config_file_path);
+        bool load_model_config(const std::string &model_config_file_path, tff::core::model::ModelConfig &params);
 
     protected:
         void load_stats();
 
         inline void load_arch() {
             _arch_name = get_value<tff::core::model::ModelMetaKV,
-            ModelContext::BasicType, std::string>(tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
-                _model_loader->get_model_context())[0];
+                ModelContext::BasicType, std::string>(tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
+                                                      _model_loader->get_model_context())[0];
         }
 
 
@@ -79,7 +75,8 @@ namespace tff::core::model {
 
         std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
         //
-        std::unordered_map<ModelTensorType, std::shared_ptr<tff::core::graph::GraphNode>> _layer_map;
+        std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<tff::core::graph::GraphNode> >
+        _layer_map;
     };
 }
 #endif //TFFINFER_LLMMODEL_H

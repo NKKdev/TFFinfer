@@ -27,7 +27,7 @@ namespace tff::core::memory {
 
         void memset_zero(void *ptr, size_t byte_size) override;
     };
-    REGISTER_MODULE_OBJECT(MemBufferAllocatorCPU, "MEMORY", "CPU")
+    REGISTER_MODULE_OBJECT(MemBufferAllocatorCPU, MemBufferAllocatorBaseObject,"MEMORY", "CPU")
 }
 
 #endif //TFFINFER_MEMBUFFERALLOCATORCPU_H

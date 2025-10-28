@@ -9,31 +9,41 @@
 #include "model/FileLoader.h"
 #include "model/BaseDefine.h"
 #include "Logger.h"
+
 namespace tff::core::model {
-    class LLAMALoader : public ModelLoaderBase{
-        public:
-        LLAMALoader() = default;
+    class LLAMALoader : public ModelLoaderBase {
+    public:
+        LLAMALoader() {
+            _model_ctx = std::make_unique<tff::core::model::ModelContext>();
+        };
+
         ~LLAMALoader() override = default;
+
     public:
         //
-        ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) override;
+        ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap,
+                                       bool check_tensors) override;
 
         std::unique_ptr<tff::core::model::ModelContext> &get_model_context() override;
 
-        ModelLoadResult convert_to_gguf(const std::string & output_path) override {
+        ModelLoadResult convert_to_gguf(const std::string &output_path) override {
             return ModelLoadResult::UNSUPPORTED_ARCH;
         }
 
-        const char * get_arch_name() const override;
+        const char *get_arch_name() const override;
 
-        const ModelConfig & get_model_config() const override;
+        const ModelConfig &get_model_config() const override;
 
-        bool supports_mmap() const override ;
+        bool supports_mmap() const override;
 
-        bool supports_mlock() const override ;
+        bool supports_mlock() const override;
 
         std::vector<std::string> get_tensor_names() const override;
 
+        //
+        inline const std::unordered_map<std::string, ModelWeight> &get_weight_map() const {
+            return this->_weight_map;
+        };
 
     protected:
         bool load(const std::vector<std::string> &model_files_name,
@@ -45,16 +55,19 @@ namespace tff::core::model {
 
         //
         bool load_header(const size_t &file_index,
-                         const std::unique_ptr<FileLoader> &file_loader, const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+                         const std::unique_ptr<FileLoader> &file_loader,
+                         const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
 
         //
         bool load_kv_meta(const size_t &file_index,
-                          const std::unique_ptr<FileLoader> &file_loader, const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+                          const std::unique_ptr<FileLoader> &file_loader,
+                          const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
 
         //
         template<typename T>
         bool load_array_meta(const std::unique_ptr<FileLoader> &file_loader,
-        const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx, const std::string &key, const size_t &n,
+                             const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx, const std::string &key,
+                             const size_t &n,
                              const bool is_array = false) {
             if (is_array) {
                 std::vector<T> value;
@@ -92,11 +105,16 @@ namespace tff::core::model {
 
         //
         bool load_tensor_info(const size_t &file_index,
-                              const std::unique_ptr<FileLoader> &file_loader, const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+                              const std::unique_ptr<FileLoader> &file_loader,
+                              const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+
         //
-        bool load_tensor_data(const std::unique_ptr<FileLoader> &file_loader, const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+        bool load_tensor_data(const std::unique_ptr<FileLoader> &file_loader,
+                              const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+
         //
-        bool load_model_config(const std::unique_ptr<FileLoader> &file_loader, const std::unique_ptr<tff::core::model::ModelContext> &ctx);
+        bool load_model_config(const std::unique_ptr<FileLoader> &file_loader,
+                               const std::unique_ptr<tff::core::model::ModelContext> &ctx);
 
         //
         inline std::unique_ptr<tff::core::model::ModelContext> &get_model_ctx() {
@@ -104,8 +122,8 @@ namespace tff::core::model {
         };
 
     private:
-        int _n_kv = 0;
-        int _n_tensors = 0;
+        int64_t _n_kv = 0;
+        int64_t _n_tensors = 0;
         int _n_created = 0;
 
         uint64_t _n_elements = 0;
@@ -127,9 +145,11 @@ namespace tff::core::model {
         //
         std::unique_ptr<tff::core::model::ModelContext> _model_ctx;
     };
-    REGISTER_MODULE_OBJECT(LLAMALoader, MODEL_LOADER_TYPE,std::string(LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->second));
-}
 
+    REGISTER_MODULE_OBJECT(LLAMALoader, ModelLoaderBase, MODEL_LOADER_TYPE,
+                           std::string(LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA
+                           )->second));
+}
 
 
 #endif //TFFINFER_LLAMALOADER_H

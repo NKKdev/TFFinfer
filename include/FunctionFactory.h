@@ -13,53 +13,79 @@
 #include <unordered_map>
 #include <any>
 #include <utility>
-//#include "log/Logger.h"
-namespace tff {
-namespace factory {
 
-class DEEP_TFF_API FunctionFactory {
-public:
-  // 单例访问
-  static std::shared_ptr<FunctionFactory> instance();
+namespace tff::factory {
+        class DEEP_TFF_API FunctionFactory : public std::enable_shared_from_this<FunctionFactory> {
+        public:
+            static std::shared_ptr<FunctionFactory> instance() {
+                static std::shared_ptr<FunctionFactory> s_instance = create_instance();
+                return s_instance;
+            }
 
-public:
-  // 注册一个函数
-  template <typename R, typename... Args>
-  void register_callback(const std::string &key,
-                         UECallback<R, Args...> callback) {
-    m_functions[std::type_index(typeid(UECallback<R, Args...>))][key] =
-        std::any(callback);
-  }
+        public:
+            template<typename Func>
+            void register_callback(const std::string& flag, const std::string& key, Func&& func) {
+                std::lock_guard<std::mutex> lock(_mutex);
+                _functions[flag][key] = std::function(func);
+            }
 
-  // 调用一个已注册的函数
-  template <typename R, typename... Args>
-  R invoke_callback(const std::string &key, Args... args) {
-    auto it = m_functions.find(std::type_index(typeid(UECallback<R, Args...>)));
-    if (it != m_functions.end()) {
-      auto func_it = it->second.find(key);
-      if (func_it != it->second.end()) {
-        auto &func_any = func_it->second;
-        return std::any_cast<UECallback<R, Args...>>(func_any)(args...);
-      }
-    }
-    //Logger::error("Function not found for key: %s",key.c_str());
-  }
+            // 获取回调（需知道类型）
+            template<typename Func>
+            std::function<Func> get_callback(const std::string& flag, const std::string& key) {
+                std::lock_guard<std::mutex> lock(_mutex);
+                auto it = _functions.find(flag);
+                if (it == _functions.end()) throw std::runtime_error("Flag not found");
+                auto it2 = it->second.find(key);
+                if (it2 == it->second.end()) throw std::runtime_error("Callback not found");
+                return std::any_cast<std::function<Func>>(it2->second);
+            }
 
+            // 判断是否存在
+            bool has_callback(const std::string& flag, const std::string& key) {
+                std::lock_guard<std::mutex> lock(_mutex);
+                auto it = _functions.find(flag);
+                if (it == _functions.end()) return false;
+                return it->second.find(key) != it->second.end();
+            }
+            //
+            template<typename... Args>
+            void invoke(const std::string& flag, const std::string& key, Args&&... args) {
+                std::lock_guard<std::mutex> lock(_mutex);
+                auto it = _functions.find(flag);
+                if (it == _functions.end()) throw std::runtime_error("Flag not found");
+                auto it2 = it->second.find(key);
+                if (it2 == it->second.end()) throw std::runtime_error("Callback not found");
 
-  // 构造函数、拷贝构造函数和移动构造函数
-  FunctionFactory() = default;
+                // 直接调用
+                std::any_cast<std::function<void(Args...)>>(it2->second)(std::forward<Args>(args)...);
+            }
 
-private:
-  std::unordered_map<std::type_index,
-                     std::unordered_map<std::string, std::any>>
-      m_functions;
+        private:
+            FunctionFactory() = default;
+            static std::shared_ptr<FunctionFactory> create_instance() {
+                struct Constructor {
+                    std::shared_ptr<FunctionFactory> operator()() {
+                        return std::shared_ptr<FunctionFactory>(new FunctionFactory());
+                    }
+                };
+                return Constructor()();
+            }
 
-  FunctionFactory(const FunctionFactory &) = delete;
-  FunctionFactory(FunctionFactory &&) = delete;
+        private:
+            // 删除拷贝和移动构造
+            FunctionFactory(const FunctionFactory &) = delete;
 
-public:
+            FunctionFactory(FunctionFactory &&) = delete;
 
-};
-} // namespace Factory
+            FunctionFactory &operator=(const FunctionFactory &) = delete;
+
+            FunctionFactory &operator=(FunctionFactory &&) = delete;
+
+        private:
+            // 三层结构：类型 -> group -> key -> function
+            std::unordered_map<std::string,std::unordered_map<std::string,std::any>> _functions;
+
+            mutable std::mutex _mutex; // 保证线程安全
+        };
 } // namespace TFF
 #endif // DEEP_TFF_FUNCTIONFACTORY_H

@@ -102,7 +102,7 @@ namespace tff::core::model {
 
     };
 
-    REGISTER_MODULE_OBJECT(LLMLLaMaVocabulary, "VOCAB", "LLAMA")
+    REGISTER_MODULE_OBJECT(LLMLLaMaVocabulary, tff::module::ModuleObject, "VOCAB", "LLAMA")
 }
 
 

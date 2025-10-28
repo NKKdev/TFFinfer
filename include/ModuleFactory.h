@@ -13,78 +13,102 @@
 #include <unordered_map>
 
 namespace tff::factory {
-    class DEEP_TFF_API ModuleFactory : public std::enable_shared_from_this<ModuleFactory>{
+    class DEEP_TFF_API ModuleFactory {
     public:
-        // 单例访问
+        // 单例
         static std::shared_ptr<ModuleFactory> &instance();
 
-    public:
-        using Creator = std::vector<std::function<std::shared_ptr<tff::module::ModuleObject>()>>;
-        using ModuleMap = std::unordered_map<std::string, Creator>;
-        using TypeMap = std::unordered_map<std::string, ModuleMap>;
+        // 删除拷贝和移动
+        ModuleFactory(const ModuleFactory &) = delete;
 
-        template<typename T>
-        static void register_module(const std::string &type, const std::string &key) {
-            instance()->m_module_func_map[type][key].push_back([]() {
-                return std::make_shared<tff::module::ModuleObject>(
-                    std::make_shared<T>()
-                );
-            });
-        }
+        ModuleFactory &operator=(const ModuleFactory &) = delete;
 
-        template<typename T, typename... Args>
-        static void register_module(const std::string &type, const std::string &key, Args &&... args) {
-            instance()->m_module_func_map[type][key].push_back([args...]() mutable {
-                return std::make_shared<tff::module::ModuleObject>(
-                    std::make_shared<T>(args...)
-                );
-            });
-        }
+        ModuleFactory(ModuleFactory &&) = delete;
 
-        std::shared_ptr<tff::module::ModuleObject> create_shared(const std::string &_module_type,
-                                                                 const std::string &key) {
-            auto type_it = m_module_func_map.find(_module_type);
-            if (type_it == m_module_func_map.end()) return nullptr;
-            auto creator_it = type_it->second.find(key);
-            if (creator_it == type_it->second.end()) return nullptr;
-            return creator_it->second.front()();
-        }
-        //
-        ModuleMap create_shared_list(const std::string &_module_type) {
-            const auto type_it = m_module_func_map.find(_module_type);
-            if (type_it == m_module_func_map.end()) return {};
-
-            return type_it->second;
-        }
+        ModuleFactory &operator=(ModuleFactory &&) = delete;
 
     private:
         ModuleFactory() = default;
 
     public:
-        ModuleFactory(const ModuleFactory &) = delete;
 
-        ModuleFactory(ModuleFactory &&) = delete;
+        template<typename T, typename Base, typename... Args>
+        static void register_type(const std::string &type, const std::string &key, Args &&... args) {
+            auto &creators = instance()->get_or_create_creator_list<Base>(type);
+            creators[key] = [args...]() -> std::shared_ptr<Base> {
+                return std::make_shared<T>(args...);
+            };
+        }
 
-    public:
-        // std::unordered_map<std::string, std::function<ptr_type()>> map_;
-        TypeMap m_module_func_map;
+        // 无参版本
+        template<typename T, typename Base>
+        static void register_type(const std::string &type, const std::string &key) {
+            auto &creators = instance()->get_or_create_creator_list<Base>(type);
+            creators[key] = []() -> std::shared_ptr<Base> {
+                return std::make_shared<T>();
+            };
+        }
+
+        // 创建 shared_ptr<Base> 对象
+        template<typename Base>
+        std::shared_ptr<Base> create_shared(const std::string &type, const std::string &key) {
+            auto it = instance()->m_base_factories.find(type_id<Base>());
+            if (it == instance()->m_base_factories.end()) return nullptr;
+
+            // 错误：不能 cast 到指针！
+            // auto &creators = *std::any_cast<std::unordered_map<...> *>(it->second);
+
+            // 正确：cast 到引用
+            auto &creators = std::any_cast<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()>> &>(it->second);
+
+            auto creator_it = creators.find(key);
+            if (creator_it == creators.end()) return nullptr;
+            return creator_it->second();
+        }
+
+        // 获取某类型下的所有创建器
+        template<typename Base>
+        std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > create_shared_list(
+            const std::string &type) {
+            auto it = instance()->m_base_factories.find(type_id<Base>());
+            if (it == instance()->m_base_factories.end()) return {};
+
+            // 同样，不能 cast 到指针
+            // return *std::any_cast<std::map<...> *>(it->second);
+
+            return std::any_cast<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()>> &>(it->second);
+        }
+
+    private:
+        // 为每个 Base 类型生成唯一 ID（避免 RTTI 依赖）
+        template<typename T>
+        static const std::type_info *type_id() { return &typeid(T); }
+
+        // 获取或创建特定 Base 类型的 creator 映射
+        template<typename Base>
+        std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > &get_or_create_creator_list(
+            const std::string &type) {
+            const std::type_info *base_id = type_id<Base>();
+            auto &any_map = m_base_factories[base_id];
+
+            if (!any_map.has_value()) {
+                any_map = std::make_any<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > >();
+            }
+
+            return std::any_cast<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > &>(any_map);
+        }
+
+    private:
+        // 外层 map: type_name -> (map of creators for a specific Base type)
+        std::unordered_map<const std::type_info *, std::any> m_base_factories;
     };
 
-// #define REGISTER_MODULE_OBJECT_NAME(T) reg_msg_##T##_
-// #define REGISTER_MODULE_OBJECT(T, type, key, ...)                              \
-//   static tff::factory::ModuleFactory::FactoryRegister_t<void, T> REGISTER_MODULE_OBJECT_NAME(T)(  \
-//       type, key, ##__VA_ARGS__);
-//
-// #define REGISTER_MODULE_OBJECT_BASE(BaseT, T, type, key, ...)                              \
-// static tff::factory::ModuleFactory::FactoryRegister_t<BaseT, T> REGISTER_MODULE_OBJECT_NAME(T)(  \
-// type, key, ##__VA_ARGS__);
-
-
-#define REGISTER_MODULE_OBJECT(T, type, key, ...) \
+#define REGISTER_MODULE_OBJECT(T, Base,type, key, ...) \
     static struct reg_##T##_##__COUNTER__ { \
             reg_##T##_##__COUNTER__() { \
-                ::tff::factory::ModuleFactory::register_module<T>(type, key, ##__VA_ARGS__); \
+                ::tff::factory::ModuleFactory::register_type<T, Base>(type, key, ##__VA_ARGS__); \
             } \
     } reg_##T##_##__COUNTER__##_instance;
+
 }
 #endif // DEEP_TFF_MODULEFACTORY_H

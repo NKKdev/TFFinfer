@@ -108,7 +108,7 @@ namespace tff::core::model {
         LLMVocabTupleBPE::queue _work_queue;
     };
 
-    REGISTER_MODULE_OBJECT(LLMTokenizerBPE, "TOKENIZER",
+    REGISTER_MODULE_OBJECT(LLMTokenizerBPE, LLMTokenizerBase,"TOKENIZER",
                            get_tokenizer_name(tff::core::model::VocabType::TFF_VOCAB_TYPE_BPE).data());
 }
 

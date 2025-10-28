@@ -117,17 +117,18 @@ namespace tff::core::model {
             size_t num_elements = 0;
             bRet &= file_loader->read(meta_type);
             if (meta_type == TFF_GGUF_TYPE_ARRAY) {
+                is_array = true;
                 file_loader->read(meta_type);
                 file_loader->read(num_elements);
             }
-#define GGUF_TYPE(t, cpp_type) case t: return this->handle_gguf_kv<t>(file_loader, gguf_ctx, key, num_elements, true);
+#define GGUF_TYPE(t, cpp_type) case t: this->handle_gguf_kv<t>(file_loader, gguf_ctx, key, num_elements, is_array);break;
             switch (meta_type) {
                 TFF_GGUF_TYPES
                 case TFF_GGUF_TYPE_ARRAY:
                 default:
                     tff::log::Logger::error("%s: key '%s' has invalid GGUF type %d\n", __func__, key.c_str(),
                                             meta_type);
-                    return false;
+                    break;
             }
 #undef GGUF_TYPE
         }
@@ -162,7 +163,7 @@ namespace tff::core::model {
             file_loader->read(data_type);
             auto type = static_cast<tff::core::memory::DataType>(data_type);
             tensor_info._tensor_ptr = std::make_shared<tff::core::memory::Tensor>(type, shapes, true);
-            tensor_info._tensor_ptr->set_data_type(tff::core::memory::DataType(data_type));
+
             //
             file_loader->read(tensor_info._offset);
             gguf_ctx->_tensor_info.push_back(tensor_info);
@@ -206,9 +207,8 @@ namespace tff::core::model {
     bool LLAMALoader::load_tensor_data(const std::unique_ptr<FileLoader> &file_loader,
                                        const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         if (this->_alloc) {
-            std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator = std::dynamic_pointer_cast<
-                tff::core::memory::MemBufferAllocatorBaseObject>(
-                tff::factory::ModuleFactory::instance()->create_shared("MEMORY", "CPU"));
+            std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator =
+                tff::factory::ModuleFactory::instance()->create_shared<tff::core::memory::MemBufferAllocatorBaseObject>("MEMORY", "CPU");
             gguf_ctx->_data_memory_ptr = std::make_shared<tff::core::memory::Memory>(gguf_ctx->_size, nullptr, false,
                 allocator);
             gguf_ctx->_data_memory_ptr->allocate();

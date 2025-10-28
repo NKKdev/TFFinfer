@@ -10,6 +10,7 @@
 #include "cuda_device_runtime_api.h"
 #include "device_launch_parameters.h"
 #include "driver_functions.h"
+#include <cuda_fp16.h>
 #include "driver_types.h"
 #include <pthread.h>
 #include <csignal>

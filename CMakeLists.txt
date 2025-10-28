@@ -55,10 +55,14 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/log/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/cuda/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/cuda/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/cpu/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/cpu/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/device/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/mem/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/mem/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/quant/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/quant/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/global/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/global/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.h
@@ -82,7 +86,13 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
+        src/core/device/cpu/DeviceCPU.cpp
+        src/core/device/cpu/DeviceCPU.h
+        src/core/model/base/ModelCreatorBase.h
+        src/core/model/llama/LLAMACreator.h
+        src/core/quant/BaseDefine.h
+)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)

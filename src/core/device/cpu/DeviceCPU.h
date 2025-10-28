@@ -1,18 +1,18 @@
 //
-// Created by nkk on 2025/9/28.
+// Created by nkk on 2025/10/28.
 //
 
-#ifndef TFFINFER_DEVICECUDA_H
-#define TFFINFER_DEVICECUDA_H
-#include "../DeviceBaseObject.h"
-#include "ModuleFactory.h"
+#ifndef TFFINFER_DEVICECPU_H
+#define TFFINFER_DEVICECPU_H
+#include "device/DeviceBaseObject.h"
 #include "global/GlobalDefine.h"
-#include <vector>
-namespace tff::core::device::cuda {
-    class DeviceCUDA final : public DeviceBaseObject {
+namespace tff::core::device::cpu {
+    class DeviceCPU : public DeviceBaseObject {
     public:
-        DeviceCUDA()= default;
-        ~DeviceCUDA() override= default;
+        DeviceCPU() = default;
+
+        ~DeviceCPU() override = default;
+
     public:
         void get_device_id(std::vector<int> &_device_list) override;
         const char *get_device_name(size_t _device_id) override ;
@@ -23,8 +23,10 @@ namespace tff::core::device::cuda {
         void device_init(size_t _device_id) override ;
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &get_device_buffer_allocator() override;
     };
-    REGISTER_MODULE_OBJECT(DeviceCUDA, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA)
+
+
+
+    REGISTER_MODULE_OBJECT(DeviceCPU, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CPU);
 }
 
-
-#endif //TFFINFER_DEVICECUDA_H
+#endif //TFFINFER_DEVICECPU_H

@@ -93,6 +93,15 @@ namespace tff::core::model {
             dst = tmp != 0;
             return true;
         }
+        //
+        inline bool read(std::string & dst) const {
+            uint64_t size = 0;
+            if (!read(size)) {
+                return false;
+            }
+            dst.resize(size);
+            return fread(dst.data(), 1, dst.length(), _fp) == dst.length();
+        }
 
     private:
         FILE *_fp;

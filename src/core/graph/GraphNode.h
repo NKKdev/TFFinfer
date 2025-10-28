@@ -13,9 +13,9 @@
 namespace tff::core::graph {
     class GraphNode final :public std::enable_shared_from_this<GraphNode>{
     public:
-        GraphNode();
+        GraphNode() = default;
 
-        virtual ~GraphNode();
+        virtual ~GraphNode() = default;
 
     public:
         std::vector<std::shared_ptr<tff::core::memory::Tensor>> _src_tensors_ptr;
@@ -27,7 +27,7 @@ namespace tff::core::graph {
         //
         tff::core::model::ModelTensorLayerType _layer_type;
         //
-        std::vector<tff::core::device::DeviceBaseObject> _devices_list;
+        std::unordered_map<uint32_t,std::shared_ptr<tff::core::device::DeviceBaseObject>> _devices_list;
     protected:
 
     };

@@ -51,6 +51,8 @@ namespace tff::core::model {
 
         // 【可选】获取所有需要加载的张量名称列表（用于预分配）
         virtual std::vector<std::string> get_tensor_names() const = 0;
+        //
+        virtual const std::unordered_map<std::string, ModelWeight> &get_weight_map() const = 0;
     };
 }
 

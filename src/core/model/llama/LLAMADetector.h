@@ -30,19 +30,18 @@ namespace tff::core::model {
 
         // 创建该模型的加载器
         std::shared_ptr<ModelLoaderBase> create_loader() override {
-            return std::dynamic_pointer_cast<ModelLoaderBase>(
-                tff::factory::ModuleFactory::instance()->create_shared(MODEL_LOADER_TYPE,
+            return tff::factory::ModuleFactory::instance()->create_shared<ModelLoaderBase>(MODEL_LOADER_TYPE,
                                                                        std::string(
                                                                            LLM_ARCH_NAMES.find(
                                                                                tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)
-                                                                           ->second)));
+                                                                           ->second));
         }
 
         // （可选）优先级，用于解决冲突
         int priority() const override { return 50; } // 默认优先级
     };
 
-    REGISTER_MODULE_OBJECT(LLAMADetector, MODEL_DETECTOR_TYPE,
+    REGISTER_MODULE_OBJECT(LLAMADetector, ModelDetectorBase,MODEL_DETECTOR_TYPE,
                            std::string(LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA
                            )->second));
 }

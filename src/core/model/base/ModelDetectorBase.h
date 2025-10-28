@@ -13,10 +13,11 @@
 #include "model/BaseDefine.h"
 #include "ModelLoaderBase.h"
 namespace tff::core::model {
-    class ModelDetectorBase : public tff::module::ModuleObject{
+    class ModelDetectorBase {
         public:
         ModelDetectorBase() = default;
-        ~ModelDetectorBase() override = default;
+
+        virtual ~ModelDetectorBase() = default;
     public:
         // 检查模型是否匹配此架构
         virtual bool matches(const std::vector<std::string> &architectures) const = 0;

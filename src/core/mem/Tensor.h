@@ -10,16 +10,20 @@
 
 #include "Memory.h"
 #include "BaseDefine.h"
-#include "graph//BaseDefine.h"
 
 namespace tff::core::memory {
+
     class Tensor {
     public:
         Tensor(const tff::core::memory::DataType data_type, std::vector<int64_t> shapes, bool use_external = false,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _use_external(false), _data_type(data_type), _shape(std::move(shapes)),
                                   _allocator(std::move(alloc)) {
-            this->set_dims(shapes.size());
+            this->set_dims(_shape.size());
+            for (size_t i = 0; i < this->_shape.size(); ++i) {
+                this->set_shape(this->_shape[i], i);
+            }
+            this->set_data_type(data_type);
             if (!use_external) {
                 _buffer = std::make_shared<tff::core::memory::Memory>(
                     type_traits_auto[data_type]._type_size * std::accumulate(
@@ -56,8 +60,6 @@ namespace tff::core::memory {
 
         inline void set_dims(const size_t &n_dims) {
             this->_n_dims = n_dims;
-            this->_shape.resize(n_dims);
-            this->_shape_bytes.resize(n_dims);
         }
 
         //
@@ -80,15 +82,20 @@ namespace tff::core::memory {
 
         //
         void set_buffer_data(void *data, const size_t &buffer_size);
+        //
+        [[nodiscard]] inline tff::core::memory::ModelTensorType get_tensor_type() const {
+            return this->_tensor_type;
+        }
 
     private:
         bool _use_external = false;
         size_t _n_dims{};
         tff::core::memory::DataType _data_type;
+        tff::core::memory::ModelTensorType _tensor_type;
         size_t _type_size{};
         int64_t _blk_size{};
         std::vector<int64_t> _shape;
-        std::vector<int64_t> _shape_bytes;
+        std::array<int64_t, 4> _shape_bytes;
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
     };
