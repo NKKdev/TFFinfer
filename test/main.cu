@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include <iostream>
 #include "device/cuda/cudaInc.h"
-#include "model/LLMModel.h"
+#include "model/LLMModelRuntime.h"
 int main(int argc,char *argv[]) {
     std::string model_config_file_path(argv[1]);
     std::string model_file(argv[2]);
-    tff::core::model::LLMModel llm_model;
+    tff::core::model::LLMModelRuntime llm_model;
     tff::core::model::ModelConfig cfg;
     llm_model.load_model_config(model_config_file_path, cfg);
     std::vector<std::string> model_files;

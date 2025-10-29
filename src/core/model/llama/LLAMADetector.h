@@ -9,7 +9,7 @@
 #include "model/base/ModelDetectorBase.h"
 #include "model/BaseDefine.h"
 #include "global/GlobalDefine.h"
-
+#include "LLAMACreator.h"
 namespace tff::core::model {
     class LLAMADetector : public ModelDetectorBase {
     public:
@@ -27,7 +27,9 @@ namespace tff::core::model {
         const char *name() const override {
             return LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->second;
         }
-
+        tff::core::model::ModelArchitectureType arch() const override {
+            return tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA;
+        }
         // 创建该模型的加载器
         std::shared_ptr<ModelLoaderBase> create_loader() override {
             return tff::factory::ModuleFactory::instance()->create_shared<ModelLoaderBase>(MODEL_LOADER_TYPE,
@@ -35,6 +37,10 @@ namespace tff::core::model {
                                                                            LLM_ARCH_NAMES.find(
                                                                                tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)
                                                                            ->second));
+        }
+        //
+        void model_registry() override  {
+            LLAMACreator::registry_function();
         }
 
         // （可选）优先级，用于解决冲突

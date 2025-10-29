@@ -25,6 +25,7 @@ namespace tff::core::model {
                 std::cout << "Created object type: " << typeid(*detector_ptr).name() << std::endl;
                 if (detector_ptr) {
                     if (detector_ptr->matches(architectures)){
+                        detector_ptr->model_registry();
                         return detector_ptr;
                     }
                 }

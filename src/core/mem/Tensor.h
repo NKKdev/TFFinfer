@@ -75,7 +75,7 @@ namespace tff::core::memory {
 
             _shape_bytes[0] = _type_size;
             _shape_bytes[1] = _shape_bytes[0] * (_shape[0] / _blk_size);
-            for (int j = 2; j < _n_dims; ++j) {
+            for (int j = 2; j < 4; ++j) {
                 _shape_bytes[j] = _shape_bytes[j - 1] * _shape[j - 1];
             }
         }
@@ -85,6 +85,9 @@ namespace tff::core::memory {
         //
         [[nodiscard]] inline tff::core::memory::ModelTensorType get_tensor_type() const {
             return this->_tensor_type;
+        }
+        inline void set_tensor_type(const tff::core::memory::ModelTensorType &tensor_type) {
+            this->_tensor_type = tensor_type;
         }
 
     private:

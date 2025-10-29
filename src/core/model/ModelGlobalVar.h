@@ -10,6 +10,8 @@
 #include "graph/BaseDefine.h"
 #include "mem/BaseDefine.h"
 #include "LLAMADefine.h"
+#include "fmt/format.h"
+
 namespace tff::core::model {
     static const std::unordered_map<tff::core::model::ModelArchitectureType, const char *> LLM_ARCH_NAMES = {
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_UNKNOWN, "unknow"},
@@ -128,37 +130,37 @@ namespace tff::core::model {
 
         {LLM_KV_SHORTCONV_L_CACHE, "%s.shortconv.l_cache"},
 
-        {LLM_KV_TOKENIZER_MODEL, "tokenizer.TFF.model"},
-        {LLM_KV_TOKENIZER_PRE, "tokenizer.TFF.pre"},
-        {LLM_KV_TOKENIZER_LIST, "tokenizer.TFF.tokens"},
-        {LLM_KV_TOKENIZER_TOKEN_TYPE, "tokenizer.TFF.token_type"},
-        {LLM_KV_TOKENIZER_TOKEN_TYPE_COUNT, "tokenizer.TFF.token_type_count"},
-        {LLM_KV_TOKENIZER_SCORES, "tokenizer.TFF.scores"},
-        {LLM_KV_TOKENIZER_MERGES, "tokenizer.TFF.merges"},
-        {LLM_KV_TOKENIZER_BOS_ID, "tokenizer.TFF.bos_token_id"},
-        {LLM_KV_TOKENIZER_EOS_ID, "tokenizer.TFF.eos_token_id"},
-        {LLM_KV_TOKENIZER_EOT_ID, "tokenizer.TFF.eot_token_id"},
-        {LLM_KV_TOKENIZER_EOM_ID, "tokenizer.TFF.eom_token_id"},
-        {LLM_KV_TOKENIZER_UNK_ID, "tokenizer.TFF.unknown_token_id"},
-        {LLM_KV_TOKENIZER_SEP_ID, "tokenizer.TFF.seperator_token_id"},
-        {LLM_KV_TOKENIZER_PAD_ID, "tokenizer.TFF.padding_token_id"},
-        {LLM_KV_TOKENIZER_CLS_ID, "tokenizer.TFF.cls_token_id"},
-        {LLM_KV_TOKENIZER_MASK_ID, "tokenizer.TFF.mask_token_id"},
-        {LLM_KV_TOKENIZER_ADD_BOS, "tokenizer.TFF.add_bos_token"},
-        {LLM_KV_TOKENIZER_ADD_EOS, "tokenizer.TFF.add_eos_token"},
-        {LLM_KV_TOKENIZER_ADD_SEP, "tokenizer.TFF.add_sep_token"},
-        {LLM_KV_TOKENIZER_ADD_PREFIX, "tokenizer.TFF.add_space_prefix"},
-        {LLM_KV_TOKENIZER_REMOVE_EXTRA_WS, "tokenizer.TFF.remove_extra_whitespaces"},
-        {LLM_KV_TOKENIZER_PRECOMPILED_CHARSMAP, "tokenizer.TFF.precompiled_charsmap"},
+        {LLM_KV_TOKENIZER_MODEL, "tokenizer.ggml.model"},
+        {LLM_KV_TOKENIZER_PRE, "tokenizer.ggml.pre"},
+        {LLM_KV_TOKENIZER_LIST, "tokenizer.ggml.tokens"},
+        {LLM_KV_TOKENIZER_TOKEN_TYPE, "tokenizer.ggml.token_type"},
+        {LLM_KV_TOKENIZER_TOKEN_TYPE_COUNT, "tokenizer.ggml.token_type_count"},
+        {LLM_KV_TOKENIZER_SCORES, "tokenizer.ggml.scores"},
+        {LLM_KV_TOKENIZER_MERGES, "tokenizer.ggml.merges"},
+        {LLM_KV_TOKENIZER_BOS_ID, "tokenizer.ggml.bos_token_id"},
+        {LLM_KV_TOKENIZER_EOS_ID, "tokenizer.ggml.eos_token_id"},
+        {LLM_KV_TOKENIZER_EOT_ID, "tokenizer.ggml.eot_token_id"},
+        {LLM_KV_TOKENIZER_EOM_ID, "tokenizer.ggml.eom_token_id"},
+        {LLM_KV_TOKENIZER_UNK_ID, "tokenizer.ggml.unknown_token_id"},
+        {LLM_KV_TOKENIZER_SEP_ID, "tokenizer.ggml.seperator_token_id"},
+        {LLM_KV_TOKENIZER_PAD_ID, "tokenizer.ggml.padding_token_id"},
+        {LLM_KV_TOKENIZER_CLS_ID, "tokenizer.ggml.cls_token_id"},
+        {LLM_KV_TOKENIZER_MASK_ID, "tokenizer.ggml.mask_token_id"},
+        {LLM_KV_TOKENIZER_ADD_BOS, "tokenizer.ggml.add_bos_token"},
+        {LLM_KV_TOKENIZER_ADD_EOS, "tokenizer.ggml.add_eos_token"},
+        {LLM_KV_TOKENIZER_ADD_SEP, "tokenizer.ggml.add_sep_token"},
+        {LLM_KV_TOKENIZER_ADD_PREFIX, "tokenizer.ggml.add_space_prefix"},
+        {LLM_KV_TOKENIZER_REMOVE_EXTRA_WS, "tokenizer.ggml.remove_extra_whitespaces"},
+        {LLM_KV_TOKENIZER_PRECOMPILED_CHARSMAP, "tokenizer.ggml.precompiled_charsmap"},
         {LLM_KV_TOKENIZER_HF_JSON, "tokenizer.huggingface.json"},
         {LLM_KV_TOKENIZER_RWKV, "tokenizer.rwkv.world"},
         {LLM_KV_TOKENIZER_CHAT_TEMPLATE, "tokenizer.chat_template"},
-        {LLM_KV_TOKENIZER_FIM_PRE_ID, "tokenizer.TFF.fim_pre_token_id"},
-        {LLM_KV_TOKENIZER_FIM_SUF_ID, "tokenizer.TFF.fim_suf_token_id"},
-        {LLM_KV_TOKENIZER_FIM_MID_ID, "tokenizer.TFF.fim_mid_token_id"},
-        {LLM_KV_TOKENIZER_FIM_PAD_ID, "tokenizer.TFF.fim_pad_token_id"},
-        {LLM_KV_TOKENIZER_FIM_REP_ID, "tokenizer.TFF.fim_rep_token_id"},
-        {LLM_KV_TOKENIZER_FIM_SEP_ID, "tokenizer.TFF.fim_sep_token_id"},
+        {LLM_KV_TOKENIZER_FIM_PRE_ID, "tokenizer.ggml.fim_pre_token_id"},
+        {LLM_KV_TOKENIZER_FIM_SUF_ID, "tokenizer.ggml.fim_suf_token_id"},
+        {LLM_KV_TOKENIZER_FIM_MID_ID, "tokenizer.ggml.fim_mid_token_id"},
+        {LLM_KV_TOKENIZER_FIM_PAD_ID, "tokenizer.ggml.fim_pad_token_id"},
+        {LLM_KV_TOKENIZER_FIM_REP_ID, "tokenizer.ggml.fim_rep_token_id"},
+        {LLM_KV_TOKENIZER_FIM_SEP_ID, "tokenizer.ggml.fim_sep_token_id"},
 
         {LLM_KV_ADAPTER_TYPE, "adapter.type"},
         {LLM_KV_ADAPTER_LORA_ALPHA, "adapter.lora.alpha"},
@@ -198,176 +200,644 @@ namespace tff::core::model {
     };
     static const std::unordered_map<tff::core::memory::ModelTensorType, std::pair<
         tff::core::model::ModelTensorLayerType, tff::core::graph::TffOpType> > LLM_LAYER_OP_INFOS = {
-        {tff::core::memory::LLM_TENSOR_TOKEN_EMBD, {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
-        {tff::core::memory::LLM_TENSOR_POS_EMBD, {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
-        {tff::core::memory::LLM_TENSOR_TOKEN_EMBD_NORM, {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
-        {tff::core::memory::LLM_TENSOR_TOKEN_TYPES, {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
+        {
+            tff::core::memory::LLM_TENSOR_TOKEN_EMBD,
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_EMBD,
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TOKEN_EMBD_NORM,
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TOKEN_TYPES,
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
         {tff::core::memory::LLM_TENSOR_OUTPUT, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
         {tff::core::memory::LLM_TENSOR_CLS, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
         {tff::core::memory::LLM_TENSOR_CLS_OUT, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
         {tff::core::memory::LLM_TENSOR_OUTPUT_NORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_DEC_OUTPUT_NORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ENC_OUTPUT_NORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ROPE_FREQS, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ROPE}},
-        {tff::core::memory::LLM_TENSOR_ROPE_FACTORS_LONG, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ROPE}},
-        {tff::core::memory::LLM_TENSOR_ROPE_FACTORS_SHORT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ROPE}},
-        {tff::core::memory::LLM_TENSOR_ATTN_Q, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_V, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_QKV, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_OUT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_GATE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_DOWN, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_UP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_DOWN_SHEXP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_GATE_SHEXP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_UP_SHEXP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_Q_A, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_Q_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_KV_A_MQA, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_KV_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_K_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_V_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ATTN_SINKS, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SCALE}},
-        {tff::core::memory::LLM_TENSOR_DEC_ATTN_Q, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_ATTN_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_ATTN_V, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_ATTN_OUT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_Q, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_V, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_OUT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_FFN_GATE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_FFN_DOWN, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_DEC_FFN_UP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ENC_ATTN_Q, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ENC_ATTN_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ENC_ATTN_V, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ENC_ATTN_OUT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ENC_FFN_GATE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ENC_FFN_DOWN, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ENC_FFN_UP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_GATE_INP_SHEXP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_FFN_GATE_INP, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_SSM_IN, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_SSM_X, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_SSM_DT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_SSM_OUT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_W1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_W2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_A1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_A2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_V1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_V2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_G1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_G2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_DECAY_W1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_DECAY_W2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_KEY, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_VALUE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_RECEPTANCE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_GATE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_OUTPUT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_CHANNEL_MIX_KEY, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_CHANNEL_MIX_RECEPTANCE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_CHANNEL_MIX_VALUE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
+        {
+            tff::core::memory::LLM_TENSOR_DEC_OUTPUT_NORM,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_OUTPUT_NORM,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ROPE_FREQS,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ROPE}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ROPE_FACTORS_LONG,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ROPE}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ROPE_FACTORS_SHORT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ROPE}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_Q,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_V,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_QKV,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_OUT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_GATE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_DOWN,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_UP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_DOWN_SHEXP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_GATE_SHEXP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_UP_SHEXP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_Q_A,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_Q_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_KV_A_MQA,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_KV_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_K_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_V_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_SINKS,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SCALE}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_ATTN_Q,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_ATTN_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_ATTN_V,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_ATTN_OUT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_Q,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_V,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_OUT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_FFN_GATE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_FFN_DOWN,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_FFN_UP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_ATTN_Q,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_ATTN_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_ATTN_V,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_ATTN_OUT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_FFN_GATE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_FFN_DOWN,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_FFN_UP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_GATE_INP_SHEXP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_GATE_INP,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_IN,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_X,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_DT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_OUT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_W1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_W2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_A1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_A2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_V1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_V2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_G1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_G2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_DECAY_W1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_DECAY_W2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_KEY,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_VALUE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_RECEPTANCE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_GATE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_OUTPUT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CHANNEL_MIX_KEY,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CHANNEL_MIX_RECEPTANCE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CHANNEL_MIX_VALUE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
         {tff::core::memory::LLM_TENSOR_FFN_ACT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_DIV}},
-        {tff::core::memory::LLM_TENSOR_SSM_CONV1D, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SSM_CONV}},
-        {tff::core::memory::LLM_TENSOR_SSM_A, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SSM_SCAN}},
-        {tff::core::memory::LLM_TENSOR_SSM_DT_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_SSM_B_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_SSM_C_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
+        {
+            tff::core::memory::LLM_TENSOR_SSM_CONV1D,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SSM_CONV}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_A,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SSM_SCAN}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_DT_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_B_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_C_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
         {tff::core::memory::LLM_TENSOR_SSM_D, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
         {tff::core::memory::LLM_TENSOR_SSM_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_X, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LN, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_CHANNEL_MIX_LERP_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_CHANNEL_MIX_LERP_R, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_K_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_K_A, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_R_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_W, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_V, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_R, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_G, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_FUSED, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_DECAY, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_W0, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_A0, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_V0, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
-        {tff::core::memory::LLM_TENSOR_TIME_MIX_FIRST, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_RWKV_WKV6}},
-        {tff::core::memory::LLM_TENSOR_ATTN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_NORM_2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_OUT_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_POST_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_X,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LN,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CHANNEL_MIX_LERP_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CHANNEL_MIX_LERP_R,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_K_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_K_A,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_R_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_W,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_V,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_R,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_G,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_FUSED,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_DECAY,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_W0,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_A0,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_V0,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_TIME_MIX_FIRST,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_RWKV_WKV6}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_NORM_2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_OUT_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_POST_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
         {tff::core::memory::LLM_TENSOR_FFN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_FFN_POST_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_FFN_NORM_EXPS, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_Q_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_K_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_LAYER_OUT_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_Q_A_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_KV_A_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ATTN_SUB_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_FFN_SUB_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_DEC_ATTN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_DEC_FFN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ENC_ATTN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ENC_FFN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_DEC_ATTN_REL_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
-        {tff::core::memory::LLM_TENSOR_ENC_ATTN_REL_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
-        {tff::core::memory::LLM_TENSOR_FFN_DOWN_EXPS, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT_ID}},
-        {tff::core::memory::LLM_TENSOR_FFN_GATE_EXPS, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT_ID}},
-        {tff::core::memory::LLM_TENSOR_FFN_UP_EXPS, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT_ID}},
-        {tff::core::memory::LLM_TENSOR_FFN_EXP_PROBS_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}},
+        {
+            tff::core::memory::LLM_TENSOR_FFN_POST_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_NORM_EXPS,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_Q_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_K_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_LAYER_OUT_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_Q_A_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_KV_A_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ATTN_SUB_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_SUB_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_ATTN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_FFN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_ATTN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_FFN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_DEC_ATTN_REL_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ENC_ATTN_REL_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_DOWN_EXPS,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT_ID}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_GATE_EXPS,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT_ID}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_UP_EXPS,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT_ID}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_FFN_EXP_PROBS_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_ADD}
+        },
         // altup / laurel (gemma 3n)
-        {tff::core::memory::LLM_TENSOR_PER_LAYER_TOKEN_EMBD, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
-        {tff::core::memory::LLM_TENSOR_PER_LAYER_MODEL_PROJ, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_PER_LAYER_PROJ_NORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ALTUP_PROJ, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ALTUP_UNEMBD_PROJ, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_PER_LAYER_INP_GATE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_PER_LAYER_PROJ, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_PER_LAYER_POST_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ALTUP_CORRECT_COEF, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ALTUP_CORRECT_SCALE, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_ALTUP_PREDICT_COEF, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ALTUP_ROUTER, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_ALTUP_ROUTER_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_LAUREL_L, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_LAUREL_R, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_LAUREL_POST_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
+        {
+            tff::core::memory::LLM_TENSOR_PER_LAYER_TOKEN_EMBD,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_PER_LAYER_MODEL_PROJ,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_PER_LAYER_PROJ_NORM,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ALTUP_PROJ,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ALTUP_UNEMBD_PROJ,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_PER_LAYER_INP_GATE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_PER_LAYER_PROJ,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_PER_LAYER_POST_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ALTUP_CORRECT_COEF,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ALTUP_CORRECT_SCALE,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ALTUP_PREDICT_COEF,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ALTUP_ROUTER,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_ALTUP_ROUTER_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_LAUREL_L,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_LAUREL_R,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_LAUREL_POST_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
         // this tensor is loaded for T5, but never used
-        {tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_REL_B, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_NONE}},
+        {
+            tff::core::memory::LLM_TENSOR_DEC_CROSS_ATTN_REL_B,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_NONE}
+        },
         {tff::core::memory::LLM_TENSOR_CONV1D, {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_IM2COL}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_NORM1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_NORM2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_CONV1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_IM2COL}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_CONV2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_IM2COL}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_ATTN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_ATTN_Q, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_ATTN_K, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_ATTN_V, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_POS_NET_ATTN_OUT, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_CONVNEXT_DW, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_IM2COL}},
-        {tff::core::memory::LLM_TENSOR_CONVNEXT_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_CONVNEXT_PW1, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_CONVNEXT_PW2, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_CONVNEXT_GAMMA, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_SHORTCONV_CONV, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SSM_CONV}},
-        {tff::core::memory::LLM_TENSOR_SHORTCONV_INPROJ, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_SHORTCONV_OUTPROJ, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_NORM1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_NORM2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_CONV1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_IM2COL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_CONV2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_IM2COL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_ATTN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_ATTN_Q,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_ATTN_K,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_ATTN_V,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_POS_NET_ATTN_OUT,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CONVNEXT_DW,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_IM2COL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CONVNEXT_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CONVNEXT_PW1,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CONVNEXT_PW2,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_CONVNEXT_GAMMA,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SHORTCONV_CONV,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_SSM_CONV}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SHORTCONV_INPROJ,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SHORTCONV_OUTPROJ,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
         // NextN/MTP tensors are currently ignored (reserved for future MTP support)
         // These tensors only exist in the last layer(s) and are treated as output tensors
-        {tff::core::memory::LLM_TENSOR_NEXTN_EH_PROJ, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_NEXTN_EMBED_TOKENS, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
-        {tff::core::memory::LLM_TENSOR_NEXTN_ENORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}},
+        {
+            tff::core::memory::LLM_TENSOR_NEXTN_EH_PROJ,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_NEXTN_EMBED_TOKENS,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_NEXTN_ENORM,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+        },
         {tff::core::memory::LLM_TENSOR_NEXTN_HNORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}},
-        {tff::core::memory::LLM_TENSOR_NEXTN_SHARED_HEAD_HEAD, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_NEXTN_SHARED_HEAD_NORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}},
+        {
+            tff::core::memory::LLM_TENSOR_NEXTN_SHARED_HEAD_HEAD,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_NEXTN_SHARED_HEAD_NORM,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL}
+        },
     };
     static std::unordered_map<ModelMetaKV, uint32_t> LLM_SPECIAL_TOKENS = {
         {LLM_KV_TOKENIZER_BOS_ID, 1},
@@ -480,19 +950,111 @@ namespace tff::core::model {
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_UNKNOWN, -1},
     };
 
-    template<class Key, class ValueType, class DataType>
-    std::vector<DataType> get_value(Key key_value, const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
-        std::vector<DataType> value;
-        const std::string key_name(
-            tff::core::model::LLM_KV_NAMES.find(key_value)->second);
-        if (std::is_same<ValueType, ModelContext::BasicType>::value) {
-            value.push_back(std::get<DataType>(
-                std::get<ValueType>(ctx->_kv.find(key_name)->second)));
+    template<typename T> struct is_vector : std::false_type {};
+    template<typename T> struct is_vector<std::vector<T>> : std::true_type {};
+    template<typename T> constexpr bool is_vector_v = is_vector<T>::value;
+
+    template<typename To, typename From>
+    std::optional<To> try_convert(const From& value) {
+        if constexpr (std::is_same_v<To, From>) {
+            return value;
+        } else if constexpr (std::is_arithmetic_v<To> && std::is_arithmetic_v<From>) {
+            return static_cast<To>(value);
+        } else if constexpr (std::is_same_v<To, std::string> && std::is_constructible_v<std::string, From>) {
+            return std::string(value);
         } else {
-            value = std::get<std::vector<DataType> >(ctx->_kv.find(key_name)->second);
+            return std::nullopt;
+        }
+    }
+    //
+    //
+    template<class Key, class ValueType, class DataType>
+    std::vector<DataType> get_general_value(const std::string key_value, const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
+         std::vector<DataType> result;
+
+
+        auto kv_it = ctx->_kv.find(key_value);
+        if (kv_it == ctx->_kv.end()) {
+            return result; // 未找到
         }
 
-        return value;
+        const auto &kvval = kv_it->second;
+
+        std::visit([&result](const auto &val) {
+            using T = std::decay_t<decltype(val)>;
+
+            // 情况1：直接是 std::vector<DataType>
+            if constexpr (std::is_same_v<T, std::vector<DataType> >) {
+                result = val;
+            }
+            // 情况2：是其他 std::vector<U>
+            else if constexpr (is_vector_v<T>) {
+                using U = typename T::value_type;
+                for (const auto &item: val) {
+                    if constexpr (std::is_convertible_v<U, DataType>) {
+                        result.push_back(static_cast<DataType>(item));
+                    } else if constexpr (requires { try_convert<DataType>(item); }) {
+                        if (auto cvt = try_convert<DataType>(item)) {
+                            result.push_back(*cvt);
+                        }
+                    }
+                    // 否则忽略或日志警告
+                }
+            }
+            // 情况3：是 BasicType（嵌套 variant）
+            else if constexpr (std::is_same_v<T, ModelContext::BasicType>) {
+                std::visit([&result](const auto &inner) {
+                    using U = std::decay_t<decltype(inner)>;
+                    if constexpr (std::is_convertible_v<U, DataType>) {
+                        result.push_back(static_cast<DataType>(inner));
+                    } else if constexpr (requires { try_convert<DataType>(inner); }) {
+                        if (auto cvt = try_convert<DataType>(inner)) {
+                            result.push_back(*cvt);
+                        }
+                    }
+                }, val);
+            }
+            // 情况4：是单个标量值（非 BasicType，但可转换）
+            else if constexpr (!is_vector_v<T> && !std::is_same_v<T, ModelContext::BasicType>) {
+                if constexpr (std::is_convertible_v<T, DataType>) {
+                    result.push_back(static_cast<DataType>(val));
+                } else if constexpr (requires { try_convert<DataType>(val); }) {
+                    if (auto cvt = try_convert<DataType>(val)) {
+                        result.push_back(*cvt);
+                    }
+                }
+            }
+            // 其他情况：不支持，忽略
+        }, kvval);
+        return result;
     }
+    static inline bool is_general_kv(const std::string &kv_value) {
+        if (kv_value.find("%") != kv_value.npos) {
+            return false;
+        }
+        return true;
+    }
+    //
+    template<class Key, class ValueType, class DataType>
+    std::vector<DataType> get_value(Key key_value,
+                                    const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
+        std::vector<DataType> result;
+        std::string key_name(
+            tff::core::model::LLM_KV_NAMES.find(key_value)->second);
+        if (!is_general_kv(key_name)) {
+            std::string arch_name(tff::core::model::LLM_KV_NAMES.find(tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE)->second);
+            arch_name = get_general_value<Key, std::string, std::string>(arch_name, ctx)[0];
+            char buffer[256];
+            std::sprintf(buffer, key_name.c_str(), arch_name.c_str());
+            key_name = buffer;
+        }
+        result = get_general_value<Key, ValueType, DataType>(key_name, ctx);
+        if (result.empty()) {
+            result.push_back(0);
+        }
+        return result;
+    }
+
+
 }
 #endif //TFFINFER_MODELGLOBALVAR_H

@@ -61,7 +61,9 @@ namespace tff::core::model {
         //
         int32_t token_to_string(int32_t token, char *buf, int32_t length, int32_t lstrip, bool special = true);
 
-    protected:
+    public:
+        //
+        std::string _arch_name;
         //
         std::string _tokenizer_model;
         std::string _tokenizer_pre;

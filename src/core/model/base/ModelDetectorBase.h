@@ -24,9 +24,13 @@ namespace tff::core::model {
 
         // 获取该模型的名称（用于日志）
         virtual const char* name() const = 0;
+        //
+        virtual tff::core::model::ModelArchitectureType arch() const = 0;
 
         // 创建该模型的加载器
         virtual std::shared_ptr<ModelLoaderBase> create_loader() = 0;
+        //
+        virtual void model_registry() = 0;
 
         // （可选）优先级，用于解决冲突
         virtual int priority() const { return 50; } // 默认优先级

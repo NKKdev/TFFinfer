@@ -44,10 +44,32 @@ if (NOT glog_FOUND)
     get_target_property(GLOG_INCLUDE_DIRS glog::glog INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "Glog include directories: ${GLOG_INCLUDE_DIRS}")
 endif ()
+#fmt
+FetchContent_Declare(
+        fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG        12.0.0  # 推荐稳定版本
+)
+FetchContent_MakeAvailable(fmt)
+
+find_package(Taskflow)
+if (NOT Taskflow_FOUND)
+    #taskflow
+    FetchContent_Declare(
+            taskflow
+            GIT_REPOSITORY https://github.com/taskflow/taskflow
+            GIT_TAG v3.10.0
+    )
+    FetchContent_MakeAvailable(taskflow)
+    get_target_property(taskflow_include_dirs Taskflow INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Include directories for taskflow: ${taskflow_include_dirs}")
+    include_directories(${taskflow_include_dirs})
+endif ()
+
 
 set(${PROJECT_NAME}_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/)
 add_subdirectory(test)
-
+add_subdirectory(src/taskgraph)
 file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty/*.cpp
@@ -73,6 +95,7 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.cu
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/base/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/base/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/llama/*.h
@@ -92,6 +115,9 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/core/model/base/ModelCreatorBase.h
         src/core/model/llama/LLAMACreator.h
         src/core/quant/BaseDefine.h
+        src/taskgraph/include/TaskFlowSchedule.h
+        src/taskgraph/include/TaskflowInc.h
+        src/taskgraph/src/TaskFlowSchedule.cu
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -102,9 +128,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/sr
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/factory)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/)
 target_include_directories(${PROJECT_NAME} PUBLIC ${json_include_dirs})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart nlohmann_json::nlohmann_json glog::glog)
+target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart nlohmann_json::nlohmann_json glog::glog fmt::fmt)
 
 
 

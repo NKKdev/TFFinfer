@@ -120,6 +120,8 @@ namespace tff::core::model {
         inline std::unique_ptr<tff::core::model::ModelContext> &get_model_ctx() {
             return this->_model_ctx;
         };
+        //
+        tff::core::memory::ModelTensorType get_model_tensor_type(const std::string &tensor_name) const;
 
     private:
         int64_t _n_kv = 0;

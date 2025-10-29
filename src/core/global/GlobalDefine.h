@@ -18,6 +18,9 @@ namespace tff::core::global {
 #define BUFFER_ALLOCATOR_FLAG "BufferAllocator"
     //
 #define CREATE_LAYER_FLAG "CREATE_LAYER"
+    //task graph
+#define TASK_GRAPH_FLAG "TASK_GRAPH"
+#define TASK_GRAPH_TYPE "TASK_SCHEDULER"
 
     static size_t get_device_size(const std::string &device_key) {
         auto devices = tff::factory::ModuleFactory::instance()->create_shared_list<tff::core::device::DeviceBaseObject>(

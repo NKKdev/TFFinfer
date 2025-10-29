@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <any>
 #include <utility>
+#include "Logger.h"
 
 namespace tff::factory {
         class DEEP_TFF_API FunctionFactory : public std::enable_shared_from_this<FunctionFactory> {
@@ -34,9 +35,9 @@ namespace tff::factory {
             std::function<Func> get_callback(const std::string& flag, const std::string& key) {
                 std::lock_guard<std::mutex> lock(_mutex);
                 auto it = _functions.find(flag);
-                if (it == _functions.end()) throw std::runtime_error("Flag not found");
+                if (it == _functions.end()) tff::log::Logger::error("Flag not found");
                 auto it2 = it->second.find(key);
-                if (it2 == it->second.end()) throw std::runtime_error("Callback not found");
+                if (it2 == it->second.end()) tff::log::Logger::error("Callback not found");
                 return std::any_cast<std::function<Func>>(it2->second);
             }
 
@@ -52,9 +53,9 @@ namespace tff::factory {
             void invoke(const std::string& flag, const std::string& key, Args&&... args) {
                 std::lock_guard<std::mutex> lock(_mutex);
                 auto it = _functions.find(flag);
-                if (it == _functions.end()) throw std::runtime_error("Flag not found");
+                if (it == _functions.end()) tff::log::Logger::error("Flag not found");
                 auto it2 = it->second.find(key);
-                if (it2 == it->second.end()) throw std::runtime_error("Callback not found");
+                if (it2 == it->second.end()) tff::log::Logger::error("Callback not found");
 
                 // 直接调用
                 std::any_cast<std::function<void(Args...)>>(it2->second)(std::forward<Args>(args)...);

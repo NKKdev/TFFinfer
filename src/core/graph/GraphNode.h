@@ -18,6 +18,10 @@ namespace tff::core::graph {
         virtual ~GraphNode() = default;
 
     public:
+        //
+        uint32_t _layer_id;
+        uint32_t _file_idx;
+
         std::vector<std::shared_ptr<tff::core::memory::Tensor>> _src_tensors_ptr;
         std::vector<std::shared_ptr<tff::core::memory::Tensor>> _dst_tensors_ptr;
         //

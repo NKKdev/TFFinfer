@@ -20,6 +20,7 @@ namespace tff::core::model {
                                       const size_t &total_layer_num = -1, const size_t &layer_index = -1) {
             auto &layer_info = LLM_LAYER_OP_INFOS.find(tensor_ptr->get_tensor_type())->second;
             layer_node = std::make_shared<tff::core::graph::GraphNode>();
+            layer_node->_layer_id = layer_index;
             layer_node->_layer_type = layer_info.first;
             layer_node->_op_type = layer_info.second;
             layer_node->_src_tensors_ptr.push_back(tensor_ptr);

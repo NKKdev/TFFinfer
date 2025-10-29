@@ -52,6 +52,7 @@ namespace tff::core::memory {
     };
     //
     enum ModelTensorType {
+        LLM_TENSOR_TYPE_UNKNOWN = -1,
         LLM_TENSOR_TOKEN_EMBD,
         LLM_TENSOR_TOKEN_EMBD_NORM,
         LLM_TENSOR_TOKEN_TYPES,

@@ -13,10 +13,10 @@
 
 namespace tff::core::model {
 #define TFF_TENSOR_MAX_DIMS 4
-#define LOAD_KEY_VALUES(DataType, key_value, dst) \
-    dst = get_value<tff::core::model::ModelMetaKV,ModelContext::BasicType, DataType>(key_value, ctx)
-#define LOAD_KEY_VALUE(DataType, key_value, dst) \
-    dst = LOAD_KEY_VALUES(DataType, key_value, dst)[0]
+#define LOAD_KEY_VALUES(ValueType,DataType, key_value, dst) \
+    dst = get_value<tff::core::model::ModelMetaKV,ValueType, DataType>(key_value, ctx)
+#define LOAD_KEY_VALUE(ValueType,DataType, key_value, dst) \
+    dst = LOAD_KEY_VALUES(ValueType,DataType, key_value, dst)[0]
 
     // model_list.h
 #define FOR_EACH_MODEL(X) \
@@ -89,17 +89,17 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
     };
 
     enum TokenAttribute {
-        TFF_TOKEN_ATTR_UNDEFINED = 0,
-        TFF_TOKEN_ATTR_UNKNOWN = 1 << 0,
-        TFF_TOKEN_ATTR_UNUSED = 1 << 1,
-        TFF_TOKEN_ATTR_NORMAL = 1 << 2,
+        TFF_TOKEN_ATTR_UNDEFINED = 1 << 0,
+        TFF_TOKEN_ATTR_NORMAL = 1 << 1,
+        TFF_TOKEN_ATTR_UNKNOWN = 1 << 2,
         TFF_TOKEN_ATTR_CONTROL = 1 << 3,
         TFF_TOKEN_ATTR_USER_DEFINED = 1 << 4,
-        TFF_TOKEN_ATTR_BYTE = 1 << 5,
-        TFF_TOKEN_ATTR_NORMALIZED = 1 << 6,
-        TFF_TOKEN_ATTR_LSTRIP = 1 << 7,
-        TFF_TOKEN_ATTR_RSTRIP = 1 << 8,
-        TFF_TOKEN_ATTR_SINGLE_WORD = 1 << 9,
+        TFF_TOKEN_ATTR_UNUSED = 1 << 5,
+        TFF_TOKEN_ATTR_BYTE = 1 << 6,
+        TFF_TOKEN_ATTR_NORMALIZED = 1 << 7,
+        TFF_TOKEN_ATTR_LSTRIP = 1 << 8,
+        TFF_TOKEN_ATTR_RSTRIP = 1 << 9,
+        TFF_TOKEN_ATTR_SINGLE_WORD = 1 << 10,
     };
 
     // pre-tokenization types
