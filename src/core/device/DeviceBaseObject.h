@@ -10,6 +10,7 @@
 #include <memory>
 
 namespace tff::core::device {
+
     class DEEP_TFF_API DeviceBaseObject : public tff::module::ModuleObject {
     public:
         DeviceBaseObject() = default;
@@ -32,6 +33,21 @@ namespace tff::core::device {
         virtual void device_init(size_t _device_id) = 0;
 
         virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &get_device_buffer_allocator() = 0;
+    public:
+        uint32_t _sched_priority = TFF_DEVICE_PRIORITY_DEFAULT;
+    };
+
+    // 优先级排序;
+    struct DevicePtrComparator {
+        bool operator()(
+            const std::shared_ptr<tff::core::device::DeviceBaseObject>& a,
+            const std::shared_ptr<tff::core::device::DeviceBaseObject>& b
+        ) const {
+            if (!a && !b) return false;
+            if (!a) return true;
+            if (!b) return false;
+            return a->_sched_priority > b->_sched_priority;  // 字典序降序
+        }
     };
 }
 

@@ -175,7 +175,7 @@ namespace tff::core::model {
         gguf_ctx->_offset = file_loader->tell();
         //
         for (size_t i = 0; i < gguf_ctx->_tensor_info.size(); ++i) {
-            const GGUFTensorInfo &info = gguf_ctx->_tensor_info[i];
+            GGUFTensorInfo &info = gguf_ctx->_tensor_info[i];
             if (info._offset != gguf_ctx->_size) {
                 tff::log::Logger::error("%s: tensor '%s' has offset %d, expected %ld \n",
                                         __func__, info._name.c_str(), info._offset, gguf_ctx->_size);
@@ -184,6 +184,7 @@ namespace tff::core::model {
                 return bRet;
             }
             size_t padded_size = TFF_PAD(info._tensor_ptr->get_bytes(), gguf_ctx->_alignment);
+            info._byte_size = padded_size;
             if (SIZE_MAX - gguf_ctx->_size < padded_size) {
                 tff::log::Logger::error("%s: tensor '%s' size overflow, cannot accumulate size %zu + %zu\n",
                                         __func__, info._name.c_str(), gguf_ctx->_size, padded_size);
@@ -191,6 +192,7 @@ namespace tff::core::model {
                 return bRet;
             }
             gguf_ctx->_size += padded_size;
+            gguf_ctx->_max_tensor_bytesize = gguf_ctx->_max_tensor_bytesize < padded_size ? padded_size : gguf_ctx->_max_tensor_bytesize;
         }
         //
         for (size_t i = 0; i < gguf_ctx->_tensor_info.size(); ++i) {

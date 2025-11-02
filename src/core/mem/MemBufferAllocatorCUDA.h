@@ -6,6 +6,7 @@
 #define TFFINFER_MEMBUFFERALLOCATORGPU_H
 #include "MemBufferAllocatorBaseObject.h"
 #include "ModuleFactory.h"
+#include "global/GlobalDefine.h"
 namespace tff::core::memory {
     class MemBufferAllocatorCUDA : public tff::core::memory::MemBufferAllocatorBaseObject {
     public:
@@ -27,7 +28,7 @@ namespace tff::core::memory {
 
         void memset_zero(void *ptr, size_t byte_size) override;
     };
-    REGISTER_MODULE_OBJECT(MemBufferAllocatorCUDA, MemBufferAllocatorBaseObject, "MEMORY", "CUDA")
+    REGISTER_MODULE_OBJECT(MemBufferAllocatorCUDA, MemBufferAllocatorBaseObject, MEMORY_ALLOCATOR_FLAG, DEVICE_BACKEND_TYPE_CUDA)
 }
 
 

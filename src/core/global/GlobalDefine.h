@@ -12,6 +12,8 @@ namespace tff::core::global {
 #define MODEL_DETECTOR_TYPE "ModelDetector"
 #define MODEL_LOADER_TYPE "ModelLoader"
 #define MODEL_READER_TYPE "ModelReader"
+#define MEMORY_ALLOCATOR_FLAG "MEMORY"
+
 #define DEVICE_BACKEND_FLAG "DEVICE"
 #define DEVICE_BACKEND_TYPE_CUDA "CUDA"
 #define DEVICE_BACKEND_TYPE_CPU "CPU"

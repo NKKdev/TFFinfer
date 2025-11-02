@@ -39,7 +39,7 @@ namespace tff::core::model {
             return -1;
         }
 
-    protected:
+    public:
         bool load_bpe();
 
         //
@@ -48,7 +48,7 @@ namespace tff::core::model {
         //
         void tokenize(const std::string &raw_text,
                       std::vector<int32_t> &token_vec,
-                      bool add_special, bool parse_special) const;
+                      bool add_special = false, bool parse_special = false) const;
         //
         void process_special_tokens();
         //
@@ -60,6 +60,14 @@ namespace tff::core::model {
 
         //
         int32_t token_to_string(int32_t token, char *buf, int32_t length, int32_t lstrip, bool special = true);
+        //
+        inline std::vector<int32_t> get_eos_tokens() const {
+            return this->_eos_tokens;
+        }
+        //
+        inline std::vector<int32_t> get_eog_tokens() const {
+            return this->_eog_tokens;
+        }
 
     public:
         //
@@ -96,6 +104,8 @@ namespace tff::core::model {
         //
         int32_t _linefeed_id;
         std::set<uint32_t> _special_eog_ids;
+        std::vector<int32_t> _eog_tokens;
+        std::vector<int32_t> _eos_tokens;
         //
         std::vector<uint32_t> _cache_special_tokens;
         std::vector<std::string> _cache_token_to_piece;

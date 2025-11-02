@@ -6,6 +6,7 @@
 #define TFFINFER_MEMBUFFERALLOCATORCPU_H
 #include "MemBufferAllocatorBaseObject.h"
 #include "ModuleFactory.h"
+#include "global/GlobalDefine.h"
 namespace tff::core::memory {
     class MemBufferAllocatorCPU :public tff::core::memory::MemBufferAllocatorBaseObject{
     public:
@@ -27,7 +28,7 @@ namespace tff::core::memory {
 
         void memset_zero(void *ptr, size_t byte_size) override;
     };
-    REGISTER_MODULE_OBJECT(MemBufferAllocatorCPU, MemBufferAllocatorBaseObject,"MEMORY", "CPU")
+    REGISTER_MODULE_OBJECT(MemBufferAllocatorCPU, MemBufferAllocatorBaseObject,MEMORY_ALLOCATOR_FLAG, DEVICE_BACKEND_TYPE_CPU)
 }
 
 #endif //TFFINFER_MEMBUFFERALLOCATORCPU_H

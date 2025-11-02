@@ -8,6 +8,12 @@
 
 namespace tff::core::device {
     //
+    enum DeviceSchedulingPriority {
+        TFF_DEVICE_PRIORITY_DEFAULT = 0,
+        TFF_DEVICE_PRIORITY_CPU = 1,
+        TFF_DEVICE_PRIORITY_GPU = 2,
+    };
+    //
     enum DeviceType {
         TFF_BACKEND_DEVICE_TYPE_UNKNOWN = 0,
         TFF_BACKEND_DEVICE_TYPE_CPU = 1,

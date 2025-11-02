@@ -89,6 +89,15 @@ namespace tff::core::memory {
         inline void set_tensor_type(const tff::core::memory::ModelTensorType &tensor_type) {
             this->_tensor_type = tensor_type;
         }
+        //
+        inline void release() {
+            _shape.clear();
+            if (_buffer) {
+                _allocator->release(_buffer->ptr());
+            }
+            _type_size = 0;
+            _blk_size = 0;
+        }
 
     private:
         bool _use_external = false;

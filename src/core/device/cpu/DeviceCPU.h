@@ -9,7 +9,9 @@
 namespace tff::core::device::cpu {
     class DeviceCPU : public DeviceBaseObject {
     public:
-        DeviceCPU() = default;
+        DeviceCPU() {
+            this->_sched_priority = TFF_DEVICE_PRIORITY_CPU;
+        };
 
         ~DeviceCPU() override = default;
 

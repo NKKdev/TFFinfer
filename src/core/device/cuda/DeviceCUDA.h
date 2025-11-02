@@ -11,7 +11,9 @@
 namespace tff::core::device::cuda {
     class DeviceCUDA final : public DeviceBaseObject {
     public:
-        DeviceCUDA()= default;
+        DeviceCUDA() {
+            this->_sched_priority = TFF_DEVICE_PRIORITY_GPU;
+        };
         ~DeviceCUDA() override= default;
     public:
         void get_device_id(std::vector<int> &_device_list) override;

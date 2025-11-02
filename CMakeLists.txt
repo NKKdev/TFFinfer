@@ -93,6 +93,12 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/factory/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/kernel/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/runtime/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/runtime/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/runtime/*.cu
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/quant/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/quant/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/quant/*.cu
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core/model/*.cu
@@ -109,16 +115,7 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        src/core/device/cpu/DeviceCPU.cpp
-        src/core/device/cpu/DeviceCPU.h
-        src/core/model/base/ModelCreatorBase.h
-        src/core/model/llama/LLAMACreator.h
-        src/core/quant/BaseDefine.h
-        src/taskgraph/include/TaskFlowSchedule.h
-        src/taskgraph/include/TaskflowInc.h
-        src/taskgraph/src/TaskFlowSchedule.cu
-)
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)
