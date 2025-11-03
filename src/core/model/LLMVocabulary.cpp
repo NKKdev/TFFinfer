@@ -4,7 +4,7 @@
 
 #include "LLMVocabulary.h"
 #include "BaseDefine.h"
-#include "ModelGlobalVar.h"
+#include "../global/ModelGlobalVar.h"
 #include "Logger.h"
 #include "util.h"
 #include "unicode.h"

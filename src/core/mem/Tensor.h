@@ -12,12 +12,12 @@
 #include "BaseDefine.h"
 
 namespace tff::core::memory {
-
     class Tensor {
     public:
-        Tensor(const tff::core::memory::DataType data_type, std::vector<int64_t> shapes, bool use_external = false,
+        Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
+               std::vector<int64_t> shapes = std::vector<int64_t>(), bool use_external = false,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
-                       nullptr) : _use_external(false), _data_type(data_type), _shape(std::move(shapes)),
+                       nullptr) : _is_allocated(false),_use_external(use_external), _data_type(data_type), _shape(std::move(shapes)),
                                   _allocator(std::move(alloc)) {
             this->set_dims(_shape.size());
             for (size_t i = 0; i < this->_shape.size(); ++i) {
@@ -25,17 +25,24 @@ namespace tff::core::memory {
             }
             this->set_data_type(data_type);
             if (!use_external) {
-                _buffer = std::make_shared<tff::core::memory::Memory>(
-                    type_traits_auto[data_type]._type_size * std::accumulate(
-                        _shape.begin(), _shape.end(), 1, std::multiplies<int64_t>()), nullptr, use_external,
-                    _allocator);
-                _buffer->allocate();
+                this->allocate();
             }
         }
 
         ~Tensor() = default;
 
     public:
+        //
+        inline void allocate() {
+            if (!_use_external) {
+                _buffer = std::make_shared<tff::core::memory::Memory>(
+                    type_traits_auto[this->_data_type]._type_size * std::accumulate(
+                        _shape.begin(), _shape.end(), 1, std::multiplies<int64_t>()), nullptr, _use_external,
+                    _allocator);
+                _buffer->allocate();
+                _is_allocated = true;
+            }
+        }
         //
         [[nodiscard]] inline size_t get_row_size() const {
             return _type_size * this->_shape[0] / type_traits_auto[_data_type]._blck_size;
@@ -63,8 +70,24 @@ namespace tff::core::memory {
         }
 
         //
+        inline std::vector<int64_t> &get_shape() {
+            return _shape;
+        }
+
+        //
         inline void set_shape(const size_t &n_dims, const size_t &index) {
             this->_shape[index] = n_dims;
+        }
+
+        //
+        inline void set_shape(const std::vector<int64_t> &shape) {
+            this->_shape = shape;
+            this->set_dims(this->_shape.size());
+        }
+
+        //
+        inline DataType get_data_type() const {
+            return this->_data_type;
         }
 
         //
@@ -82,13 +105,16 @@ namespace tff::core::memory {
 
         //
         void set_buffer_data(void *data, const size_t &buffer_size);
+
         //
         [[nodiscard]] inline tff::core::memory::ModelTensorType get_tensor_type() const {
             return this->_tensor_type;
         }
+
         inline void set_tensor_type(const tff::core::memory::ModelTensorType &tensor_type) {
             this->_tensor_type = tensor_type;
         }
+
         //
         inline void release() {
             _shape.clear();
@@ -99,7 +125,26 @@ namespace tff::core::memory {
             _blk_size = 0;
         }
 
+        //
+        inline std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &get_allocator() {
+            return _allocator;
+        }
+        //
+        inline void set_allocator(const std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &allocator) {
+            _allocator = allocator;
+        }
+        //
+        inline bool is_allocated() const {
+            return _is_allocated;
+        }
+        //
+        inline std::shared_ptr<tff::core::memory::Memory> &get_buffer() {
+            return _buffer;
+        }
+
     private:
+        //
+        bool _is_allocated;
         bool _use_external = false;
         size_t _n_dims{};
         tff::core::memory::DataType _data_type;

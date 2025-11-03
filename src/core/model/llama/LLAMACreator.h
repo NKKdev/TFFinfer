@@ -9,9 +9,10 @@
 
 #include "mem/MemBufferAllocatorBaseObject.h"
 #include "graph/GraphNode.h"
-#include "model/ModelGlobalVar.h"
+#include "global/ModelGlobalVar.h"
 #include "global/GlobalDefine.h"
 #include "FunctionFactory.h"
+using namespace tff::core::global;
 namespace tff::core::model {
     class LLAMACreator : public ModelCreatorBase<LLAMACreator> {
     public:
@@ -19,23 +20,24 @@ namespace tff::core::model {
                                       std::shared_ptr<tff::core::graph::GraphNode> &layer_node,
                                       const size_t &total_layer_num = -1, const size_t &layer_index = -1) {
             auto &layer_info = LLM_LAYER_OP_INFOS.find(tensor_ptr->get_tensor_type())->second;
-            layer_node = std::make_shared<tff::core::graph::GraphNode>();
-            layer_node->_layer_id = layer_index;
-            layer_node->_layer_type = layer_info.first;
-            layer_node->_op_type = layer_info.second;
-            layer_node->_src_tensors_ptr.push_back(tensor_ptr);
+            layer_node = std::make_shared<tff::core::graph::GraphNode>("");
+            layer_node->set_layer_id(layer_index);
+            layer_node->set_layer_type(layer_info.first);
+            layer_node->set_op_type(layer_info.second);
+            std::vector<std::shared_ptr<tff::core::memory::Tensor> > _src_tensors_ptr;
+            _src_tensors_ptr.push_back(tensor_ptr);
+            layer_node->set_inputs(_src_tensors_ptr);
             switch (layer_info.first) {
                 case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
                     auto device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
                         DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CPU);
-                    layer_node->_devices_list.insert(std::make_pair(0,device));
+                    layer_node->bind_devices(device);
                     break;
                 }
                 case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT: {
                     auto device_cuda = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
                         DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA);
-                    layer_node->_devices_list.insert(std::make_pair(0,device_cuda));
-
+                    layer_node->bind_devices(device_cuda);
                     break;
                 }
                 case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING: {
@@ -68,14 +70,27 @@ namespace tff::core::model {
                     const int layer_gpu = std::upper_bound(device_splits.begin(), device_splits.begin() + device_size,
                                                            float(layer_index) / total_layer_num) - device_splits.
                                           begin();
-                    layer_node->_devices_list.insert(std::make_pair(layer_gpu,device_cuda));
+                    layer_node->bind_devices(device_cuda);
                     break;
                 }
             }
         }
         //
+        static void build_graph(std::unordered_map<tff::core::model::ModelTensorLayerType, std::vector<std::shared_ptr<
+            tff::core::graph::GraphNode> > > &_layer_map,
+            std::shared_ptr<tff::core::graph::Graph> &graph_ptr) {
+            graph_ptr = std::make_shared<tff::core::graph::Graph>();
+            auto repeating_layer_vec = _layer_map.find(tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+            if (repeating_layer_vec != _layer_map.end()) {
+                for (auto &layer : repeating_layer_vec->second) {
+                    //todo
+                }
+            }
+        }
+
+        //
         static const char *get_model_name() {
-            return tff::core::model::LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->second;
+            return tff::core::global::LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->second;
         }
     };
 

@@ -5,14 +5,14 @@
 #ifndef TFFINFER_MODELGLOBALVAR_H
 #define TFFINFER_MODELGLOBALVAR_H
 #include <unordered_map>
-#include "BaseDefine.h"
+#include "../model/BaseDefine.h"
 #include "graph/GraphNode.h"
 #include "graph/BaseDefine.h"
 #include "mem/BaseDefine.h"
-#include "LLAMADefine.h"
+#include "../model/LLAMADefine.h"
 #include "fmt/format.h"
-
-namespace tff::core::model {
+using namespace tff::core::model;
+namespace tff::core::global {
     static const std::unordered_map<tff::core::model::ModelArchitectureType, const char *> LLM_ARCH_NAMES = {
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_UNKNOWN, "unknow"},
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA, "llama"},
@@ -949,13 +949,121 @@ namespace tff::core::model {
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA, LLAMA_MAX_LAYERS},
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_UNKNOWN, -1},
     };
+    static const std::unordered_map<tff::core::graph::TffOpType, const char *> TFF_OP_TYPE_MAP = {
+        {tff::core::graph::TffOpType::TFF_OP_NONE, "none"},
 
-    template<typename T> struct is_vector : std::false_type {};
-    template<typename T> struct is_vector<std::vector<T>> : std::true_type {};
-    template<typename T> constexpr bool is_vector_v = is_vector<T>::value;
+        {tff::core::graph::TffOpType::TFF_OP_DUP, "dup"},
+        {tff::core::graph::TffOpType::TFF_OP_ADD, "add"},
+        {tff::core::graph::TffOpType::TFF_OP_ADD_ID, "add_id"},
+        {tff::core::graph::TffOpType::TFF_OP_ADD1, "add1"},
+        {tff::core::graph::TffOpType::TFF_OP_ACC, "acc"},
+        {tff::core::graph::TffOpType::TFF_OP_SUB, "sub"},
+        {tff::core::graph::TffOpType::TFF_OP_MUL, "mul"},
+        {tff::core::graph::TffOpType::TFF_OP_DIV, "div"},
+        {tff::core::graph::TffOpType::TFF_OP_SQR, "sqr"},
+        {tff::core::graph::TffOpType::TFF_OP_SQRT, "sqrt"},
+        {tff::core::graph::TffOpType::TFF_OP_LOG, "log"},
+        {tff::core::graph::TffOpType::TFF_OP_SIN, "sin"},
+        {tff::core::graph::TffOpType::TFF_OP_COS, "cos"},
+        {tff::core::graph::TffOpType::TFF_OP_SUM, "sum"},
+        {tff::core::graph::TffOpType::TFF_OP_SUM_ROWS, "sum_rows"},
+        {tff::core::graph::TffOpType::TFF_OP_MEAN, "mean"},
+        {tff::core::graph::TffOpType::TFF_OP_ARGMAX, "argmax"},
+        {tff::core::graph::TffOpType::TFF_OP_COUNT_EQUAL, "count_equal"},
+        {tff::core::graph::TffOpType::TFF_OP_REPEAT, "repeat"},
+        {tff::core::graph::TffOpType::TFF_OP_REPEAT_BACK, "repeat_back"},
+        {tff::core::graph::TffOpType::TFF_OP_CONCAT, "concat"},
+        {tff::core::graph::TffOpType::TFF_OP_SILU_BACK, "silu_back"},
+        {tff::core::graph::TffOpType::TFF_OP_NORM, "norm"}, // normalize
+        {tff::core::graph::TffOpType::TFF_OP_RMS_NORM, "rms_norm"},
+        {tff::core::graph::TffOpType::TFF_OP_RMS_NORM_BACK, "rms_norm_back"},
+        {tff::core::graph::TffOpType::TFF_OP_GROUP_NORM, "group_norm"},
+        {tff::core::graph::TffOpType::TFF_OP_L2_NORM, "l2_norm"},
+
+        {tff::core::graph::TffOpType::TFF_OP_MUL_MAT, "mul_mat"},
+        {tff::core::graph::TffOpType::TFF_OP_MUL_MAT_ID, "mul_mat_id"},
+        {tff::core::graph::TffOpType::TFF_OP_OUT_PROD, "out_prod"},
+
+        {tff::core::graph::TffOpType::TFF_OP_SCALE, "scale"},
+        {tff::core::graph::TffOpType::TFF_OP_SET, "set"},
+        {tff::core::graph::TffOpType::TFF_OP_CPY, "cpy"},
+        {tff::core::graph::TffOpType::TFF_OP_CONT, "cont"},
+        {tff::core::graph::TffOpType::TFF_OP_RESHAPE, "reshape"},
+        {tff::core::graph::TffOpType::TFF_OP_VIEW, "view"},
+        {tff::core::graph::TffOpType::TFF_OP_PERMUTE, "permute"},
+        {tff::core::graph::TffOpType::TFF_OP_TRANSPOSE, "transpose"},
+        {tff::core::graph::TffOpType::TFF_OP_GET_ROWS, "get_rows"},
+        {tff::core::graph::TffOpType::TFF_OP_GET_ROWS_BACK, "get_rows_back"},
+        {tff::core::graph::TffOpType::TFF_OP_SET_ROWS, "set_rows"},
+        {tff::core::graph::TffOpType::TFF_OP_DIAG, "diag"},
+        {tff::core::graph::TffOpType::TFF_OP_DIAG_MASK_INF, "diag_mask_inf"},
+        {tff::core::graph::TffOpType::TFF_OP_DIAG_MASK_ZERO, "diag_mask_zero"},
+        {tff::core::graph::TffOpType::TFF_OP_SOFT_MAX, "soft_max"},
+        {tff::core::graph::TffOpType::TFF_OP_SOFT_MAX_BACK, "soft_max_back"},
+        {tff::core::graph::TffOpType::TFF_OP_ROPE, "rope"},
+        {tff::core::graph::TffOpType::TFF_OP_ROPE_BACK, "rope_back"},
+        {tff::core::graph::TffOpType::TFF_OP_CLAMP, "clamp"},
+        {tff::core::graph::TffOpType::TFF_OP_CONV_TRANSPOSE_1D, "conv_transpose_1d"},
+        {tff::core::graph::TffOpType::TFF_OP_IM2COL, "im2col"},
+        {tff::core::graph::TffOpType::TFF_OP_IM2COL_BACK, "im2col_back"},
+        {tff::core::graph::TffOpType::TFF_OP_IM2COL_3D, "im2col_3d"},
+        {tff::core::graph::TffOpType::TFF_OP_CONV_2D, "conv_2d"},
+        {tff::core::graph::TffOpType::TFF_OP_CONV_3D, "conv_3d"},
+        {tff::core::graph::TffOpType::TFF_OP_CONV_2D_DW, "conv_2d_dw"},
+        {tff::core::graph::TffOpType::TFF_OP_CONV_TRANSPOSE_2D, "conv_transpose_2d"},
+        {tff::core::graph::TffOpType::TFF_OP_POOL_1D, "pool_1d"},
+        {tff::core::graph::TffOpType::TFF_OP_POOL_2D, "pool_2d"},
+        {tff::core::graph::TffOpType::TFF_OP_POOL_2D_BACK, "pool_2d_back"},
+        {tff::core::graph::TffOpType::TFF_OP_UPSCALE, "upscale"},
+        {tff::core::graph::TffOpType::TFF_OP_PAD, "pad"},
+        {tff::core::graph::TffOpType::TFF_OP_PAD_REFLECT_1D, "pad_reflect_1d"},
+        {tff::core::graph::TffOpType::TFF_OP_ROLL, "roll"},
+        {tff::core::graph::TffOpType::TFF_OP_ARANGE, "arange"},
+        {tff::core::graph::TffOpType::TFF_OP_TIMESTEP_EMBEDDING, "timestep_embedding"},
+        {tff::core::graph::TffOpType::TFF_OP_ARGSORT, "argsort"},
+        {tff::core::graph::TffOpType::TFF_OP_LEAKY_RELU, "leaky_relu"},
+
+        {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT, "flash_attn_ext"},
+        {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_BACK, "flash_attn_back"},
+        {tff::core::graph::TffOpType::TFF_OP_SSM_CONV, "ssm_conv"},
+        {tff::core::graph::TffOpType::TFF_OP_SSM_SCAN, "ssm_scan"},
+        {tff::core::graph::TffOpType::TFF_OP_WIN_PART, "win_part"},
+        {tff::core::graph::TffOpType::TFF_OP_WIN_UNPART, "win_unpart"},
+        {tff::core::graph::TffOpType::TFF_OP_GET_REL_POS, "get_rel_pos"},
+        {tff::core::graph::TffOpType::TFF_OP_ADD_REL_POS, "add_rel_pos"},
+        {tff::core::graph::TffOpType::TFF_OP_RWKV_WKV6, "rwkv_wkv6"},
+        {tff::core::graph::TffOpType::TFF_OP_GATED_LINEAR_ATTN, "gated_linear_attn"},
+        {tff::core::graph::TffOpType::TFF_OP_RWKV_WKV7, "rwkv_wkv7"},
+
+        {tff::core::graph::TffOpType::TFF_OP_UNARY, "unary"},
+
+        {tff::core::graph::TffOpType::TFF_OP_MAP_CUSTOM1, "map_custom1"},
+        {tff::core::graph::TffOpType::TFF_OP_MAP_CUSTOM2, "map_custom2"},
+        {tff::core::graph::TffOpType::TFF_OP_MAP_CUSTOM3, "map_custom3"},
+
+        {tff::core::graph::TffOpType::TFF_OP_CUSTOM, "custom"},
+
+        {tff::core::graph::TffOpType::TFF_OP_CROSS_ENTROPY_LOSS, "cross_entropy_loss"},
+        {tff::core::graph::TffOpType::TFF_OP_CROSS_ENTROPY_LOSS_BACK, "cross_entropy_loss_back"},
+        {tff::core::graph::TffOpType::TFF_OP_OPT_STEP_ADAMW, "opt_step_adamw"},
+        {tff::core::graph::TffOpType::TFF_OP_OPT_STEP_SGD, "opt_step_sgd"},
+
+        {tff::core::graph::TffOpType::TFF_OP_GLU, "glu"},
+    };
+
+    template<typename T>
+    struct is_vector : std::false_type {
+    };
+
+    template<typename T>
+    struct is_vector<std::vector<T> > : std::true_type {
+    };
+
+    template<typename T>
+    constexpr bool is_vector_v = is_vector<T>::value;
 
     template<typename To, typename From>
-    std::optional<To> try_convert(const From& value) {
+    std::optional<To> try_convert(const From &value) {
         if constexpr (std::is_same_v<To, From>) {
             return value;
         } else if constexpr (std::is_arithmetic_v<To> && std::is_arithmetic_v<From>) {
@@ -966,11 +1074,13 @@ namespace tff::core::model {
             return std::nullopt;
         }
     }
+
     //
     //
     template<class Key, class ValueType, class DataType>
-    std::vector<DataType> get_general_value(const std::string key_value, const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
-         std::vector<DataType> result;
+    std::vector<DataType> get_general_value(const std::string key_value,
+                                            const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
+        std::vector<DataType> result;
 
 
         auto kv_it = ctx->_kv.find(key_value);
@@ -1028,21 +1138,25 @@ namespace tff::core::model {
         }, kvval);
         return result;
     }
+
     static inline bool is_general_kv(const std::string &kv_value) {
         if (kv_value.find("%") != kv_value.npos) {
             return false;
         }
         return true;
     }
+
     //
     template<class Key, class ValueType, class DataType>
     std::vector<DataType> get_value(Key key_value,
                                     const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
         std::vector<DataType> result;
         std::string key_name(
-            tff::core::model::LLM_KV_NAMES.find(key_value)->second);
+            tff::core::global::LLM_KV_NAMES.find(key_value)->second);
         if (!is_general_kv(key_name)) {
-            std::string arch_name(tff::core::model::LLM_KV_NAMES.find(tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE)->second);
+            std::string arch_name(
+                tff::core::global::LLM_KV_NAMES.find(
+                    tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE)->second);
             arch_name = get_general_value<Key, std::string, std::string>(arch_name, ctx)[0];
             char buffer[256];
             std::sprintf(buffer, key_name.c_str(), arch_name.c_str());
@@ -1054,7 +1168,5 @@ namespace tff::core::model {
         }
         return result;
     }
-
-
 }
 #endif //TFFINFER_MODELGLOBALVAR_H

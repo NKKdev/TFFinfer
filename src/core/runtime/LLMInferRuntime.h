@@ -12,7 +12,7 @@
 #include "device/DeviceBaseObject.h"
 #include "model/base/ModelLoaderBase.h"
 #include "ModuleFactory.h"
-#include "model/ModelGlobalVar.h"
+#include "../global/ModelGlobalVar.h"
 #include "graph/GraphNode.h"
 #include "taskgraph/include/TaskFlowSchedule.h"
 #include "mem/LLMKVCache.h"
@@ -53,7 +53,7 @@ namespace tff::core::runtime {
         void load_stats();
 
         inline void load_arch() {
-            this->_arch_name = tff::core::model::LLM_ARCH_NAMES.find(this->_architecture)->second;
+            this->_arch_name = tff::core::global::LLM_ARCH_NAMES.find(this->_architecture)->second;
         }
 
 

@@ -4,7 +4,7 @@
 
 #ifndef TFFINFER_LLAMALOADER_H
 #define TFFINFER_LLAMALOADER_H
-#include "model/ModelGlobalVar.h"
+#include "global/ModelGlobalVar.h"
 #include "model/base/ModelLoaderBase.h"
 #include "model/FileLoader.h"
 #include "model/BaseDefine.h"

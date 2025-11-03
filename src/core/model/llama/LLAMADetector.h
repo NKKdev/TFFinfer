@@ -4,7 +4,7 @@
 
 #ifndef TFFINFER_LLAMADETECTOR_H
 #define TFFINFER_LLAMADETECTOR_H
-#include "model/ModelGlobalVar.h"
+#include "../../global/ModelGlobalVar.h"
 #include "model/base/ModelLoaderBase.h"
 #include "model/base/ModelDetectorBase.h"
 #include "model/BaseDefine.h"

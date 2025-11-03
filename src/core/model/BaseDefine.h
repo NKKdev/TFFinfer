@@ -10,7 +10,8 @@
 #include "mem/Tensor.h"
 #include "GGUFDef.h"
 #include "Logger.h"
-
+#include "global/OPDefine.h"
+using namespace tff::core::global;
 namespace tff::core::model {
 #define TFF_TENSOR_MAX_DIMS 4
 #define LOAD_KEY_VALUES(ValueType,DataType, key_value, dst) \
@@ -400,6 +401,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
 
     //
     enum ModelTensorLayerType {
+        LLM_TENSOR_LAYER_NONE,
         LLM_TENSOR_LAYER_INPUT,
         LLM_TENSOR_LAYER_REPEATING,
         LLM_TENSOR_LAYER_OUTPUT,

@@ -21,6 +21,8 @@ namespace tff::core::memory {
 
         virtual void memcpy(const void* src_ptr, void* dest_ptr, size_t byte_size,
                             tff::core::memory::MemCpyKind _memcpy_kind) const = 0;
+        virtual void memcpy_async(const void* src_ptr, void* dest_ptr, size_t byte_size,
+        tff::core::memory::MemCpyKind _memcpy_kind) const = 0;
 
         virtual void memset_zero(void* ptr, size_t byte_size) = 0;
     };

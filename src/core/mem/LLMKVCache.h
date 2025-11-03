@@ -106,14 +106,14 @@ namespace tff::core::memory {
     };
 
     //
-    class SequenceContext : public std::enable_shared_from_this<SequenceContext> {
+    class LayerKVContext : public std::enable_shared_from_this<LayerKVContext> {
     public:
-        SequenceContext();
+        LayerKVContext();
 
-        SequenceContext(const int sid, const int lid) : _seq_id(sid), _layer_id(lid) {
+        LayerKVContext(const int sid, const int lid) : _seq_id(sid), _layer_id(lid) {
         }
 
-        ~SequenceContext(){};
+        ~LayerKVContext()= default;
 
     public:
         int get_num_pages() const { return (int) _page_table.size(); }
@@ -204,7 +204,7 @@ namespace tff::core::memory {
 
 
         // 获取或创建某个 sequence 在某层的 context
-        SequenceContext *get_context(int seq_id, int layer_id) {
+        LayerKVContext *get_context(int seq_id, int layer_id) {
             const int key = make_key(seq_id, layer_id);
             std::lock_guard<std::mutex> lock(global_mutex);
 
@@ -213,22 +213,24 @@ namespace tff::core::memory {
                 return it->second.get();
             }
 
-            auto ctx = std::make_unique<SequenceContext>(seq_id, layer_id);
-            SequenceContext *ptr = ctx.get();
+            auto ctx = std::make_unique<LayerKVContext>(seq_id, layer_id);
+            LayerKVContext *ptr = ctx.get();
             this->_seq_contexts[key] = std::move(ctx);
             return ptr;
         }
 
         // 写入当前 token 的 K/V（追加到指定 sequence 的 cache）
         bool set(int seq_id, int layer_id, const DeviceTensor *cur_k, const DeviceTensor *cur_v) {
-            SequenceContext *ctx = get_context(seq_id, layer_id);
+            LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (!ctx->append_token()) {
                 return false; // 内存不足
             }
 
             int token_pos = ctx->_num_tokens - 1;
-            int page_idx = token_pos / PAGE_SIZE;
-            int offset = token_pos % PAGE_SIZE;
+
+            auto index_pair = ctx->get_location(token_pos);
+            const int page_idx = index_pair.first;
+            const int offset   = index_pair.second;
 
             PageID page_id = ctx->_page_table[page_idx];
             //DeviceTensor* dst_k = slice_page(_page_manager->get_k(page_id), offset);
@@ -246,7 +248,7 @@ namespace tff::core::memory {
         std::tuple<std::shared_ptr<tff::core::memory::Tensor>, std::shared_ptr<tff::core::memory::Tensor>, const PageID
             *, int>
         get(int seq_id, int layer_id, int from_token = 0) {
-            const SequenceContext *ctx = get_context(seq_id, layer_id);
+            const LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (from_token >= ctx->_num_tokens) {
                 return {nullptr, nullptr, nullptr, 0};
             }
@@ -283,7 +285,7 @@ namespace tff::core::memory {
         KVConfig _config;
         //
         std::shared_ptr<PageManager> _page_manager;
-        std::unordered_map<int, std::unique_ptr<SequenceContext> > _seq_contexts;
+        std::unordered_map<int, std::unique_ptr<LayerKVContext> > _seq_contexts;
         mutable std::mutex global_mutex; // 仅当 thread_safe == true 时使用
     };
 }

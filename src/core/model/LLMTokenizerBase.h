@@ -9,8 +9,9 @@
 #include <queue>
 #include "ModuleFactory.h"
 #include "ModuleObject.h"
-#include "ModelGlobalVar.h"
+#include "../global/ModelGlobalVar.h"
 #include "BaseDefine.h"
+using namespace tff::core::global;
 namespace tff::core::model {
     struct LLMSymbol {
         int32_t _prev;

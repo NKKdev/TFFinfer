@@ -18,10 +18,24 @@ namespace tff::core::memory {
 
     void tff::core::memory::MemBufferAllocatorCUDA::memcpy(const void *src_ptr, void *dest_ptr, size_t byte_size,
         tff::core::memory::MemCpyKind _memcpy_kind) const {
-        if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_CPU2GPU) {
+        if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
-        }else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_GPU2CPU) {
+        }else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost));
+        }else {
+            CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToDevice));
+        }
+
+    }
+
+    void MemBufferAllocatorCUDA::memcpy_async(const void *src_ptr, void *dest_ptr, size_t byte_size,
+        tff::core::memory::MemCpyKind _memcpy_kind) const {
+        if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
+            CudaSafeCall(cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
+        }else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
+            CudaSafeCall(cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost));
+        }else {
+            CudaSafeCall(cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToDevice));
         }
     }
 

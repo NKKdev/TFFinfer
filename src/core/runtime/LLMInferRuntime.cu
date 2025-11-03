@@ -14,6 +14,7 @@ namespace tff::core::runtime {
                                      const tff::core::model::ModelConfig &params) {
         bool bRet = true;
         auto model_detector = tff::core::model::ModelDetectyorRegistry::get().find_dector(params._architectures);
+        model_detector->model_registry();
         this->_architecture = model_detector->arch();
         this->_model_loader = model_detector->create_loader();
         this->_model_loader->load_from_file(model_files_path, params._use_mmap, params._check_tensors);
@@ -27,7 +28,8 @@ namespace tff::core::runtime {
 
     bool LLMInferRuntime::load_model_config(const std::string &model_config_file_path,
                                             tff::core::model::ModelConfig &params) {
-        tff::core::model::ModelConfigReader::Config cfg = tff::core::model::ModelConfigReader::read(model_config_file_path);
+        tff::core::model::ModelConfigReader::Config cfg = tff::core::model::ModelConfigReader::read(
+            model_config_file_path);
         params._architectures = cfg.architectures;
         return true;
     }
@@ -52,43 +54,102 @@ namespace tff::core::runtime {
     }
 
     bool LLMInferRuntime::init_runtime_context() {
+        //
         tff::core::memory::LLMKVCache::KVConfig kv_cfg;
         kv_cfg._n_embd_head = this->_model_config._n_embd;
         kv_cfg._n_head = this->_model_config._n_head_arr.size();
         kv_cfg._n_head_kv = this->_model_config._n_embd_head_k;
         kv_cfg._n_layer = this->_model_config._n_layer;
         kv_cfg._use_sliding_window = this->_model_config._n_swa != 0;
+
         const auto device = *this->_devices.begin();
+        if (!device) {
+            tff::log::Logger::error("No valid device found in _devices.");
+            return false;
+        }
+        //
         const float one_page_size = 2 * kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE *
                                     tff::core::memory::type_traits_auto[this->_model_config._kv_data_type]._type_size;
+        tff::log::Logger::info("KV Cache: Size per page: {:.2f} bytes", one_page_size);
+
+        //
         std::vector<int> device_ids;
         device->get_device_id(device_ids);
+        if (device_ids.empty()) {
+            tff::log::Logger::error("Failed to get device IDs.");
+            return false;
+        }
+        tff::log::Logger::info("KV Cache: Target devices: {}", device_ids);
+
         float free_mem_sum = 0;
-        for (const auto device_id : device_ids) {\
+        for (const auto device_id: device_ids) {
             size_t free_mem = 0;
             size_t total_mem = 0;
             device->get_device_mem(device_id, &free_mem, &total_mem);
+            tff::log::Logger::info("Device {}: Total memory: {} bytes, Free memory: {} bytes",
+                                   device_id, total_mem, free_mem);
             free_mem_sum += free_mem;
         }
-        free_mem_sum -= this->_model_loader->get_model_context()->_max_tensor_bytesize * 2;//计算一层
-        kv_cfg._total_pages = int(free_mem_sum / one_page_size);
-        this->_kv_cache_ptr = std::make_unique<tff::core::memory::LLMKVCache>(this->_model_config._kv_data_type, kv_cfg,
-                                                                              device->get_device_buffer_allocator());
+
+        //预留模型上下文至少一层权重和其他开销的显存;
+        const size_t context_reserve = this->_model_loader->get_model_context()->_max_tensor_bytesize * 2;
+        free_mem_sum -= context_reserve;
+        tff::log::Logger::info("Reserved memory for model context and overhead: {} bytes", context_reserve);
+
+        if (free_mem_sum <= 0) {
+            tff::log::Logger::error("Insufficient GPU memory. After reservation, free memory is {} bytes (<= 0).",
+                                    free_mem_sum);
+            return false;
+        }
+
+        //计算总页数并创建KV Cache
+        kv_cfg._total_pages = static_cast<int>(free_mem_sum / one_page_size);
+        tff::log::Logger::info("KV Cache: Total available free memory for KV: {} bytes",
+                               static_cast<size_t>(free_mem_sum));
+        tff::log::Logger::info("KV Cache: Total pages calculated: {} ({} bytes per page)",
+                               kv_cfg._total_pages, static_cast<size_t>(one_page_size));
+
+        if (kv_cfg._total_pages == 0) {
+            tff::log::Logger::error(
+                "Calculated total KV cache pages is 0. Available memory ({}) is less than one page size ({}).",
+                static_cast<size_t>(free_mem_sum), static_cast<size_t>(one_page_size));
+            return false;
+        }
+
+        try {
+            this->_kv_cache_ptr = std::make_unique<tff::core::memory::LLMKVCache>(
+                this->_model_config._kv_data_type,
+                kv_cfg,
+                device->get_device_buffer_allocator()
+            );
+            tff::log::Logger::info("KV Cache successfully initialized with {} pages.", kv_cfg._total_pages);
+        } catch (const std::exception &e) {
+            tff::log::Logger::error("Failed to create LLMKVCache instance. Exception: {}", e.what());
+            return false;
+        } catch (...) {
+            tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
+            return false;
+        }
+
+        tff::log::Logger::info("LLMInferRuntime context initialized successfully.");
+        return true; // 初始化成功
     }
 
     bool LLMInferRuntime::init_graph() {
-
+        if (this->_layer_map.empty()) {
+            tff::log::Logger::error("model layer is invalid!!\n");
+            return false;
+        }
+        tff::log::Logger::info("Initializing graph");
 
         return true;
     }
 
     bool LLMInferRuntime::prefill(const std::string &prompt) {
-
         return true;
     }
 
     bool LLMInferRuntime::decode(const int &n_predict, std::string &generate_str) {
-
         return true;
     }
 
@@ -132,7 +193,7 @@ namespace tff::core::runtime {
 
     //
     bool LLMInferRuntime::load_layers() {
-        const std::string &name = std::string(tff::core::model::LLM_ARCH_NAMES.find(this->_architecture)->second);
+        const std::string &name = std::string(tff::core::global::LLM_ARCH_NAMES.find(this->_architecture)->second);
         auto &weight_map = this->_model_loader->get_weight_map();
         size_t total_layer_num = -1;
         size_t layer_index = -1;
@@ -143,7 +204,7 @@ namespace tff::core::runtime {
                 std::shared_ptr<tff::core::graph::GraphNode> &,
                 const size_t &, const size_t &)>(CREATE_LAYER_FLAG, name);
             auto tensor = weight.second._tensor_ptr;
-            auto &layer_info = tff::core::model::LLM_LAYER_OP_INFOS.find(tensor->get_tensor_type())->second;
+            auto &layer_info = tff::core::global::LLM_LAYER_OP_INFOS.find(tensor->get_tensor_type())->second;
             if (layer_info.first == tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING) {
                 total_layer_num = this->_model_config._n_layer;
                 auto get_layer_index = [](const std::string &layer_name) -> size_t {
@@ -156,7 +217,7 @@ namespace tff::core::runtime {
             }
             if (callback) {
                 callback(tensor, layer_node, total_layer_num, layer_index);
-                layer_node->_file_idx = weight.second._idx;
+                layer_node->set_file_idx(weight.second._idx);
                 this->_layer_map[layer_info.first].push_back(layer_node);
             }
         }

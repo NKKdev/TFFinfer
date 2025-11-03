@@ -4,10 +4,11 @@
 
 #ifndef TFFINFER_DEVICEBASEOBJECT_H
 #define TFFINFER_DEVICEBASEOBJECT_H
+#include <memory>
 #include "ModuleObject.h"
 #include "BaseDefine.h"
-#include "../mem/MemBufferAllocatorBaseObject.h"
-#include <memory>
+#include "mem/MemBufferAllocatorBaseObject.h"
+
 
 namespace tff::core::device {
 

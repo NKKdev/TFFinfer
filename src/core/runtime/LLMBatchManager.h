@@ -13,16 +13,17 @@
 #include "model/LLMVocabulary.h"
 
 namespace tff::core::runtime {
-    class LLMSeq {
+    class LLMSeq :public std::enable_shared_from_this<LLMSeq>{
     public:
-        LLMSeq();
+        LLMSeq() = default;
 
         LLMSeq(const int32_t id, const std::vector<int32_t> &eos_ids, const std::vector<int32_t> &eog_ids) : _seq_id(id), _is_finished(false),
                                                                                _eos_token_ids(eos_ids),
-                                                                               _eog_token_ids(eog_ids) {
+                                                                               _eog_token_ids(eog_ids),
+        _parent_seq_id(-1),_shared_prefix_len(0), _is_prefilled(false){
         }
 
-        ~LLMSeq();
+        ~LLMSeq() = default;
 
     public:
         inline void append_token(const int32_t token) {
@@ -52,47 +53,51 @@ namespace tff::core::runtime {
         std::vector<int32_t> _eog_token_ids;
         int _current_pos = 0;
         bool _is_prompt_done = false;
+
+        int32_t _parent_seq_id;           // 父 sequence ID，-1 表示无父
+        uint32_t _shared_prefix_len;      // 与父共享多少个 token
+        bool _is_prefilled;               // 是否已初始化（避免重复处理）
     };
 
-    class LLMBatch {
+    class LLMBatch :public std::enable_shared_from_this<LLMBatch>{
     public:
-        LLMBatch();
+        LLMBatch() = default;
 
-        ~LLMBatch();
+        ~LLMBatch() = default;
 
     public:
         uint32_t _n_tokens;
-        std::vector<int32_t> _tokens;
+        std::vector<uint32_t> _tokens;
         std::vector<float> _embd;
         std::vector<int32_t> _pos;
-        std::vector<int32_t> _n_seq_id;
-        std::vector<std::vector<int32_t> > _seq_id_belong_to;
+        std::vector<int32_t> _token_seq_ids;
         std::vector<int8_t> _logits;
-        std::set<int32_t> _seq_id_unq;
     };
 
-    class LLMBatchManager {
+    class LLMBatchManager :public std::enable_shared_from_this<LLMBatchManager>{
     public:
-        LLMBatchManager();
+        LLMBatchManager() = default;
 
-        ~LLMBatchManager();
+        ~LLMBatchManager() = default;
 
     public:
         bool init(const std::map<int, std::string> &seq_prompt,
-                  std::shared_ptr<tff::core::model::LLMLLaMaVocabulary> &vocabulary_ptr,
+                  const std::shared_ptr<tff::core::model::LLMLLaMaVocabulary> &vocabulary_ptr,
                   bool output_all = false);
 
         // 分割策略 1：简单打包（填满为止）
-        std::vector<std::shared_ptr<LLMBatch> > split_simple();
+        void split_simple();
 
         // 分割策略 2：等长 sequence 分组
-        std::vector<std::shared_ptr<LLMBatch> > split_equal();
+        void split_equal();
 
         // 分割策略 3：每个 ubatch 一个 sequence（流式生成）
-        std::vector<std::shared_ptr<LLMBatch> > split_seq();
+        void split_seq();
 
         // 获取所有 sequence 的当前状态（用于 KV Cache 管理）
-        const std::map<uint32_t, std::shared_ptr<LLMSeq> > &get_sequence() const;
+        [[nodiscard]] const std::map<uint32_t, std::shared_ptr<LLMSeq> > &get_sequence() const {
+            return this->_sequence;
+        }
 
     private:
         // 辅助函数：根据策略分组 token 索引
@@ -102,8 +107,9 @@ namespace tff::core::runtime {
         std::shared_ptr<LLMBatch> build_sub_batch(const std::vector<int> &token_indices);
 
     public:
-        int32_t _n_batch;
-        int32_t _n_seq;
+        uint32_t _n_stream{};
+        int32_t _max_batch_size{};
+        int32_t _max_seq_size{};
         std::shared_ptr<LLMBatch> _main_batch;
         std::vector<std::shared_ptr<LLMBatch> > _ubatches;
         std::shared_ptr<tff::core::model::LLMLLaMaVocabulary> _vocabulary;

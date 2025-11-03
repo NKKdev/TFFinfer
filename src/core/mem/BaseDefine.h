@@ -10,8 +10,9 @@
 namespace tff::core::memory {
     enum MemCpyKind {
         TFF_MEM_CPY_TYPE_UNKNOWN = 0,
-        TFF_MEM_CPY_TYPE_GPU2CPU = 1,
-        TFF_MEM_CPY_TYPE_CPU2GPU = 2,
+        TFF_MEM_CPY_TYPE_DEVICE2HOST = 1,
+        TFF_MEM_CPY_TYPE_HOST2DEVICE = 2,
+        TFF_MEM_CPY_TYPE_DEVICE2DEVICE = 2,
     };
 
     enum DataType {
