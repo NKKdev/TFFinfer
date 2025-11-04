@@ -29,12 +29,7 @@ namespace tff::core::device::cuda {
     }
 
     void DeviceCUDA::get_device_mem(size_t _device_id, size_t *_free_mem, size_t *_total_mem) {
-        size_t freeMem, totalMem;
-        cudaError_t err = cudaMemGetInfo(&freeMem, &totalMem);
-        if (err != cudaSuccess) {
-            tff::log::Logger::error("Error: %s" ,cudaGetErrorString(err));
-            return ;
-        }
+        CudaSafeCall(cudaMemGetInfo(_free_mem, _total_mem));
     }
 
     tff::core::device::DeviceType DeviceCUDA::get_device_type(size_t _device_id) {
@@ -60,10 +55,9 @@ namespace tff::core::device::cuda {
         CudaSafeCall(cudaSetDevice(_device_id));
     }
 
-    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &DeviceCUDA::get_device_buffer_allocator() {
-        auto device_mem_buffer_allocator = tff::factory::ModuleFactory::instance()->create_shared<
+    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCUDA::get_device_buffer_allocator() {
+        return tff::factory::ModuleFactory::instance()->create_shared<
                         tff::core::memory::MemBufferAllocatorBaseObject>(MEMORY_ALLOCATOR_FLAG,
                                                                          DEVICE_BACKEND_TYPE_CUDA);
-        return device_mem_buffer_allocator;
     }
 }

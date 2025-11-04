@@ -23,7 +23,7 @@ namespace tff::core::device::cuda {
         tff::core::device::DeviceType get_device_type(size_t _device_id) override ;
         void get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) override ;
         void device_init(size_t _device_id) override ;
-        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &get_device_buffer_allocator() override;
+        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator() override;
     };
     REGISTER_MODULE_OBJECT(DeviceCUDA, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA)
 }

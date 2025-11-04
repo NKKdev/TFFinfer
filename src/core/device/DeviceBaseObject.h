@@ -33,7 +33,7 @@ namespace tff::core::device {
 
         virtual void device_init(size_t _device_id) = 0;
 
-        virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &get_device_buffer_allocator() = 0;
+        virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator() = 0;
     public:
         uint32_t _sched_priority = TFF_DEVICE_PRIORITY_DEFAULT;
     };

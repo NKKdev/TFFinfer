@@ -25,6 +25,6 @@ namespace tff::core::device::cpu {
     void DeviceCPU::device_init(size_t _device_id) {
     }
 
-    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> & DeviceCPU::get_device_buffer_allocator() {
+    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCPU::get_device_buffer_allocator() {
     }
 }

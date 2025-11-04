@@ -13,12 +13,17 @@
 #include "global/GlobalDefine.h"
 #include "FunctionFactory.h"
 using namespace tff::core::global;
+
 namespace tff::core::model {
     class LLAMACreator : public ModelCreatorBase<LLAMACreator> {
     public:
+        using callback_para = void(std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+        std::unordered_map<tff::core::memory::ModelTensorType,std::shared_ptr<tff::core::graph::GraphNode>>>>&,
+                                std::shared_ptr<tff::core::graph::Graph> &);
+    public:
         static void create_layer(std::shared_ptr<tff::core::memory::Tensor> &tensor_ptr,
-                                      std::shared_ptr<tff::core::graph::GraphNode> &layer_node,
-                                      const size_t &total_layer_num = -1, const size_t &layer_index = -1) {
+                                 std::shared_ptr<tff::core::graph::GraphNode> &layer_node,
+                                 const size_t &total_layer_num = -1, const size_t &layer_index = -1) {
             auto &layer_info = LLM_LAYER_OP_INFOS.find(tensor_ptr->get_tensor_type())->second;
             layer_node = std::make_shared<tff::core::graph::GraphNode>("");
             layer_node->set_layer_id(layer_index);
@@ -29,13 +34,15 @@ namespace tff::core::model {
             layer_node->set_inputs(_src_tensors_ptr);
             switch (layer_info.first) {
                 case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
-                    auto device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
+                    auto device = tff::factory::ModuleFactory::instance()->create_shared<
+                        tff::core::device::DeviceBaseObject>(
                         DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CPU);
                     layer_node->bind_devices(device);
                     break;
                 }
                 case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT: {
-                    auto device_cuda = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
+                    auto device_cuda = tff::factory::ModuleFactory::instance()->create_shared<
+                        tff::core::device::DeviceBaseObject>(
                         DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA);
                     layer_node->bind_devices(device_cuda);
                     break;
@@ -75,24 +82,74 @@ namespace tff::core::model {
                 }
             }
         }
+
         //
-        static void build_graph(std::unordered_map<tff::core::model::ModelTensorLayerType, std::vector<std::shared_ptr<
-            tff::core::graph::GraphNode> > > &_layer_map,
-            std::shared_ptr<tff::core::graph::Graph> &graph_ptr) {
-            graph_ptr = std::make_shared<tff::core::graph::Graph>();
-            auto repeating_layer_vec = _layer_map.find(tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
-            if (repeating_layer_vec != _layer_map.end()) {
-                for (auto &layer : repeating_layer_vec->second) {
-                    //todo
+        static void build_graph(std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+        std::unordered_map<tff::core::memory::ModelTensorType,std::shared_ptr<tff::core::graph::GraphNode>>>>&_layer_map,
+                                std::shared_ptr<tff::core::graph::Graph> &graph_ptr) {
+            //
+            if (!graph_ptr) {
+                graph_ptr = std::make_shared<tff::core::graph::Graph>();
+            }
+            //
+            auto add_nodes_to_graph = [&graph_ptr](
+                const std::shared_ptr<tff::core::graph::GraphNode> &node) {
+                    if (node) {
+                        graph_ptr->add_node(node);
+                    }
+            };
+            //
+            for (auto &layers:_layer_map) {
+                for (auto &one_layer:layers.second) {
+                    for (auto &one_node:one_layer.second) {
+                        add_nodes_to_graph(one_node.second);
+                    }
+                }
+            }
+            const auto input_layer_iter = _layer_map.find(
+                tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT);
+            const auto repeating_layer_iter = _layer_map.find(
+                tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+            //
+            const auto output_layer_iter = _layer_map.find(
+                tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT);
+            //
+            if (input_layer_iter != _layer_map.end() && !input_layer_iter->second.empty() &&
+                repeating_layer_iter != _layer_map.end() && !repeating_layer_iter->second.empty()) {
+                auto &input_layers = input_layer_iter->second;
+                auto &input_node = input_layers.begin()->second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_TOKEN_EMBD)->second;
+                //
+                if (repeating_layer_iter != _layer_map.end() && repeating_layer_iter->second.size() > 1) {
+                    const auto& repeating_layer_map = repeating_layer_iter->second; // Assume it's a std::set or similar
+                    for (auto &repeating_layer:repeating_layer_map) {
+
+
+                        auto &attn_norm_node = repeating_layer.second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_NORM)->second;
+                        graph_ptr->add_edge(input_node,attn_norm_node);
+
+                        auto &attn_q_node = repeating_layer.second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q)->second;
+                        graph_ptr->add_edge(attn_norm_node,attn_q_node);
+                        auto &attn_k_node = repeating_layer.second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K)->second;
+                        graph_ptr->add_edge(attn_norm_node,attn_k_node);
+                        auto &attn_v_node = repeating_layer.second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V)->second;
+                        graph_ptr->add_edge(attn_norm_node,attn_v_node);
+                        //reshape;
+                        auto q_reshaper_node = std::make_shared<tff::core::graph::GraphNode>();
+                        q_reshaper_node->set_layer_type(tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+                        q_reshaper_node->set_op_type(graph::TFF_OP_RESHAPE);
+                        q_reshaper_node->set_name("Q_reshaper");
+                        q_reshaper_node->set_layer_id(attn_q_node->layer_id());
+                        graph_ptr->add_edge(attn_q_node, q_reshaper_node);
+                    }
                 }
             }
         }
 
         //
         static const char *get_model_name() {
-            return tff::core::global::LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->second;
+            return tff::core::global::LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)
+                    ->second;
         }
     };
-
 }
 #endif //TFFINFER_LLAMACREATOR_H

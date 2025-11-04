@@ -185,7 +185,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
     struct GGUFTensorInfo {
         std::string _name;
         uint64_t _offset;
-        size_t _byte_size;
+        double _byte_size;
         std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
     };
 
@@ -216,7 +216,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         size_t _alignment = GGUF_DEFAULT_ALIGNMENT;
         size_t _offset = 0;
         size_t _size = 0;
-        size_t _max_tensor_bytesize = INT_MIN;
+        float _max_tensor_bytesize = 0;
 
         std::shared_ptr<tff::core::memory::Memory> _data_memory_ptr;
 

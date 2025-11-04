@@ -13,6 +13,7 @@
 #include "device/DeviceBaseObject.h"
 #include "Logger.h"
 class Graph;
+
 namespace tff::core::graph {
     class GraphNode : public std::enable_shared_from_this<GraphNode> {
         friend class Graph; // 允许 Graph 修改依赖关系
@@ -45,12 +46,13 @@ namespace tff::core::graph {
         const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs() const { return _dst_tensors_ptr; }
 
         void set_inputs(std::vector<std::shared_ptr<tff::core::memory::Tensor> > inputs) {
-            _src_tensors_ptr = std::move(inputs);
+            _src_tensors_ptr.insert(_src_tensors_ptr.end(), inputs.begin(), inputs.end());
         }
 
         void set_outputs(std::vector<std::shared_ptr<tff::core::memory::Tensor> > outputs) {
-            _dst_tensors_ptr = std::move(outputs);
+            _dst_tensors_ptr.insert(_dst_tensors_ptr.end(), outputs.begin(), outputs.end());
         }
+
         //
         inline void set_layer_id(const uint32_t &layer_id) { _layer_id = layer_id; }
         //
@@ -58,6 +60,25 @@ namespace tff::core::graph {
         //
         inline void set_layer_type(const tff::core::model::ModelTensorLayerType _layer_type) {
             this->_layer_type = _layer_type;
+        }
+
+        //
+        inline tff::core::memory::DataType data_type() const {
+            tff::core::memory::DataType data_type = memory::DataType::TFF_DATA_TYPE_UNKNOWN;
+            switch (_layer_type) {
+                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT:
+                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT:
+                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING:{
+                    if (!_src_tensors_ptr.empty()) {
+                        data_type = _src_tensors_ptr[0]->get_data_type();
+                    }
+                    break;
+                }
+                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_NONE:
+                default:
+                    data_type = memory::DataType::TFF_DATA_TYPE_UNKNOWN;
+            }
+            return data_type;
         }
 
         // 算子参数（通用）
@@ -91,9 +112,11 @@ namespace tff::core::graph {
             }
             return true;
         }
+
         //
         virtual void release() {
         }
+
         //
         virtual bool forward() {
             std::lock_guard<std::mutex> lock(_mutex);
@@ -122,7 +145,7 @@ namespace tff::core::graph {
 
             // 2. 确保所有输入 tensor 已分配内存
             for (size_t i = 0; i < _src_tensors_ptr.size(); ++i) {
-                auto& tensor = _src_tensors_ptr[i];
+                auto &tensor = _src_tensors_ptr[i];
                 if (!tensor || !tensor->is_allocated()) {
                     tff::log::Logger::error("Node '%s': input tensor[%zu] is null or not allocated", _name.c_str(), i);
                     return false;
@@ -131,7 +154,7 @@ namespace tff::core::graph {
 
             // 3. 确保所有输出 tensor 已分配内存（应在 init() 中完成）
             for (size_t i = 0; i < _dst_tensors_ptr.size(); ++i) {
-                auto& tensor = _dst_tensors_ptr[i];
+                auto &tensor = _dst_tensors_ptr[i];
                 if (!tensor || !tensor->is_allocated()) {
                     tff::log::Logger::error("Node '%s': output tensor[%zu] is null or not allocated", _name.c_str(), i);
                     return false;
@@ -160,7 +183,15 @@ namespace tff::core::graph {
         tff::core::model::ModelTensorLayerType _layer_type =
                 tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_NONE;
 
-        std::set<std::shared_ptr<tff::core::device::DeviceBaseObject> ,tff::core::device::DevicePtrComparator> _devices;
+        std::set<std::shared_ptr<tff::core::device::DeviceBaseObject>, tff::core::device::DevicePtrComparator> _devices;
+    };
+    struct CompareByLayerID {
+        bool operator()(const std::shared_ptr<GraphNode> &node1, const std::shared_ptr<GraphNode> &node2) const{
+            if (node1->layer_id() != node2->layer_id()) {
+                return node1->layer_id() < node2->layer_id();
+            }
+            return node1->name() < node2->name();
+        }
     };
 }
 

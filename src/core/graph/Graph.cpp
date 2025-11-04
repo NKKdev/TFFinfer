@@ -20,6 +20,9 @@ namespace tff::core::graph {
             from->_next_nodes.push_back(to);
             to->_prev_nodes.push_back(from);
 
+            to->set_inputs(from->outputs());
+            from->set_outputs(to->inputs());
+
             return true;
         }
 

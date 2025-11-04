@@ -89,9 +89,11 @@ namespace tff::core::runtime {
 
         std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
         //
-        std::unordered_map<tff::core::model::ModelTensorLayerType, std::vector<std::shared_ptr<
-            tff::core::graph::GraphNode> > >
+        std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+        std::unordered_map<tff::core::memory::ModelTensorType,std::shared_ptr<tff::core::graph::GraphNode>>>>
         _layer_map;
+        //
+        std::shared_ptr<tff::core::graph::Graph> _graph_ptr;
 
     public:
         std::unique_ptr<tff::schedule::HybridScheduler> _scheduler;

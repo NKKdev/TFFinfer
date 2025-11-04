@@ -130,7 +130,8 @@ namespace tff::core::runtime {
             tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
             return false;
         }
-
+        //
+        this->init_graph();
         tff::log::Logger::info("LLMInferRuntime context initialized successfully.");
         return true; // 初始化成功
     }
@@ -141,7 +142,11 @@ namespace tff::core::runtime {
             return false;
         }
         tff::log::Logger::info("Initializing graph");
-
+        auto callback = tff::factory::FunctionFactory::instance()->get_callback<LLAMACreator::callback_para>(
+            BUILD_GRAPH_FLAG, std::string(tff::core::global::LLM_ARCH_NAMES.find(this->_architecture)->second));
+        if (callback) {
+            callback(this->_layer_map, this->_graph_ptr);
+        }
         return true;
     }
 
@@ -195,9 +200,10 @@ namespace tff::core::runtime {
     bool LLMInferRuntime::load_layers() {
         const std::string &name = std::string(tff::core::global::LLM_ARCH_NAMES.find(this->_architecture)->second);
         auto &weight_map = this->_model_loader->get_weight_map();
-        size_t total_layer_num = -1;
-        size_t layer_index = -1;
+        size_t total_layer_num = this->_model_config._n_layer;
+
         for (auto &weight: weight_map) {
+            size_t layer_index = 0;
             std::shared_ptr<tff::core::graph::GraphNode> layer_node;
             auto callback = tff::factory::FunctionFactory::instance()->get_callback<void(
                 std::shared_ptr<tff::core::memory::Tensor> &,
@@ -206,7 +212,6 @@ namespace tff::core::runtime {
             auto tensor = weight.second._tensor_ptr;
             auto &layer_info = tff::core::global::LLM_LAYER_OP_INFOS.find(tensor->get_tensor_type())->second;
             if (layer_info.first == tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING) {
-                total_layer_num = this->_model_config._n_layer;
                 auto get_layer_index = [](const std::string &layer_name) -> size_t {
                     const int pos0 = layer_name.find_first_of(".") + 1;
                     const std::string substr = layer_name.substr(pos0, layer_name.size());
@@ -218,7 +223,25 @@ namespace tff::core::runtime {
             if (callback) {
                 callback(tensor, layer_node, total_layer_num, layer_index);
                 layer_node->set_file_idx(weight.second._idx);
-                this->_layer_map[layer_info.first].push_back(layer_node);
+                layer_node->set_name(weight.first);
+                auto iter = this->_layer_map[layer_info.first].find(layer_index);
+                if (iter != this->_layer_map[layer_info.first].end()) {
+                    iter->second.insert(std::make_pair(tensor->get_tensor_type(),layer_node));
+                }else {
+                    std::unordered_map<tff::core::memory::ModelTensorType,std::shared_ptr<tff::core::graph::GraphNode>>
+                    tensor_type_graph_map;
+                    tensor_type_graph_map.insert(std::make_pair(tensor->get_tensor_type(),layer_node));
+                    this->_layer_map[layer_info.first].insert(std::make_pair(layer_index,tensor_type_graph_map));
+                }
+
+                const auto iter_tmp = this->_layer_map.find(tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+                if (iter_tmp != this->_layer_map.end()) {
+                    auto iter_tensor = iter_tmp->second.begin()->second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K);
+                    if (iter_tensor != iter_tmp->second.begin()->second.end()) {
+                        this->_model_config._kv_data_type = iter_tensor->second.get()->data_type();
+                    }
+                }
+
             }
         }
         return true;

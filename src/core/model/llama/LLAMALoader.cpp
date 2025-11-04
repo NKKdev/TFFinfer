@@ -183,7 +183,7 @@ namespace tff::core::model {
                 bRet = false;
                 return bRet;
             }
-            size_t padded_size = TFF_PAD(info._tensor_ptr->get_bytes(), gguf_ctx->_alignment);
+            float padded_size = TFF_PAD(info._tensor_ptr->get_bytes(), gguf_ctx->_alignment);
             info._byte_size = padded_size;
             if (SIZE_MAX - gguf_ctx->_size < padded_size) {
                 tff::log::Logger::error("%s: tensor '%s' size overflow, cannot accumulate size %zu + %zu\n",
