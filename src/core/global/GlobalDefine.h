@@ -24,6 +24,8 @@ namespace tff::core::global {
     //task graph
 #define TASK_GRAPH_FLAG "TASK_GRAPH"
 #define TASK_GRAPH_TYPE "TASK_SCHEDULER"
+    //TOKENIZER
+#define TOKENIZER_FLAG "TOKENIZER"
     //
 #define MAX_BATCH_SIZE 512
     //OP

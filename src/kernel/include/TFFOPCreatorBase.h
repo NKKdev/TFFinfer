@@ -21,8 +21,8 @@ namespace tff::kernel::base {
                 "Derived::compute must be a function"
             );
 
-            using traits = tff::core::global::FunctionTraits<callback_type>;
-            using signature = typename traits::type;
+            //using traits = tff::core::global::FunctionTraits<callback_type>;
+            //using signature = typename traits::type;
 
             tff::factory::FunctionFactory::instance()->register_callback(
                 OP_NODE_FLAG,

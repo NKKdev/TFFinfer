@@ -11,14 +11,63 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 namespace tff::factory {
+    using ModuleKeyType = std::variant<std::string, int>;
+    struct ModuleKeyHash {
+        using is_transparent = void;
+
+        std::size_t operator()(const std::string &str) const {
+            return std::hash<std::string>{}(str);
+        }
+
+        std::size_t operator()(int enum_val) const {
+            return std::hash<int>{}(enum_val);
+        }
+
+        std::size_t operator()(const ModuleKeyType &key) const {
+            return std::visit([this](const auto &k) { return (*this)(k); }, key);
+        }
+    };
+
+    struct ModuleKeyEqual {
+        using is_transparent = void;
+
+        bool operator()(const std::string &lhs, const std::string &rhs) const {
+            return lhs == rhs;
+        }
+
+        bool operator()(int lhs, int rhs) const {
+            return lhs == rhs;
+        }
+
+        bool operator()(const ModuleKeyType &lhs, const ModuleKeyType &rhs) const {
+            return lhs == rhs;
+        }
+
+        bool operator()(const std::string &lhs, const ModuleKeyType &rhs) const {
+            return std::holds_alternative<std::string>(rhs) && lhs == std::get<std::string>(rhs);
+        }
+
+        bool operator()(const ModuleKeyType &lhs, const std::string &rhs) const {
+            return std::holds_alternative<std::string>(lhs) && std::get<std::string>(lhs) == rhs;
+        }
+
+        bool operator()(int lhs, const ModuleKeyType &rhs) const {
+            return std::holds_alternative<int>(rhs) && lhs == std::get<int>(rhs);
+        }
+
+        bool operator()(const ModuleKeyType &lhs, int rhs) const {
+            return std::holds_alternative<int>(lhs) && std::get<int>(lhs) == rhs;
+        }
+    };
+
     class DEEP_TFF_API ModuleFactory {
     public:
-        // 单例
         static std::shared_ptr<ModuleFactory> &instance();
 
-        // 删除拷贝和移动
+    public:
         ModuleFactory(const ModuleFactory &) = delete;
 
         ModuleFactory &operator=(const ModuleFactory &) = delete;
@@ -31,76 +80,82 @@ namespace tff::factory {
         ModuleFactory() = default;
 
     public:
-
         template<typename T, typename Base, typename... Args>
-        static void register_type(const std::string &type, const std::string &key, Args &&... args) {
-            auto &creators = instance()->get_or_create_creator_list<Base>(type);
+        static void register_type(const std::string &type, const ModuleKeyType &key, Args &&... args) {
+            auto &creators = instance()->get_or_create_creator_list<Base>();
             creators[key] = [args...]() -> std::shared_ptr<Base> {
                 return std::make_shared<T>(args...);
             };
         }
 
-        // 无参版本
         template<typename T, typename Base>
-        static void register_type(const std::string &type, const std::string &key) {
-            auto &creators = instance()->get_or_create_creator_list<Base>(type);
+        static void register_type(const std::string &type, const ModuleKeyType &key) {
+            auto &creators = instance()->get_or_create_creator_list<Base>();
             creators[key] = []() -> std::shared_ptr<Base> {
                 return std::make_shared<T>();
             };
         }
 
-        // 创建 shared_ptr<Base> 对象
         template<typename Base>
-        std::shared_ptr<Base> create_shared(const std::string &type, const std::string &key) {
-            auto it = instance()->m_base_factories.find(type_id<Base>());
-            if (it == instance()->m_base_factories.end()) return nullptr;
-
-            // 错误：不能 cast 到指针！
-            // auto &creators = *std::any_cast<std::unordered_map<...> *>(it->second);
-
-            // 正确：cast 到引用
-            auto &creators = std::any_cast<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()>> &>(it->second);
-
+        std::shared_ptr<Base> create_shared(const std::string &type, const ModuleKeyType &key) {
+            auto it = instance()->_base_factories.find(type_id<Base>());
+            if (it == instance()->_base_factories.end()) return nullptr;
+            using MapType = std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
+                ModuleKeyHash, ModuleKeyEqual>;
+            auto &creators = std::any_cast<MapType &>(it->second);
             auto creator_it = creators.find(key);
             if (creator_it == creators.end()) return nullptr;
             return creator_it->second();
         }
 
+        template<typename Base>
+        std::shared_ptr<Base> create_shared(const std::string &type, const std::string &key_string) {
+            return create_shared<Base>(type, ModuleKeyType(key_string));
+        }
+
         // 获取某类型下的所有创建器
         template<typename Base>
-        std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > create_shared_list(
+        std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,ModuleKeyHash, ModuleKeyEqual > create_shared_list(
             const std::string &type) {
-            auto it = instance()->m_base_factories.find(type_id<Base>());
-            if (it == instance()->m_base_factories.end()) return {};
+            auto it = instance()->_base_factories.find(type_id<Base>());
+            if (it == instance()->_base_factories.end()) {
+                return std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
+                    ModuleKeyHash, ModuleKeyEqual>();
+            }
+            using MapType = std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
+                ModuleKeyHash, ModuleKeyEqual>;
+            auto &creators = std::any_cast<MapType &>(it->second);
 
-            // 同样，不能 cast 到指针
-            // return *std::any_cast<std::map<...> *>(it->second);
-
-            return std::any_cast<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()>> &>(it->second);
+            return creators;
         }
 
     private:
-        // 为每个 Base 类型生成唯一 ID（避免 RTTI 依赖）
         template<typename T>
         static const std::type_info *type_id() { return &typeid(T); }
 
-        // 获取或创建特定 Base 类型的 creator 映射
         template<typename Base>
-        std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > &get_or_create_creator_list(
-            const std::string &type) {
+        std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>, ModuleKeyHash, ModuleKeyEqual> &
+        get_or_create_creator_list() {
             const std::type_info *base_id = type_id<Base>();
-            auto &any_map = m_base_factories[base_id];
-
+            auto &any_map = _base_factories[base_id];
             if (!any_map.has_value()) {
-                any_map = std::make_any<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > >();
+                any_map = std::make_any<std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
+                    ModuleKeyHash, ModuleKeyEqual> >();
             }
 
-            return std::any_cast<std::unordered_map<std::string, std::function<std::shared_ptr<Base>()> > &>(any_map);
+            using MapType = std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>, ModuleKeyHash,
+                ModuleKeyEqual>;
+
+            return std::any_cast<MapType &>(any_map);
         }
 
     private:
-        // 外层 map: type_name -> (map of creators for a specific Base type)
-        std::unordered_map<const std::type_info *, std::any> m_base_factories;
+        //std::unordered_map<const std::type_info *, std::any> m_base_factories;
+        std::unordered_map<
+            const std::type_info *,
+            std::any,
+            std::hash<const std::type_info *>,
+            std::equal_to<const std::type_info *> > _base_factories;
     };
 
 #define REGISTER_MODULE_OBJECT(T, Base,type, key, ...) \
@@ -109,6 +164,5 @@ namespace tff::factory {
                 ::tff::factory::ModuleFactory::register_type<T, Base>(type, key, ##__VA_ARGS__); \
             } \
     } reg_##T##_##__COUNTER__##_instance;
-
 }
 #endif // DEEP_TFF_MODULEFACTORY_H

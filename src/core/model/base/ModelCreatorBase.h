@@ -24,8 +24,8 @@ namespace tff::core::model {
                 "Derived::create_layer must be a function"
             );
 
-            using traits = tff::core::global::FunctionTraits<callback_type>;
-            using signature = typename traits::type;
+            //using traits = tff::core::global::FunctionTraits<callback_type>;
+            //using signature = typename traits::type;
 
             tff::factory::FunctionFactory::instance()->register_callback(
                 CREATE_LAYER_FLAG,
@@ -43,8 +43,8 @@ namespace tff::core::model {
                 "Derived::create_layer must be a function"
             );
 
-            using traits = tff::core::global::FunctionTraits<callback_type>;
-            using signature = typename traits::type;
+            //using traits = tff::core::global::FunctionTraits<callback_type>;
+            //using signature = typename traits::type;
 
             tff::factory::FunctionFactory::instance()->register_callback(
                 BUILD_GRAPH_FLAG,

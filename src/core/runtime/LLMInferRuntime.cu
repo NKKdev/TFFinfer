@@ -37,7 +37,7 @@ namespace tff::core::runtime {
     bool LLMInferRuntime::init_device() {
         auto gpu_device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
             DEVICE_BACKEND_FLAG,
-            DEVICE_BACKEND_TYPE_CUDA);
+            tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
         if (gpu_device) {
             this->_devices.insert(gpu_device);
             this->_has_gpu_backend = true;
@@ -45,7 +45,7 @@ namespace tff::core::runtime {
 
         auto cpu_device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
             DEVICE_BACKEND_FLAG,
-            DEVICE_BACKEND_TYPE_CPU);
+            tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
         if (cpu_device) {
             this->_devices.insert(cpu_device);
         }
@@ -222,6 +222,10 @@ namespace tff::core::runtime {
             }
             if (callback) {
                 callback(tensor, layer_node, total_layer_num, layer_index);
+                if (!layer_node) {
+                    tff::log::Logger::error("current layer %s create failed!! \n", weight.first.c_str());
+                    continue;
+                }
                 layer_node->set_file_idx(weight.second._idx);
                 layer_node->set_name(weight.first);
                 auto iter = this->_layer_map[layer_info.first].find(layer_index);

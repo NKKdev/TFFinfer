@@ -16,6 +16,10 @@ namespace tff::core::global {
         using return_type = Ret;
         using args_tuple = std::tuple<Args...>;
         static constexpr size_t arity = sizeof...(Args);
+        template <size_t Index>
+        struct argument {
+            using type = typename std::tuple_element<Index, args_tuple>::type;
+        };
     };
 
     // std::function
@@ -31,6 +35,11 @@ namespace tff::core::global {
         using return_type = Ret;
         using args_tuple = std::tuple<Args...>;
         static constexpr size_t arity = sizeof...(Args);
+
+        template <size_t Index>
+        struct argument {
+            using type = typename std::tuple_element<Index, args_tuple>::type;
+        };
     };
 
     // const 成员函数
@@ -40,7 +49,18 @@ namespace tff::core::global {
         using return_type = Ret;
         using args_tuple = std::tuple<Args...>;
         static constexpr size_t arity = sizeof...(Args);
+
+        template <size_t Index>
+        struct argument {
+            using type = typename std::tuple_element<Index, args_tuple>::type;
+        };
     };
+    //
+    template<typename Ret, typename... Args>
+    struct FunctionTraits<Ret(*&)(Args...)> : FunctionTraits<Ret(*)(Args...)> { };
+    //
+    template<typename Ret, typename... Args>
+    struct FunctionTraits<Ret(*&&)(Args...)> : FunctionTraits<Ret(*)(Args...)> { };
 
     //lambda
     template<typename T>

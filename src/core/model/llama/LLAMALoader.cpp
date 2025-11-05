@@ -7,12 +7,14 @@
 #include "mem/BaseDefine.h"
 #include "LLAMALoader.h"
 #include "global/GlobalDefine.h"
+
 namespace tff::core::model {
-    tff::core::model::ModelLoadResult tff::core::model::LLAMALoader::load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
+    tff::core::model::ModelLoadResult tff::core::model::LLAMALoader::load_from_file(
+        const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
         bool bRet = this->load(model_files_name, use_mmap, check_tensors);
         if (bRet) {
             return ModelLoadResult::SUCCESS;
-        }else {
+        } else {
             return ModelLoadResult::FAILED;
         }
     }
@@ -57,8 +59,8 @@ namespace tff::core::model {
                 auto cpu_device_size = tff::core::global::get_device_size("CPU");
                 bool is_numa = cpu_device_size > 1 ? true : false;
                 _files_mmap.insert(
-               std::make_pair(
-                   i, std::make_unique<FileMMap>(it->second, -1, is_numa)));
+                    std::make_pair(
+                        i, std::make_unique<FileMMap>(it->second, -1, is_numa)));
             }
 
             bRet &= this->check_file(it->second);
@@ -192,7 +194,9 @@ namespace tff::core::model {
                 return bRet;
             }
             gguf_ctx->_size += padded_size;
-            gguf_ctx->_max_tensor_bytesize = gguf_ctx->_max_tensor_bytesize < padded_size ? padded_size : gguf_ctx->_max_tensor_bytesize;
+            gguf_ctx->_max_tensor_bytesize = gguf_ctx->_max_tensor_bytesize < padded_size
+                                                 ? padded_size
+                                                 : gguf_ctx->_max_tensor_bytesize;
         }
         //
         for (size_t i = 0; i < gguf_ctx->_tensor_info.size(); ++i) {
@@ -211,7 +215,9 @@ namespace tff::core::model {
                                        const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         if (this->_alloc) {
             std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator =
-                tff::factory::ModuleFactory::instance()->create_shared<tff::core::memory::MemBufferAllocatorBaseObject>("MEMORY", "CPU");
+                    tff::factory::ModuleFactory::instance()->create_shared<
+                        tff::core::memory::MemBufferAllocatorBaseObject>(
+                        MEMORY_ALLOCATOR_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
             gguf_ctx->_data_memory_ptr = std::make_shared<tff::core::memory::Memory>(gguf_ctx->_size, nullptr, false,
                 allocator);
             gguf_ctx->_data_memory_ptr->allocate();
@@ -228,42 +234,54 @@ namespace tff::core::model {
     }
 
     bool LLAMALoader::load_model_config(const std::unique_ptr<FileLoader> &file_loader,
-        const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
-
-        LOAD_KEY_VALUE(ModelContext::BasicType, std::string,tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,    this->_model_config._arch_name);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,        this->_model_config._n_embd);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_BLOCK_COUNT,             this->_model_config._n_layer);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_EXPERT_COUNT,            this->_model_config._n_expert);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_EXPERT_USED_COUNT,       this->_model_config._n_expert_used);
-        LOAD_KEY_VALUE(ModelContext::BasicType, bool,       tff::core::model::ModelMetaKV::LLM_KV_ROPE_SCALING_FINETUNED,  this->_model_config._rope_fine_tuned);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_KEY_LENGTH,    this->_model_config._n_embd_head_k);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_VALUE_LENGTH,  this->_model_config._n_embd_head_v);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t,   tff::core::model::ModelMetaKV::LLM_KV_ROPE_DIMENSION_COUNT,    this->_model_config._n_rot);
+                                        const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
+        LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
+                       this->_model_config._arch_name);
+        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,
+                       this->_model_config._n_embd);
+        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_BLOCK_COUNT,
+                       this->_model_config._n_layer);
+        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_COUNT,
+                       this->_model_config._n_expert);
+        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_USED_COUNT,
+                       this->_model_config._n_expert_used);
+        LOAD_KEY_VALUE(ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_ROPE_SCALING_FINETUNED,
+                       this->_model_config._rope_fine_tuned);
+        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_KEY_LENGTH,
+                       this->_model_config._n_embd_head_k);
+        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_VALUE_LENGTH,
+                       this->_model_config._n_embd_head_v);
+        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ROPE_DIMENSION_COUNT,
+                       this->_model_config._n_rot);
         //
-        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t,  tff::core::model::ModelMetaKV::LLM_KV_FEED_FORWARD_LENGTH,     this->_model_config._n_ff_arr);
-        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t,  tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,    this->_model_config._n_head_arr);
-        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t,  tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV, this->_model_config._n_head_kv_arr);
+        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_FEED_FORWARD_LENGTH,
+                        this->_model_config._n_ff_arr);
+        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,
+                        this->_model_config._n_head_arr);
+        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t,
+                        tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV,
+                        this->_model_config._n_head_kv_arr);
 
         return true;
     }
 
     tff::core::memory::ModelTensorType LLAMALoader::get_model_tensor_type(const std::string &tensor_name) const {
-        std::string tmp = tensor_name.substr(0,tensor_name.find(".weight"));
-        auto tensor_names_map = LLM_TENSOR_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->second;
-        for (auto &tensor_type : tensor_names_map) {
+        std::string tmp = tensor_name.substr(0, tensor_name.find(".weight"));
+        auto tensor_names_map = LLM_TENSOR_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->
+                second;
+        for (auto &tensor_type: tensor_names_map) {
             auto str = std::string(tensor_type.second);
             auto pos = str.find_last_of(".");
-            if ( pos == std::string::npos) {
+            if (pos == std::string::npos) {
                 if (str.find(tmp) != std::string::npos || tmp.find(str) != std::string::npos) {
                     return tensor_type.first;
                 }
-            }else {
+            } else {
                 std::string substr = str.substr(str.find_last_of("."), str.size() - pos);
                 if (substr.find(tmp) != std::string::npos || tmp.find(substr) != std::string::npos) {
                     return tensor_type.first;
                 }
             }
-
         }
         return tff::core::memory::ModelTensorType::LLM_TENSOR_TYPE_UNKNOWN;
     }

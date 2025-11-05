@@ -25,10 +25,12 @@ namespace tff::core::model {
                                  std::shared_ptr<tff::core::graph::GraphNode> &layer_node,
                                  const size_t &total_layer_num = -1, const size_t &layer_index = -1) {
             auto &layer_info = LLM_LAYER_OP_INFOS.find(tensor_ptr->get_tensor_type())->second;
-            layer_node = std::make_shared<tff::core::graph::GraphNode>("");
+            layer_node = tff::factory::ModuleFactory::instance()->create_shared<tff::core::graph::GraphNode>(OP_NODE_FLAG,layer_info.second);
+            if (!layer_node) {
+                return;
+            }
             layer_node->set_layer_id(layer_index);
             layer_node->set_layer_type(layer_info.first);
-            layer_node->set_op_type(layer_info.second);
             std::vector<std::shared_ptr<tff::core::memory::Tensor> > _src_tensors_ptr;
             _src_tensors_ptr.push_back(tensor_ptr);
             layer_node->set_inputs(_src_tensors_ptr);
@@ -36,14 +38,14 @@ namespace tff::core::model {
                 case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
                     auto device = tff::factory::ModuleFactory::instance()->create_shared<
                         tff::core::device::DeviceBaseObject>(
-                        DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CPU);
+                        DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
                     layer_node->bind_devices(device);
                     break;
                 }
                 case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT: {
                     auto device_cuda = tff::factory::ModuleFactory::instance()->create_shared<
                         tff::core::device::DeviceBaseObject>(
-                        DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA);
+                        DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
                     layer_node->bind_devices(device_cuda);
                     break;
                 }
@@ -52,7 +54,7 @@ namespace tff::core::model {
                     std::vector<float> device_splits;
                     auto device_cuda = tff::factory::ModuleFactory::instance()->create_shared<
                         tff::core::device::DeviceBaseObject>(
-                        DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA);
+                        DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
 
 
                     std::vector<int> device_list;
@@ -77,7 +79,7 @@ namespace tff::core::model {
                     const int layer_gpu = std::upper_bound(device_splits.begin(), device_splits.begin() + device_size,
                                                            float(layer_index) / total_layer_num) - device_splits.
                                           begin();
-                    layer_node->bind_devices(device_cuda);
+                    layer_node->bind_devices(device_cuda);//todo 应该绑定某种类型设备下某个设备
                     break;
                 }
             }

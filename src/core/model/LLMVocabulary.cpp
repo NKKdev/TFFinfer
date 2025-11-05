@@ -34,7 +34,7 @@ namespace tff::core::model {
         const auto &type = LLM_TOKENIZER_MODEL_VOCAB_TYPE.find(this->_tokenizer_model)->second;
         this->_tokenizer =
                 tff::factory::ModuleFactory::instance()->create_shared<tff::core::model::LLMTokenizerBase>(
-                    "TOKENIZER", get_tokenizer_name(type).data());
+                    TOKENIZER_FLAG, tff::factory::ModuleKeyType(get_tokenizer_name(type).data()));
 
 
         bRet &= this->load_bpe();

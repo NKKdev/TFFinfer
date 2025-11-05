@@ -58,6 +58,6 @@ namespace tff::core::device::cuda {
     std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCUDA::get_device_buffer_allocator() {
         return tff::factory::ModuleFactory::instance()->create_shared<
                         tff::core::memory::MemBufferAllocatorBaseObject>(MEMORY_ALLOCATOR_FLAG,
-                                                                         DEVICE_BACKEND_TYPE_CUDA);
+                                                                         tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
     }
 }

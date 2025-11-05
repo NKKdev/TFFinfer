@@ -18,7 +18,7 @@ namespace tff::core::model {
 
 
         // 自动探测并返回合适的读取器
-        std::shared_ptr<ModelDetectorBase> find_dector(const std::vector<std::string> &architectures) const {
+        static std::shared_ptr<ModelDetectorBase> find_dector(const std::vector<std::string> &architectures) {
             auto detectors = tff::factory::ModuleFactory::instance()->create_shared_list<ModelDetectorBase>(MODEL_DETECTOR_TYPE);
             for (auto &detector: detectors) {
                 auto detector_ptr = detector.second();
@@ -30,13 +30,14 @@ namespace tff::core::model {
                     }
                 }
             }
+            return nullptr;
         }
 
         std::vector<const char *> get_supported_formats() const {
             std::vector<const char *> names;
             auto detectors = tff::factory::ModuleFactory::instance()->create_shared_list<ModelDetectorBase>(MODEL_DETECTOR_TYPE);
             for (auto &detector: detectors) {
-                names.push_back(detector.first.c_str());
+                names.push_back(std::get<std::string>(detector.first).c_str());
             }
             return names;
         }
