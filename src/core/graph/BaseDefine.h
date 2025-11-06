@@ -105,7 +105,10 @@ namespace tff::core::graph {
         TFF_OP_OPT_STEP_SGD,
 
         TFF_OP_GLU,
-
+        //mem
+        TFF_OP_MAP2CPU,
+        TFF_OP_MEM_CPY,
+        TFF_OP_TOKENIZE,
         TFF_OP_COUNT,
     };
 }

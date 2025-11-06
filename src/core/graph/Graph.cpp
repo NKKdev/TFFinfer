@@ -13,7 +13,7 @@ namespace tff::core::graph {
 
             // 检查是否已存在
             if (has_edge(from, to)) {
-                return true; // 允许重复调用
+                return true;
             }
 
             // 双向链接

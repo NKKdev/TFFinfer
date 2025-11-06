@@ -32,4 +32,12 @@ namespace tff::core::graph::op {
     REGISTER_MODULE_OBJECT(SoftmaxNode, GraphNode, OP_NODE_FLAG, TFF_OP_SOFT_MAX);
 
     REGISTER_MODULE_OBJECT(RopeNode, GraphNode, OP_NODE_FLAG, TFF_OP_ROPE);
+
+    REGISTER_MODULE_OBJECT(MapCPUBufferNode, GraphNode, OP_NODE_FLAG, TFF_OP_MAP2CPU);
+
+    REGISTER_MODULE_OBJECT(MemCpyNode, GraphNode, OP_NODE_FLAG, TFF_OP_MEM_CPY);
+
+    REGISTER_MODULE_OBJECT(TokenizeNode, GraphNode, OP_NODE_FLAG, TFF_OP_TOKENIZE);
+
+
 }

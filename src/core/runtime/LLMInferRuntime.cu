@@ -147,6 +147,10 @@ namespace tff::core::runtime {
         if (callback) {
             callback(this->_layer_map, this->_graph_ptr);
         }
+        {
+            //debug;
+            this->_graph_ptr->forward();
+        }
         return true;
     }
 

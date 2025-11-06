@@ -45,12 +45,14 @@ namespace tff::core::graph {
         const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &inputs() const { return _src_tensors_ptr; }
         const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs() const { return _dst_tensors_ptr; }
 
-        void set_inputs(std::vector<std::shared_ptr<tff::core::memory::Tensor> > inputs) {
-            _src_tensors_ptr.insert(_src_tensors_ptr.end(), inputs.begin(), inputs.end());
+        void set_inputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &inputs) {
+            //_src_tensors_ptr.insert(_src_tensors_ptr.end(), inputs.begin(), inputs.end());
+            std::ranges::move(inputs, std::back_inserter(_src_tensors_ptr));
         }
 
-        void set_outputs(std::vector<std::shared_ptr<tff::core::memory::Tensor> > outputs) {
-            _dst_tensors_ptr.insert(_dst_tensors_ptr.end(), outputs.begin(), outputs.end());
+        void set_outputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs) {
+            //_dst_tensors_ptr.insert(_dst_tensors_ptr.end(), outputs.begin(), outputs.end());
+            std::ranges::move(outputs, std::back_inserter(_dst_tensors_ptr));
         }
 
         //
