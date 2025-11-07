@@ -21,7 +21,7 @@ namespace tff::core::model {
         static std::shared_ptr<ModelDetectorBase> find_dector(const std::vector<std::string> &architectures) {
             auto detectors = tff::factory::ModuleFactory::instance()->create_shared_list<ModelDetectorBase>(MODEL_DETECTOR_TYPE);
             for (auto &detector: detectors) {
-                auto detector_ptr = detector.second();
+                auto detector_ptr = detector.second.creator();
                 std::cout << "Created object type: " << typeid(*detector_ptr).name() << std::endl;
                 if (detector_ptr) {
                     if (detector_ptr->matches(architectures)){

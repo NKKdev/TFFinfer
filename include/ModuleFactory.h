@@ -1,9 +1,11 @@
 //
 // Created by nkk on 2025/4/27.
+// Modified to support both Singleton and Prototype creation policies.
 //
 
 #ifndef DEEP_TFF_MODULEFACTORY_H
 #define DEEP_TFF_MODULEFACTORY_H
+
 #include "ExportInc.h"
 #include "ModuleObject.h"
 #include <any>
@@ -12,9 +14,13 @@
 #include <string>
 #include <unordered_map>
 #include <variant>
+#include <mutex>
+
+#include "Logger.h"
 
 namespace tff::factory {
     using ModuleKeyType = std::variant<std::string, int>;
+
     struct ModuleKeyHash {
         using is_transparent = void;
 
@@ -63,6 +69,18 @@ namespace tff::factory {
         }
     };
 
+    enum class CreationPolicy {
+        PROTOTYPE,
+        SINGLETON
+    };
+
+    template<typename Base>
+    struct CreatorInfo {
+        std::function<std::shared_ptr<Base>()> creator;
+        CreationPolicy policy;
+    };
+
+
     class DEEP_TFF_API ModuleFactory {
     public:
         static std::shared_ptr<ModuleFactory> &instance();
@@ -79,33 +97,92 @@ namespace tff::factory {
     private:
         ModuleFactory() = default;
 
+        template<typename Base>
+        struct SingletonInstanceMap {
+            static std::unordered_map<ModuleKeyType, std::weak_ptr<Base>, ModuleKeyHash, ModuleKeyEqual> instances;
+            static std::mutex mtx;
+        };
+
+        template<typename Base>
+        std::shared_ptr<Base> get_singleton_instance(const ModuleKeyType &key,
+                                                     const std::function<std::shared_ptr<Base>()> &creator) {
+            auto &map = SingletonInstanceMap<Base>::instances;
+            auto &mtx = SingletonInstanceMap<Base>::mtx;
+
+            std::lock_guard<std::mutex> lock(mtx);
+            auto it = map.find(key);
+            if (it != map.end()) {
+                std::shared_ptr<Base> ptr = it->second.lock();
+                if (ptr) {
+                    return ptr;
+                } else {
+                    map.erase(it);
+                }
+            }
+
+            std::shared_ptr<Base> new_instance = creator();
+            map[key] = new_instance;
+            return new_instance;
+        }
+
     public:
         template<typename T, typename Base, typename... Args>
         static void register_type(const std::string &type, const ModuleKeyType &key, Args &&... args) {
-            auto &creators = instance()->get_or_create_creator_list<Base>();
-            creators[key] = [args...]() -> std::shared_ptr<Base> {
-                return std::make_shared<T>(args...);
-            };
+            register_type_with_policy<T, Base>(type, key, CreationPolicy::PROTOTYPE, std::forward<Args>(args)...);
         }
 
         template<typename T, typename Base>
         static void register_type(const std::string &type, const ModuleKeyType &key) {
-            auto &creators = instance()->get_or_create_creator_list<Base>();
-            creators[key] = []() -> std::shared_ptr<Base> {
-                return std::make_shared<T>();
+            register_type_with_policy<T, Base>(type, key, CreationPolicy::PROTOTYPE);
+        }
+
+        template<typename T, typename Base, typename... Args>
+        static void register_type_with_policy(const std::string &type, const ModuleKeyType &key, CreationPolicy policy,
+                                              Args &&... args) {
+            auto &creators = instance()->get_or_create_creator_list<Base>(type);
+            creators[key] = CreatorInfo<Base>{
+                [args...]() -> std::shared_ptr<Base> {
+                    return std::make_shared<T>(args...);
+                },
+                policy
             };
         }
 
+        template<typename T, typename Base>
+        static void register_type_with_policy(const std::string &type, const ModuleKeyType &key,
+                                              CreationPolicy policy) {
+            auto &creators = instance()->get_or_create_creator_list<Base>(type);
+            creators[key] = CreatorInfo<Base>{
+                []() -> std::shared_ptr<Base> {
+                    return std::make_shared<T>();
+                },
+                policy
+            };
+        }
+
+    public:
         template<typename Base>
         std::shared_ptr<Base> create_shared(const std::string &type, const ModuleKeyType &key) {
-            auto it = instance()->_base_factories.find(type_id<Base>());
-            if (it == instance()->_base_factories.end()) return nullptr;
-            using MapType = std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
-                ModuleKeyHash, ModuleKeyEqual>;
-            auto &creators = std::any_cast<MapType &>(it->second);
-            auto creator_it = creators.find(key);
-            if (creator_it == creators.end()) return nullptr;
-            return creator_it->second();
+            auto it = instance()->_typed_factories.find(type);
+            if (it != instance()->_typed_factories.end()) {
+                using MapType = std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash, ModuleKeyEqual>;
+                try {
+                    auto &creators = std::any_cast<MapType &>(it->second._creators);
+                    auto creator_it = creators.find(key);
+                    if (creator_it != creators.end()) {
+                        const auto &info = creator_it->second;
+                        if (info.policy == CreationPolicy::PROTOTYPE) {
+                            return info.creator();
+                        } else if (info.policy == CreationPolicy::SINGLETON) {
+                            return instance()->get_singleton_instance<Base>(key, info.creator);
+                        }
+                    }
+                } catch (const std::bad_any_cast &e) {
+                    tff::log::Logger::error("create_shared: bad_any_cast %s", e.what());
+                }
+            }
+
+            return nullptr;
         }
 
         template<typename Base>
@@ -113,56 +190,85 @@ namespace tff::factory {
             return create_shared<Base>(type, ModuleKeyType(key_string));
         }
 
-        // 获取某类型下的所有创建器
+        //
         template<typename Base>
-        std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,ModuleKeyHash, ModuleKeyEqual > create_shared_list(
-            const std::string &type) {
-            auto it = instance()->_base_factories.find(type_id<Base>());
-            if (it == instance()->_base_factories.end()) {
-                return std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
-                    ModuleKeyHash, ModuleKeyEqual>();
+        std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash, ModuleKeyEqual>
+        create_shared_list(const std::string &type_string) {
+            const auto it = this ->_typed_factories.find(type_string);
+            if (it != this->_typed_factories.end()) {
+                using ExpectedMapType = std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash,
+                    ModuleKeyEqual>;
+                try {
+                    const auto &creators_any = it->second._creators;
+                    const auto &creators_map = std::any_cast<const ExpectedMapType &>(creators_any);
+                    return creators_map;
+                } catch (const std::bad_any_cast &e) {
+                    tff::log::Logger::error("create_shared_list creator type %s not found error: %s",
+                                            type_string.c_str(), e.what());
+                }
             }
-            using MapType = std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
-                ModuleKeyHash, ModuleKeyEqual>;
-            auto &creators = std::any_cast<MapType &>(it->second);
-
-            return creators;
+            return std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash, ModuleKeyEqual>();
         }
 
     private:
         template<typename T>
         static const std::type_info *type_id() { return &typeid(T); }
 
+        struct FactoryEntry {
+            std::any _creators;
+            std::string _category;
+        };
+
+        std::unordered_map<
+            std::string,
+            FactoryEntry,
+            std::hash<std::string>,
+            std::equal_to<std::string>
+        > _typed_factories;
+
         template<typename Base>
-        std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>, ModuleKeyHash, ModuleKeyEqual> &
-        get_or_create_creator_list() {
-            const std::type_info *base_id = type_id<Base>();
-            auto &any_map = _base_factories[base_id];
-            if (!any_map.has_value()) {
-                any_map = std::make_any<std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>,
-                    ModuleKeyHash, ModuleKeyEqual> >();
+        std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash, ModuleKeyEqual> &
+        get_or_create_creator_list(const std::string &type_category) {
+            auto it = _typed_factories.find(type_category);
+            if (it == _typed_factories.end()) {
+                FactoryEntry entry;
+                entry._creators = std::make_any<std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash,
+                    ModuleKeyEqual> >();
+                entry._category = type_category;
+                _typed_factories.emplace(type_category, std::move(entry));
+                it = _typed_factories.find(type_category);
             }
 
-            using MapType = std::unordered_map<ModuleKeyType, std::function<std::shared_ptr<Base>()>, ModuleKeyHash,
-                ModuleKeyEqual>;
-
-            return std::any_cast<MapType &>(any_map);
+            using MapType = std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash, ModuleKeyEqual>;
+            try {
+                return std::any_cast<MapType &>(it->second._creators);
+            } catch (const std::bad_any_cast &) {
+                tff::log::Logger::error("Internal error: Type mismatch when retrieving creator list.");
+            }
         }
-
-    private:
-        //std::unordered_map<const std::type_info *, std::any> m_base_factories;
-        std::unordered_map<
-            const std::type_info *,
-            std::any,
-            std::hash<const std::type_info *>,
-            std::equal_to<const std::type_info *> > _base_factories;
     };
 
-#define REGISTER_MODULE_OBJECT(T, Base,type, key, ...) \
-    static struct reg_##T##_##__COUNTER__ { \
-            reg_##T##_##__COUNTER__() { \
-                ::tff::factory::ModuleFactory::register_type<T, Base>(type, key, ##__VA_ARGS__); \
-            } \
-    } reg_##T##_##__COUNTER__##_instance;
-}
+    template<typename Base>
+    std::unordered_map<ModuleKeyType, std::weak_ptr<Base>, ModuleKeyHash, ModuleKeyEqual>
+    ModuleFactory::SingletonInstanceMap<Base>::instances;
+
+    template<typename Base>
+    std::mutex ModuleFactory::SingletonInstanceMap<Base>::mtx;
+
+
+#define REGISTER_MODULE_OBJECT_PROTOTYPE(T, Base, type, key, ...) \
+        static struct reg_##T##_##__COUNTER__ { \
+                reg_##T##_##__COUNTER__() { \
+                    ::tff::factory::ModuleFactory::register_type<T, Base>(type, key, ##__VA_ARGS__); \
+                } \
+        } reg_##T##_##__COUNTER__##_instance;
+
+#define REGISTER_MODULE_OBJECT(T, Base, type, key, ...) \
+        static struct reg_singleton_##T##_##__COUNTER__ { \
+                reg_singleton_##T##_##__COUNTER__() { \
+                    ::tff::factory::ModuleFactory::register_type_with_policy<T, Base>(type, key, ::tff::factory::CreationPolicy::SINGLETON, ##__VA_ARGS__); \
+                } \
+        } reg_singleton_##T##_##__COUNTER__##_instance;
+} // namespace tff::factory
+
 #endif // DEEP_TFF_MODULEFACTORY_H

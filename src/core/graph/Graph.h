@@ -11,6 +11,7 @@
 #include "GraphNode.h"
 
 namespace tff::core::graph {
+
     class Graph final : public std::enable_shared_from_this<Graph> {
     public:
         Graph() = default;
@@ -33,7 +34,7 @@ namespace tff::core::graph {
         }
 
         // 建立边：from -> to
-        bool add_edge(std::shared_ptr<GraphNode> from, std::shared_ptr<GraphNode> to);
+        bool add_edge(std::shared_ptr<GraphNode> &from, std::shared_ptr<GraphNode> &to);
 
         // 构建拓扑排序（Kahn 算法）
         std::vector<std::shared_ptr<GraphNode> > topological_sort();

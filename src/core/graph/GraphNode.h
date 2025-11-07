@@ -15,8 +15,15 @@
 class Graph;
 
 namespace tff::core::graph {
+    enum GraphNodeType {
+        TFF_GRAPH_NODE_UNKNOWN,
+        TFF_GRAPH_NODE_COMPUTE,
+        TFF_GRAPH_NODE_MAP2CPU,
+        TFF_GRAPH_NODE_CPU2GPU,
+        TFF_GRAPH_NODE_GPU2CPU,
+    };
     class GraphNode : public std::enable_shared_from_this<GraphNode> {
-        friend class Graph; // 允许 Graph 修改依赖关系
+        friend class Graph;
 
     public:
         explicit GraphNode(const std::string &name = "") {
@@ -46,13 +53,13 @@ namespace tff::core::graph {
         const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs() const { return _dst_tensors_ptr; }
 
         void set_inputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &inputs) {
-            //_src_tensors_ptr.insert(_src_tensors_ptr.end(), inputs.begin(), inputs.end());
-            std::ranges::move(inputs, std::back_inserter(_src_tensors_ptr));
+            _src_tensors_ptr.reserve(inputs.size());
+            _src_tensors_ptr.insert(_src_tensors_ptr.end(), inputs.begin(), inputs.end());
         }
 
         void set_outputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs) {
-            //_dst_tensors_ptr.insert(_dst_tensors_ptr.end(), outputs.begin(), outputs.end());
-            std::ranges::move(outputs, std::back_inserter(_dst_tensors_ptr));
+            _dst_tensors_ptr.reserve(outputs.size());
+            _dst_tensors_ptr.insert(_dst_tensors_ptr.end(), outputs.begin(), outputs.end());
         }
 
         //

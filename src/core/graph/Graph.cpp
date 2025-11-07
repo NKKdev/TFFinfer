@@ -7,8 +7,11 @@ namespace tff::core::graph {
 // 添加节点（自动去重）
 
         // 建立边：from -> to
-        bool Graph::add_edge(std::shared_ptr<GraphNode> from, std::shared_ptr<GraphNode> to) {
-            if (!from || !to) return false;
+        bool Graph::add_edge(std::shared_ptr<GraphNode> &from, std::shared_ptr<GraphNode> &to) {
+            if (!from || !to) {
+                tff::log::Logger::error("add_edge failed!! from or to is invalid!!");
+                return false;
+            }
             std::lock_guard<std::mutex> lock(_mutex);
 
             // 检查是否已存在
@@ -21,8 +24,6 @@ namespace tff::core::graph {
             to->_prev_nodes.push_back(from);
 
             to->set_inputs(from->outputs());
-            from->set_outputs(to->inputs());
-
             return true;
         }
 

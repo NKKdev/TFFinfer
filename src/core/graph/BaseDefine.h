@@ -108,6 +108,7 @@ namespace tff::core::graph {
         //mem
         TFF_OP_MAP2CPU,
         TFF_OP_MEM_CPY,
+        TFF_OP_MEM_REF,
         TFF_OP_TOKENIZE,
         TFF_OP_COUNT,
     };

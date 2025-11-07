@@ -754,6 +754,67 @@ namespace tff::core::graph::op {
             return true;
         }
     };
+    //
+    class MemRefNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit MemRefNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_FLASH_ATTN_EXT); }
+
+        ~MemRefNode() override = default;
+
+    public:
+        bool init() override {
+            if (!GraphNode::init()) return false;
+
+            if (_src_tensors_ptr.size() != 1) {
+                /* log error */
+                return false;
+            }
+            return true;
+        }
+
+        bool forward() override {
+            if (!GraphNode::forward()) {
+                /* log error */
+                return false;
+            }
+            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
+                /* log error */
+                return false;
+            }
+            return true;
+        }
+    };
+    //
+    class FlashAttnNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit FlashAttnNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_FLASH_ATTN_EXT); }
+
+        ~FlashAttnNode() override = default;
+
+    public:
+        bool init() override {
+            if (!GraphNode::init()) return false;
+
+            if (_src_tensors_ptr.size() != 1) {
+                /* log error */
+                return false;
+            }
+            return true;
+        }
+
+        bool forward() override {
+            if (!GraphNode::forward()) {
+                /* log error */
+                return false;
+            }
+            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
+                /* log error */
+                return false;
+            }
+            return true;
+        }
+
+    };
 }
 
 

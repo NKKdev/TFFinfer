@@ -34,11 +34,16 @@ namespace tff::core::global {
     static size_t get_device_size(const std::string &device_key) {
         auto devices = tff::factory::ModuleFactory::instance()->create_shared_list<tff::core::device::DeviceBaseObject>(
             DEVICE_BACKEND_FLAG);
-        auto device_backend = devices[device_key]();
-        std::vector<int> device_list;
-        device_backend->get_device_id(device_list);
-
-        return device_list.size();
+        int n_device_num = 0;
+        for (const auto& [key, info] : devices) {
+            if (tff::factory::ModuleKeyType(device_key) != tff::factory::ModuleKeyType(key)) {
+                continue;
+            }
+            std::vector<int> device_list;
+            info.creator()->get_device_id(device_list);
+            n_device_num = device_list.size();
+        }
+        return n_device_num;
     }
     //
 

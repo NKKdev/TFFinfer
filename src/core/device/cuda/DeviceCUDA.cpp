@@ -6,6 +6,7 @@
 #include "cudaInc.h"
 #include "Logger.h"
 namespace tff::core::device::cuda {
+    REGISTER_MODULE_OBJECT(DeviceCUDA, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA)
     void DeviceCUDA::get_device_id(std::vector<int> &_device_list) {
         int device_cnt = 0;
         CudaSafeCall(cudaGetDeviceCount(&device_cnt));

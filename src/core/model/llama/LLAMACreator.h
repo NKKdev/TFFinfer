@@ -13,12 +13,13 @@
 #include "global/GlobalDefine.h"
 #include "FunctionFactory.h"
 using namespace tff::core::global;
-
+using namespace tff::core::graph;
 namespace tff::core::model {
     class LLAMACreator : public ModelCreatorBase<LLAMACreator> {
 #define ADD_NODE(enum_op_type) \
         tff::factory::ModuleFactory::instance()->create_shared<tff::core::graph::GraphNode>(OP_NODE_FLAG,\
         tff::factory::ModuleKeyType(enum_op_type));
+        using NodeType = std::unordered_map<tff::core::graph::GraphNodeType,std::shared_ptr<graph::GraphNode>>;
 
     public:
         using callback_para = void(
@@ -28,14 +29,137 @@ namespace tff::core::model {
             std::shared_ptr<tff::core::graph::Graph> &);
 
     public:
+        //
+        static void build_mul_mat_node(const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::graph::GraphNode> > > > &_layer_map, std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                    std::shared_ptr<tff::core::graph::GraphNode> &input_node,
+                    std::shared_ptr<tff::core::graph::GraphNode> &out_put_node) {
+            out_put_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MUL_MAT);
+            graph_ptr->add_node(out_put_node);
+            graph_ptr->add_edge(input_node, out_put_node);
+        }
+        //
+        static void build_add_node(const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::graph::GraphNode> > > > &_layer_map, std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                    std::shared_ptr<tff::core::graph::GraphNode> &input_node,
+                    std::shared_ptr<tff::core::graph::GraphNode> &out_put_node) {
+            out_put_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ADD);
+            graph_ptr->add_node(out_put_node);
+            graph_ptr->add_edge(input_node, out_put_node);
+        }
+        //
+        static void build_cpu_node(const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::graph::GraphNode> > > > &_layer_map, std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                    NodeType &input_node,
+                    NodeType &out_put_node) {
+            auto current_map2cpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
+            graph_ptr->add_node(current_map2cpu_node);
+            graph_ptr->add_edge(input_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU)->second,
+                                current_map2cpu_node);
+            out_put_node.insert({tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU, current_map2cpu_node});
+        }
+        //
+        static void build_gpu_node(const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::graph::GraphNode> > > > &_layer_map, std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                    NodeType &input_node,
+                    NodeType &out_put_node) {
+            auto current_cpu2gpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
+            graph_ptr->add_node(current_cpu2gpu_node);
+            graph_ptr->add_edge(out_put_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU)->second,
+                                current_cpu2gpu_node);
+
+            auto current_compute_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_REF);
+            graph_ptr->add_node(current_compute_node);
+            graph_ptr->add_edge(current_cpu2gpu_node, current_compute_node);
+            out_put_node.insert({tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU, current_cpu2gpu_node});
+            out_put_node.insert({tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE, current_compute_node});
+        }
+        //
+        static void build_attn_norm(const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::graph::GraphNode> > > > &layer_map, std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                    NodeType &input_node,
+                    NodeType &attn_norm_node) {
+
+            build_cpu_node(layer_map, graph_ptr, input_node, attn_norm_node);
+            build_gpu_node(layer_map, graph_ptr, attn_norm_node, attn_norm_node);
+            //
+            auto rms_norm_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
+            graph_ptr->add_node(rms_norm_node);
+            graph_ptr->add_edge(input_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE)->second,
+                                rms_norm_node);
+
+            build_mul_mat_node(layer_map, graph_ptr, rms_norm_node,
+                attn_norm_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
+        }
+        //
+        static void build_inputs(
+            const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::graph::GraphNode> > > > &_layer_map, std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                    NodeType &input_node) {
+            //
+            auto token_embd_map2cpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
+            token_embd_map2cpu_node->set_name("token_embding_map2cpu_node");
+            graph_ptr->add_node(token_embd_map2cpu_node);
+            auto token_embd_cpu2gpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
+            token_embd_cpu2gpu_node->set_name("token_embding_cpu2gpu_node");
+            graph_ptr->add_node(token_embd_cpu2gpu_node);
+            auto tokenize_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_TOKENIZE);
+            tokenize_node->set_name("tokenize_node");
+            graph_ptr->add_node(tokenize_node);
+            graph_ptr->add_edge(token_embd_map2cpu_node, token_embd_cpu2gpu_node);
+            graph_ptr->add_edge(token_embd_cpu2gpu_node, tokenize_node);
+
+            std::unordered_map<tff::core::graph::GraphNodeType,std::shared_ptr<graph::GraphNode>> input;
+
+            //
+            input_node.insert({tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE, tokenize_node});
+            input_node.insert({tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU, token_embd_map2cpu_node});
+            input_node.insert({tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU, token_embd_cpu2gpu_node});
+        }
+        //
+        static void build_qkv_node(const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::graph::GraphNode> > > > &layer_map, std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                    NodeType &input_node,
+                    NodeType &attn_qkv_node) {
+            build_cpu_node(layer_map, graph_ptr, input_node, attn_qkv_node);
+            build_gpu_node(layer_map, graph_ptr, attn_qkv_node, attn_qkv_node);
+            //
+            build_mul_mat_node(layer_map, graph_ptr,
+                input_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE)->second,
+                attn_qkv_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE)->second);
+
+            auto q_reshape_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
+            graph_ptr->add_node(q_reshape_node);
+            graph_ptr->add_edge(attn_qkv_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE)->second,
+                                q_reshape_node);
+        }
+        //
         static void build_attn(const std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
                                     std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                                        tff::core::graph::GraphNode> > > > &_layer_map,
-                                        const std::shared_ptr<tff::core::graph::GraphNode>& q_node,
-            const std::shared_ptr<tff::core::graph::GraphNode>& k_node,
-            const std::shared_ptr<tff::core::graph::GraphNode>& v_node) {
-
+                                        tff::core::graph::GraphNode> > > > &layer_map,
+                                        std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                                        NodeType &input_node,
+                                        NodeType& q_node,
+                                        NodeType& k_node,
+                                        NodeType& v_node,
+                                        NodeType& out_put_node){
+            auto flash_attn_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
+            graph_ptr->add_node(flash_attn_node);
+            graph_ptr->add_edge(input_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
+            graph_ptr->add_edge(q_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
+            graph_ptr->add_edge(k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
+            graph_ptr->add_edge(v_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
+            out_put_node.insert({TFF_GRAPH_NODE_COMPUTE, flash_attn_node});
         }
+        //
+        static void add_node();
     public:
         static void create_layer(std::shared_ptr<tff::core::memory::Tensor> &tensor_ptr,
                                  std::shared_ptr<tff::core::graph::GraphNode> &layer_node,
@@ -105,7 +229,7 @@ namespace tff::core::model {
         //
         static void build_graph(std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
                                     std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                                        tff::core::graph::GraphNode> > > > &_layer_map,
+                                        tff::core::graph::GraphNode> > > > &layer_map,
                                 std::shared_ptr<tff::core::graph::Graph> &graph_ptr) {
             //
             if (!graph_ptr) {
@@ -118,143 +242,64 @@ namespace tff::core::model {
                     graph_ptr->add_node(node);
                 }
             };
-            //
-            for (auto &layers: _layer_map) {
-                for (auto &one_layer: layers.second) {
-                    for (auto &one_node: one_layer.second) {
-                        add_nodes_to_graph(one_node.second);
-                    }
-                }
-            }
-            const auto input_layer_iter = _layer_map.find(
+
+            const auto input_layer_iter = layer_map.find(
                 tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT);
-            const auto repeating_layer_iter = _layer_map.find(
+            const auto repeating_layer_iter = layer_map.find(
                 tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
             //
-            const auto output_layer_iter = _layer_map.find(
+            const auto output_layer_iter = layer_map.find(
                 tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT);
 
-            //
-            auto map2CPU_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
-            add_nodes_to_graph(map2CPU_node);
-            auto tokenize_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_TOKENIZE);
-            add_nodes_to_graph(tokenize_node);
-            auto token_embdCPU2GPU_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
-            add_nodes_to_graph(token_embdCPU2GPU_node);
-            graph_ptr->add_edge(map2CPU_node, token_embdCPU2GPU_node);
+            NodeType input_node;
+            build_inputs(layer_map, graph_ptr,input_node);
 
             //
-            if (input_layer_iter != _layer_map.end() && !input_layer_iter->second.empty() &&
-                repeating_layer_iter != _layer_map.end() && !repeating_layer_iter->second.empty()) {
+            if (input_layer_iter != layer_map.end() && !input_layer_iter->second.empty() &&
+                repeating_layer_iter != layer_map.end() && !repeating_layer_iter->second.empty()) {
                 //auto &input_layers = input_layer_iter->second;
                 //auto &input_node = input_layers.begin()->second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_TOKEN_EMBD)->second;
                 //
-                if (repeating_layer_iter != _layer_map.end() && repeating_layer_iter->second.size() > 1) {
+                if (repeating_layer_iter != layer_map.end() && repeating_layer_iter->second.size() > 1) {
                     const auto &repeating_layer_map = repeating_layer_iter->second; // Assume it's a std::set or similar
                     for (size_t layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
                         tff::log::Logger::info("build layer :%d graph\n", layer_id);
                         auto &layer = repeating_layer_map.find(layer_id)->second;
                         //
-                        auto attn_norm_weight_map2cpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
-                        add_nodes_to_graph(attn_norm_weight_map2cpu_node);
-                        graph_ptr->add_edge(map2CPU_node, attn_norm_weight_map2cpu_node);
-                        //
-                        auto attn_norm_weight_cpu2gpu = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
-                        add_nodes_to_graph(attn_norm_weight_cpu2gpu);
-                        graph_ptr->add_edge(attn_norm_weight_map2cpu_node, attn_norm_weight_cpu2gpu);
-                        //
-                        auto &attn_norm_node = layer.find(
-                            tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_NORM)->second;
-                        graph_ptr->add_edge(token_embdCPU2GPU_node, attn_norm_node);
-                        // auto attn_norm_mul_attn_norm_w = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MUL_MAT);
-                        // add_nodes_to_graph(attn_norm_mul_attn_norm_w);
-                        // graph_ptr->add_edge(attn_norm_weight_cpu2gpu, attn_norm_mul_attn_norm_w);
-                        // graph_ptr->add_edge(attn_norm_node, attn_norm_mul_attn_norm_w);
-                        // auto add_attn_norm_bias_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ADD);
-                        // add_nodes_to_graph(add_attn_norm_bias_node);
-                        // graph_ptr->add_edge(attn_norm_mul_attn_norm_w, add_attn_norm_bias_node);
+                        NodeType attn_norm_node;
+                        build_attn_norm(layer_map, graph_ptr, input_node, attn_norm_node);
                         //process qkv weight
                         {
-                            // auto q_w_map2cpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
-                            // add_nodes_to_graph(q_w_map2cpu_node);
-                            // graph_ptr->add_edge(attn_norm_weight_map2cpu_node, q_w_map2cpu_node);
-                            // //
-                            // auto q_w_cpu2gpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
-                            // add_nodes_to_graph(q_w_cpu2gpu_node);
-                            // graph_ptr->add_edge(q_w_map2cpu_node, q_w_cpu2gpu_node);
-                            // auto &attn_q_node = layer.find(
-                            //     tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q)->second;
-                            // graph_ptr->add_edge(q_w_cpu2gpu_node, attn_q_node);
-                            // graph_ptr->add_edge(add_attn_norm_bias_node, attn_q_node);
+                            NodeType attn_q_node;
+                            build_qkv_node(layer_map, graph_ptr, attn_norm_node, attn_q_node);
+                            NodeType attn_k_node;
+                            build_qkv_node(layer_map, graph_ptr, attn_norm_node, attn_k_node);
+                            NodeType attn_v_node;
+                            build_qkv_node(layer_map, graph_ptr, attn_norm_node, attn_v_node);
+
                             //
-                            // //
-                            // auto k_w_map2cpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
-                            // add_nodes_to_graph(k_w_map2cpu_node);
-                            // graph_ptr->add_edge(attn_norm_weight_map2cpu_node, k_w_map2cpu_node);
-                            // //
-                            // auto k_w_cpu2gpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
-                            // add_nodes_to_graph(k_w_cpu2gpu_node);
-                            // graph_ptr->add_edge(k_w_map2cpu_node, k_w_cpu2gpu_node);
+                            auto q_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
+                            graph_ptr->add_node(q_rope_node);
+                            graph_ptr->add_edge(attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second, q_rope_node);
+                            auto q_compute_node = ADD_NODE(TFF_OP_MEM_REF);
+                            graph_ptr->add_node(q_compute_node);
+                            graph_ptr->add_edge(q_rope_node, q_compute_node);
+                            attn_q_node.insert({TFF_GRAPH_NODE_COMPUTE, q_compute_node});
                             //
-                            // auto &attn_k_node = layer.find(
-                            //     tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K)->second;
-                            // graph_ptr->add_edge(k_w_cpu2gpu_node, attn_k_node);
-                            // graph_ptr->add_edge(add_attn_norm_bias_node, attn_k_node);
+                            auto k_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
+                            add_nodes_to_graph(k_rope_node);
+                            graph_ptr->add_edge(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, k_rope_node);
+                            auto k_compute_node = ADD_NODE(TFF_OP_MEM_REF);
+                            graph_ptr->add_node(k_compute_node);
+                            graph_ptr->add_edge(k_rope_node, k_compute_node);
+                            attn_k_node.insert({TFF_GRAPH_NODE_COMPUTE, k_compute_node});
+
                             //
+                            NodeType attn_node;
+                            build_attn(layer_map, graph_ptr, input_node, attn_q_node, attn_k_node, attn_v_node, attn_node);
                             //
-                            // //
-                            // auto v_w_map2cpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
-                            // add_nodes_to_graph(v_w_map2cpu_node);
-                            // graph_ptr->add_edge(attn_norm_weight_map2cpu_node, v_w_map2cpu_node);
-                            // //
-                            // auto v_w_cpu2gpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
-                            // add_nodes_to_graph(v_w_cpu2gpu_node);
-                            // graph_ptr->add_edge(v_w_map2cpu_node, v_w_cpu2gpu_node);
-                            // auto &attn_v_node = layer.find(
-                            //     tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V)->second;
-                            // graph_ptr->add_edge(q_w_cpu2gpu_node, attn_v_node);
-                            // graph_ptr->add_edge(add_attn_norm_bias_node, attn_v_node);
-                            //
-                            //
-                            // //reshape;
-                            // auto q_reshaper_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
-                            // add_nodes_to_graph(q_reshaper_node);
-                            // q_reshaper_node->set_layer_type(
-                            //     tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
-                            // q_reshaper_node->set_op_type(graph::TFF_OP_RESHAPE);
-                            // q_reshaper_node->set_name("Q_reshaper");
-                            // q_reshaper_node->set_layer_id(attn_q_node->layer_id());
-                            // graph_ptr->add_edge(attn_q_node, q_reshaper_node);
-                            // //
-                            // auto k_reshaper_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
-                            // add_nodes_to_graph(k_reshaper_node);
-                            // k_reshaper_node->set_layer_type(
-                            //     tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
-                            // k_reshaper_node->set_op_type(graph::TFF_OP_RESHAPE);
-                            // k_reshaper_node->set_name("Q_reshaper");
-                            // k_reshaper_node->set_layer_id(attn_k_node->layer_id());
-                            // graph_ptr->add_edge(attn_k_node, k_reshaper_node);
-                            // //
-                            // auto v_reshaper_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
-                            // add_nodes_to_graph(v_reshaper_node);
-                            // v_reshaper_node->set_layer_type(
-                            //     tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
-                            // v_reshaper_node->set_op_type(graph::TFF_OP_RESHAPE);
-                            // v_reshaper_node->set_name("Q_reshaper");
-                            // v_reshaper_node->set_layer_id(attn_v_node->layer_id());
-                            // graph_ptr->add_edge(attn_v_node, v_reshaper_node);
-                            // //
-                            // auto q_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
-                            // add_nodes_to_graph(q_rope_node);
-                            // graph_ptr->add_edge(q_reshaper_node, q_rope_node);
-                            // //
-                            // auto k_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
-                            // add_nodes_to_graph(k_rope_node);
-                            // graph_ptr->add_edge(k_reshaper_node, k_rope_node);
-                            //
-                            // //
-                            // build_attn(_layer_map, q_rope_node, k_rope_node, v_reshaper_node);
-                            //
+                            build_add_node(layer_map, graph_ptr, attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
+                                input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
                         }
                     }
                 }
