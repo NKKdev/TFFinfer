@@ -21,6 +21,8 @@ namespace tff::core::graph {
         TFF_GRAPH_NODE_MAP2CPU,
         TFF_GRAPH_NODE_CPU2GPU,
         TFF_GRAPH_NODE_GPU2CPU,
+        TFF_GRAPH_NODE_W,
+        TFF_GRAPH_NODE_B,
     };
     class GraphNode : public std::enable_shared_from_this<GraphNode> {
         friend class Graph;
@@ -137,7 +139,7 @@ namespace tff::core::graph {
             }
 
             if (_src_tensors_ptr.empty()) {
-                tff::log::Logger::error("Node '%s': no input tensors", _name.c_str());
+                tff::log::Logger::error("func: %s,Node '%s': no input tensors", __func__,_name.c_str());
                 return false;
             }
 
@@ -152,23 +154,23 @@ namespace tff::core::graph {
                 return false;
             }
 
-            // 2. 确保所有输入 tensor 已分配内存
-            for (size_t i = 0; i < _src_tensors_ptr.size(); ++i) {
-                auto &tensor = _src_tensors_ptr[i];
-                if (!tensor || !tensor->is_allocated()) {
-                    tff::log::Logger::error("Node '%s': input tensor[%zu] is null or not allocated", _name.c_str(), i);
-                    return false;
-                }
-            }
-
-            // 3. 确保所有输出 tensor 已分配内存（应在 init() 中完成）
-            for (size_t i = 0; i < _dst_tensors_ptr.size(); ++i) {
-                auto &tensor = _dst_tensors_ptr[i];
-                if (!tensor || !tensor->is_allocated()) {
-                    tff::log::Logger::error("Node '%s': output tensor[%zu] is null or not allocated", _name.c_str(), i);
-                    return false;
-                }
-            }
+            // // 2. 确保所有输入 tensor 已分配内存
+            // for (size_t i = 0; i < _src_tensors_ptr.size(); ++i) {
+            //     auto &tensor = _src_tensors_ptr[i];
+            //     if (!tensor || !tensor->is_allocated()) {
+            //         tff::log::Logger::error("Node '%s': input tensor[%zu] is null or not allocated", _name.c_str(), i);
+            //         return false;
+            //     }
+            // }
+            //
+            // // 3. 确保所有输出 tensor 已分配内存（应在 init() 中完成）
+            // for (size_t i = 0; i < _dst_tensors_ptr.size(); ++i) {
+            //     auto &tensor = _dst_tensors_ptr[i];
+            //     if (!tensor || !tensor->is_allocated()) {
+            //         tff::log::Logger::error("Node '%s': output tensor[%zu] is null or not allocated", _name.c_str(), i);
+            //         return false;
+            //     }
+            // }
             return true;
         }
 

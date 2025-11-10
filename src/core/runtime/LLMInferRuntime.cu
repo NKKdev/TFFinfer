@@ -14,10 +14,11 @@ namespace tff::core::runtime {
                                      const tff::core::model::ModelConfig &params) {
         bool bRet = true;
         auto model_detector = tff::core::model::ModelDetectyorRegistry::get().find_dector(params._architectures);
-        model_detector->model_registry();
         this->_architecture = model_detector->arch();
         this->_model_loader = model_detector->create_loader();
         this->_model_loader->load_from_file(model_files_path, params._use_mmap, params._check_tensors);
+        this->_model_creator = model_detector->create_creator();
+        this->_model_creator->set_loader(this->_model_loader);
         this->_vocabulary_ptr = std::make_unique<tff::core::model::LLMLLaMaVocabulary>();
         //
         this->load_hparams();
@@ -142,13 +143,9 @@ namespace tff::core::runtime {
             return false;
         }
         tff::log::Logger::info("Initializing graph");
-        auto callback = tff::factory::FunctionFactory::instance()->get_callback<LLAMACreator::callback_para>(
-            BUILD_GRAPH_FLAG, std::string(tff::core::global::LLM_ARCH_NAMES.find(this->_architecture)->second));
-        if (callback) {
-            callback(this->_layer_map, this->_graph_ptr);
-        }
+
+        this->_model_creator->build_graph(this->_layer_map, this->_graph_ptr);
         {
-            //debug;
             this->_graph_ptr->forward();
         }
         return true;
@@ -209,10 +206,6 @@ namespace tff::core::runtime {
         for (auto &weight: weight_map) {
             size_t layer_index = 0;
             std::shared_ptr<tff::core::graph::GraphNode> layer_node;
-            auto callback = tff::factory::FunctionFactory::instance()->get_callback<void(
-                std::shared_ptr<tff::core::memory::Tensor> &,
-                std::shared_ptr<tff::core::graph::GraphNode> &,
-                const size_t &, const size_t &)>(CREATE_LAYER_FLAG, name);
             auto tensor = weight.second._tensor_ptr;
             auto &layer_info = tff::core::global::LLM_LAYER_OP_INFOS.find(tensor->get_tensor_type())->second;
             if (layer_info.first == tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING) {
@@ -224,8 +217,8 @@ namespace tff::core::runtime {
                 };
                 layer_index = get_layer_index(weight.first);
             }
-            if (callback) {
-                callback(tensor, layer_node, total_layer_num, layer_index);
+            if (this->_model_creator) {
+                this->_model_creator->build_layer(tensor, layer_node, total_layer_num, layer_index);
                 if (!layer_node) {
                     tff::log::Logger::error("current layer %s create failed!! \n", weight.first.c_str());
                     continue;

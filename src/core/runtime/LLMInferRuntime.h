@@ -18,6 +18,7 @@
 #include "mem/LLMKVCache.h"
 #include "mem/MemBufferAllocatorBaseObject.h"
 #include "ExportInc.h"
+#include "model/base/ModelCreatorBase.h"
 #include "runtime/LLMBatchManager.h"
 namespace tff::core::runtime {
     class DEEP_TFF_API LLMInferRuntime {
@@ -88,6 +89,7 @@ namespace tff::core::runtime {
         std::set<std::shared_ptr<tff::core::device::DeviceBaseObject> ,tff::core::device::DevicePtrComparator> _devices;
 
         std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
+        std::shared_ptr<tff::core::model::ModelCreatorBase> _model_creator;
         //
         std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
         std::unordered_map<tff::core::memory::ModelTensorType,std::shared_ptr<tff::core::graph::GraphNode>>>>

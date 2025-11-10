@@ -4,9 +4,6 @@
 
 #include "Graph.h"
 namespace tff::core::graph {
-// 添加节点（自动去重）
-
-        // 建立边：from -> to
         bool Graph::add_edge(std::shared_ptr<GraphNode> &from, std::shared_ptr<GraphNode> &to) {
             if (!from || !to) {
                 tff::log::Logger::error("add_edge failed!! from or to is invalid!!");
@@ -91,7 +88,6 @@ namespace tff::core::graph {
             return true;
         }
 
-        // 调试：打印拓扑结构
         void Graph::print_topology() const {
             std::lock_guard<std::mutex> lock(_mutex);
             for (const auto &node: _nodes) {

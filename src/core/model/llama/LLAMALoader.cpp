@@ -9,6 +9,9 @@
 #include "global/GlobalDefine.h"
 
 namespace tff::core::model {
+    REGISTER_MODULE_OBJECT(LLAMALoader, ModelLoaderBase, MODEL_LOADER_FLAG,
+                       std::string(LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA
+                       )->second));
     tff::core::model::ModelLoadResult tff::core::model::LLAMALoader::load_from_file(
         const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
         bool bRet = this->load(model_files_name, use_mmap, check_tensors);

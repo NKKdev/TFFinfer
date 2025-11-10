@@ -82,16 +82,12 @@ namespace tff::schedule {
         // 创建事件用于同步
         auto &event = _sync_events[stream_idx];
 
-        // 包装任务：先执行 kernel(stream, args...), 再记录 event
         auto gpu_lambda = [this,
                     kern = std::forward<Kernel>(kernel),
                     tup = std::make_tuple(std::ref(stream), std::forward<Args>(args)...),_event = event,
                     _stream = stream]()
             -> void {
-            // 展开 tuple 并调用 kernel(stream, args...)
             std::apply(kern, std::move(tup));
-
-            // 记录事件（异步）
             cudaEventRecord(_event, _stream);
         };
 
@@ -118,7 +114,7 @@ namespace tff::schedule {
         return task;
     }
 
-    REGISTER_MODULE_OBJECT(HybridScheduler, tff::module::ModuleObject, TASK_GRAPH_FLAG, TASK_GRAPH_TYPE);
+
 }
 
 #endif //TFFINFER_TASKFLOWSCHEDULE_H

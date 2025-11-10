@@ -148,9 +148,7 @@ namespace tff::core::model {
         std::unique_ptr<tff::core::model::ModelContext> _model_ctx;
     };
 
-    REGISTER_MODULE_OBJECT(LLAMALoader, ModelLoaderBase, MODEL_LOADER_TYPE,
-                           std::string(LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA
-                           )->second));
+
 }
 
 

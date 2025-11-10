@@ -12,6 +12,7 @@
 #include "ModuleObject.h"
 #include "model/BaseDefine.h"
 #include "ModelLoaderBase.h"
+#include "ModelCreatorBase.h"
 namespace tff::core::model {
     class ModelDetectorBase {
         public:
@@ -30,7 +31,7 @@ namespace tff::core::model {
         // 创建该模型的加载器
         virtual std::shared_ptr<ModelLoaderBase> create_loader() = 0;
         //
-        virtual void model_registry() = 0;
+        virtual std::shared_ptr<ModelCreatorBase> create_creator() = 0;
 
         // （可选）优先级，用于解决冲突
         virtual int priority() const { return 50; } // 默认优先级

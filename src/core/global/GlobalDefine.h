@@ -9,9 +9,12 @@
 #include "OPDefine.h"
 namespace tff::core::global {
 #define TFF_MAX_OP_PARAMS      64
-#define MODEL_DETECTOR_TYPE "ModelDetector"
-#define MODEL_LOADER_TYPE "ModelLoader"
-#define MODEL_READER_TYPE "ModelReader"
+#define TASK_FLOW_MANAGER_FLAG "TASK_FLOW_MANAGER"
+
+#define MODEL_CREATOR_FLAG "MODELCreator"
+#define MODEL_DETECTOR_FLAG "ModelDetector"
+#define MODEL_LOADER_FLAG "ModelLoader"
+#define MODEL_READER_FLAG "ModelReader"
 #define MEMORY_ALLOCATOR_FLAG "MEMORY"
 
 #define DEVICE_BACKEND_FLAG "DEVICE"

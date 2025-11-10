@@ -128,7 +128,10 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCE_LIST
 #        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
+        src/core/model/llama/LLAMACreator.cpp
+        src/core/runtime/LLMTaskFlowManager.cu
+        src/core/runtime/LLMTaskFlowManager.h)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)
