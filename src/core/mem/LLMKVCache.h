@@ -7,7 +7,8 @@
 #include <memory>
 #include <mutex>
 #include "Tensor.h"
-
+#include "global/OPDefine.h"
+#include "global/GlobalDefine.h"
 namespace tff::core::memory {
 #define INVALID_PAGE_ID (-1)
 #define PAGE_SIZE 32
@@ -174,7 +175,7 @@ namespace tff::core::memory {
     public:
         explicit LLMKVCache(const tff::core::memory::DataType data_type, const LLMKVCache::KVConfig &cfg,
                             std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator = nullptr)
-            : _config(cfg) {
+            : _config(cfg),_seq_length(MAX_SEQ_LENGTH) {
             this->_page_manager = std::make_shared<PageManager>(
                 data_type,
                 cfg._total_pages,
@@ -198,6 +199,16 @@ namespace tff::core::memory {
         };
 
     public:
+        //
+        inline void begine_prefill(const size_t &batch_size,const size_t &seq_len) {
+            this->_seq_length = seq_len;
+            this->_current_batch_size = batch_size;
+            _is_prefilling = true;
+        }
+        //
+        inline void end_prefill() {
+            _is_prefilling = false;
+        }
         static inline int make_key(const int seq_id, const int layer_id) {
             return (seq_id << 16) | layer_id;
         }
@@ -281,6 +292,9 @@ namespace tff::core::memory {
         const LLMKVCache::KVConfig &get_config() const { return _config; }
 
     public:
+        size_t _seq_length;
+        size_t _current_batch_size;
+        bool _is_prefilling;
         std::vector<KVPage> _layers;
         KVConfig _config;
         //

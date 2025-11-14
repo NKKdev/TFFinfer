@@ -19,7 +19,7 @@ int main(int argc,char *argv[]) {
     std::string prompt = "Hello my name is";
     std::string respone_str = "";
     const int n_predict = 256;
-    llm_runtime.prefill(prompt);
+    llm_runtime.prefill(std::vector<std::string>{prompt});
     llm_runtime.decode(n_predict, respone_str);
     return 0;
 }

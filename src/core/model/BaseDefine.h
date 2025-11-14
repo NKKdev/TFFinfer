@@ -59,7 +59,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         int32_t n_gpu_layers;
 
 
-        uint32_t _n_ctx_train = 0;
+        uint32_t _n_ctx = 8192;
         uint32_t _n_embd{};
         uint32_t _n_embd_features = 0;
         uint32_t _n_layer{};

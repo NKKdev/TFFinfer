@@ -7,7 +7,9 @@
 #include "core/global/FunctionTraits.h"
 #include "FunctionFactory.h"
 #include "core/global/GlobalDefine.h"
+#include "global/ParamBaseObject.h"
 namespace tff::kernel::base {
+    using OP_CALLBACK_TYPE = void(std::shared_ptr<tff::core::global::ParamBaseObject>&);
     template<typename Derived, typename T>
     class OPCreatorBase {
     public:

@@ -46,7 +46,7 @@ namespace tff::core::runtime {
         //
         bool init_graph();
         //
-        bool prefill(const std::string &prompt);
+        bool prefill(const std::vector<std::string> &prompt_batches);
         //
         bool decode(const int &n_predict, std::string &generate_str);
 

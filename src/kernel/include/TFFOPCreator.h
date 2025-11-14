@@ -7,23 +7,36 @@
 #include "Buffer.h"
 #include "core/global/ModelGlobalVar.h"
 #include "TFFOPCreatorBase.h"
+#include "global/ParamBaseObject.h"
+#include "log/Logger.h"
 namespace tff::kernel {
     template <typename T>
     class XGemm :public base::OPCreatorBase<XGemm<T>, T>{
     public:
-        static void compute(base::Layout layout,
-                            base::Transpose a_transpose,  base::Transpose b_transpose,
-                            size_t m,  size_t n,  size_t k,
-                            float alpha,
-                            Buffer<T> &a_buffer,  size_t a_offset,  size_t a_ld,
-                            Buffer<T> &b_buffer,  size_t b_offset,  size_t b_ld,
-                            float beta,
-                            Buffer<T> &c_buffer,  size_t c_offset,  size_t c_ld);
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
         //
-        static const char *get_op_name() {
-            return core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MUL_MAT)->second;
+        static std::string get_op_name() {
+            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MUL_MAT);
+            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
+                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
+                return "";
+            }
+            return std::string(it->second) + DEVICE_BACKEND_TYPE_CPU;
         }
 
+    };
+    template <typename T>
+    class MemMap2Cpu :public base::OPCreatorBase<MemMap2Cpu<T>, T> {
+        public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+        static std::string get_op_name() {
+            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
+            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
+                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
+                return "";
+            }
+            return std::string(it->second) + DEVICE_BACKEND_TYPE_CPU;
+        }
     };
 
 

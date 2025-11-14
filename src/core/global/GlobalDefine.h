@@ -5,9 +5,6 @@
 #ifndef TFFINFER_GLOBALDEFINE_H
 #define TFFINFER_GLOBALDEFINE_H
 #include "ModuleFactory.h"
-#include "device/DeviceBaseObject.h"
-#include "OPDefine.h"
-namespace tff::core::global {
 #define TFF_MAX_OP_PARAMS      64
 #define TASK_FLOW_MANAGER_FLAG "TASK_FLOW_MANAGER"
 
@@ -31,23 +28,14 @@ namespace tff::core::global {
 #define TOKENIZER_FLAG "TOKENIZER"
     //
 #define MAX_BATCH_SIZE 512
+#define MAX_SEQ_LENGTH 8192
+#define MAX_PARAM_BUFFER_SIZE 512
+#define MAX_PARAM_COUNT 64
     //OP
 #define OP_NODE_FLAG "OP_NODE"
 
-    static size_t get_device_size(const std::string &device_key) {
-        auto devices = tff::factory::ModuleFactory::instance()->create_shared_list<tff::core::device::DeviceBaseObject>(
-            DEVICE_BACKEND_FLAG);
-        int n_device_num = 0;
-        for (const auto& [key, info] : devices) {
-            if (tff::factory::ModuleKeyType(device_key) != tff::factory::ModuleKeyType(key)) {
-                continue;
-            }
-            std::vector<int> device_list;
-            info.creator()->get_device_id(device_list);
-            n_device_num = device_list.size();
-        }
-        return n_device_num;
-    }
+namespace tff::core::global {
+
     //
 
 }

@@ -59,7 +59,7 @@ namespace tff::core::model {
             this->_files_loader.insert(std::make_pair(i, std::make_unique<FileLoader>(model_file_name.c_str(), "rb")));
             const auto &it = this->_files_loader.find(i);
             if (use_mmap) {
-                auto cpu_device_size = tff::core::global::get_device_size("CPU");
+                auto cpu_device_size = tff::core::device::get_device_size("CPU");
                 bool is_numa = cpu_device_size > 1 ? true : false;
                 _files_mmap.insert(
                     std::make_pair(

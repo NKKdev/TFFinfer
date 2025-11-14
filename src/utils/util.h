@@ -10,13 +10,13 @@ namespace tff::utils {
 
     //hash
     template<typename T>
-    static void hash_combine(std::size_t &seed, const T &v) {
+    static constexpr void hash_combine(std::size_t &seed, const T &v) {
         std::hash<T> hasher;
         seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }
 
     template<typename T, typename... Rest>
-    static void hash_combine(std::size_t &seed, const T &v, const Rest &... rest) {
+    static constexpr void hash_combine(std::size_t &seed, const T &v, const Rest &... rest) {
         hash_combine(seed, v);
         hash_combine(seed, rest...);
     }

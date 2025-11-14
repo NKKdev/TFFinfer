@@ -30,6 +30,12 @@ namespace tff::core::graph {
             }
             _nodes.push_back(node);
             _node_set.insert(node);
+            if (node->is_input_node()) {
+                _input_node = (node);
+            }
+            if (node->is_output_node()) {
+                _output_node = (node);
+            }
             return true;
         }
 
@@ -41,18 +47,6 @@ namespace tff::core::graph {
 
         // 前向执行整个图
         bool forward();
-
-        // 初始化所有节点
-        inline bool init() {
-            auto topo_order = topological_sort();
-            for (const auto &node: topo_order) {
-                if (!node->init()) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
         // 释放所有资源
         inline void release() const {
             std::lock_guard<std::mutex> lock(_mutex);
@@ -81,6 +75,11 @@ namespace tff::core::graph {
         inline bool has_cycle() {
             return topological_sort().empty() && !_nodes.empty();
         }
+        //
+        inline std::shared_ptr<tff::core::graph::GraphNode> get_input_nodes() {
+            std::lock_guard<std::mutex> lock(_mutex);
+            return _input_node;
+        }
 
     private:
         inline bool has_edge(const std::shared_ptr<GraphNode> &from, const std::shared_ptr<GraphNode> &to) const {
@@ -97,6 +96,9 @@ namespace tff::core::graph {
     private:
         std::vector<std::shared_ptr<GraphNode> > _nodes;
         std::unordered_set<std::shared_ptr<GraphNode> > _node_set; // 去重
+        //
+        std::shared_ptr<GraphNode> _input_node;
+        std::shared_ptr<GraphNode> _output_node;
         mutable std::mutex _mutex;
     };
 }

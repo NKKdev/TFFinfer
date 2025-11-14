@@ -5,6 +5,7 @@
 #include "DeviceCUDA.h"
 #include "cudaInc.h"
 #include "Logger.h"
+#include "global/ModelGlobalVar.h"
 namespace tff::core::device::cuda {
     REGISTER_MODULE_OBJECT(DeviceCUDA, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA)
     void DeviceCUDA::get_device_id(std::vector<int> &_device_list) {
@@ -60,5 +61,18 @@ namespace tff::core::device::cuda {
         return tff::factory::ModuleFactory::instance()->create_shared<
                         tff::core::memory::MemBufferAllocatorBaseObject>(MEMORY_ALLOCATOR_FLAG,
                                                                          tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
+    }
+    //
+    std::function<tff::kernel::base::OP_CALLBACK_TYPE> DeviceCUDA::get_op_func(
+            const tff::core::graph::TffOpType &op_type) {
+        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
+        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
+            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
+            return nullptr;
+        }
+        std::string op_name = std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+
+        return tff::factory::FunctionFactory::instance()->get_callback<tff::kernel::base::OP_CALLBACK_TYPE>(OP_NODE_FLAG,
+                                                                          op_name);
     }
 }

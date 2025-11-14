@@ -8,10 +8,9 @@
 #include "ModuleObject.h"
 #include "BaseDefine.h"
 #include "mem/MemBufferAllocatorBaseObject.h"
-
-
+#include "graph/BaseDefine.h"
+#include "kernel/include/TFFOPCreatorBase.h"
 namespace tff::core::device {
-
     class DEEP_TFF_API DeviceBaseObject : public tff::module::ModuleObject {
     public:
         DeviceBaseObject() = default;
@@ -34,6 +33,11 @@ namespace tff::core::device {
         virtual void device_init(size_t _device_id) = 0;
 
         virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator() = 0;
+
+        //
+        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
+            const tff::core::graph::TffOpType &op_type) = 0;
+
     public:
         uint32_t _sched_priority = TFF_DEVICE_PRIORITY_DEFAULT;
     };
@@ -41,15 +45,29 @@ namespace tff::core::device {
     // 优先级排序;
     struct DevicePtrComparator {
         bool operator()(
-            const std::shared_ptr<tff::core::device::DeviceBaseObject>& a,
-            const std::shared_ptr<tff::core::device::DeviceBaseObject>& b
+            const std::shared_ptr<tff::core::device::DeviceBaseObject> &a,
+            const std::shared_ptr<tff::core::device::DeviceBaseObject> &b
         ) const {
             if (!a && !b) return false;
             if (!a) return true;
             if (!b) return false;
-            return a->_sched_priority > b->_sched_priority;  // 字典序降序
+            return a->_sched_priority > b->_sched_priority; // 字典序降序
         }
     };
+    static size_t get_device_size(const std::string &device_key) {
+        auto devices = tff::factory::ModuleFactory::instance()->create_shared_list<tff::core::device::DeviceBaseObject>(
+            DEVICE_BACKEND_FLAG);
+        int n_device_num = 0;
+        for (const auto& [key, info] : devices) {
+            if (tff::factory::ModuleKeyType(device_key) != tff::factory::ModuleKeyType(key)) {
+                continue;
+            }
+            std::vector<int> device_list;
+            info.creator()->get_device_id(device_list);
+            n_device_num = device_list.size();
+        }
+        return n_device_num;
+    }
 }
 
 

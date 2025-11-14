@@ -5,7 +5,8 @@
 #ifndef TFFINFER_DEVICE_BASEDEFINE_H
 #define TFFINFER_DEVICE_BASEDEFINE_H
 #include <stddef.h>
-
+#include <string>
+#include "ModuleFactory.h"
 namespace tff::core::device {
     //
     enum DeviceSchedulingPriority {
@@ -49,6 +50,7 @@ namespace tff::core::device {
         // device capabilities
         struct DeviceCaps caps;
     };
+
 }
 
 #endif //TFFINFER_DEVICE_BASEDEFINE_H

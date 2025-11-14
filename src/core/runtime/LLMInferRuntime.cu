@@ -145,13 +145,72 @@ namespace tff::core::runtime {
         tff::log::Logger::info("Initializing graph");
 
         this->_model_creator->build_graph(this->_layer_map, this->_graph_ptr);
-        {
-            this->_graph_ptr->forward();
-        }
+
         return true;
     }
 
-    bool LLMInferRuntime::prefill(const std::string &prompt) {
+    bool LLMInferRuntime::prefill(const std::vector<std::string> &prompt_batches) {
+        if (prompt_batches.empty()) {
+            tff::log::Logger::error("Prompt is empty.");
+            return false;
+        }
+
+        const size_t batch_size = prompt_batches.size();
+        std::vector<std::vector<int> > tokenized_batch;
+        size_t max_seq_len = 0;
+        for (size_t i = 0; i < batch_size; ++i) {
+            std::vector<int> tokens;
+            this->_vocabulary_ptr->tokenize(prompt_batches[i], tokens);
+
+            if (tokens.size() > this->_model_config._n_ctx) {
+                tff::log::Logger::warning("Prompt {} length ({}) exceeds context length ({}). Truncating.",
+                                          i, tokens.size(), this->_model_config._n_ctx);
+                tokens.resize(this->_model_config._n_ctx);
+            }
+            max_seq_len = std::max(max_seq_len, tokens.size());
+            tokenized_batch.push_back(std::move(tokens));
+            tff::log::Logger::info("Batch {}: tokenized {} tokens.", i, tokens.size());
+        }
+
+        for (auto &tokens: tokenized_batch) {
+            tokens.resize(max_seq_len, 0);
+        }
+
+        std::vector<int32_t> flat_tokens;
+        flat_tokens.reserve(batch_size * max_seq_len);
+        for (const auto &tokens: tokenized_batch) {
+            flat_tokens.insert(flat_tokens.end(), tokens.begin(), tokens.end());
+        }
+
+        auto input_tensor = std::make_shared<tff::core::memory::Tensor>(
+            tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+            std::vector<int64_t>{static_cast<int64_t>(batch_size), static_cast<int64_t>(max_seq_len)}
+        );
+
+        const size_t total_bytes = flat_tokens.size() *
+                                   tff::core::memory::type_traits_auto[tff::core::memory::DataType::TFF_DATA_TYPE_I32].
+                                   _type_size;
+        input_tensor->set_buffer_data(flat_tokens.data(), total_bytes);
+
+        auto input_node = this->_graph_ptr->get_input_nodes();
+        input_node->set_inputs({input_tensor});
+
+        this->_kv_cache_ptr->begine_prefill(batch_size, max_seq_len);
+
+        try {
+            this->_graph_ptr->forward();
+        } catch (const std::exception &e) {
+            tff::log::Logger::error("Prefill forward failed: {}", e.what());
+            return false;
+        }
+
+        // Step 7: finalize KV cache
+        this->_kv_cache_ptr->end_prefill();
+
+        tff::log::Logger::info("Prefill completed successfully for {} batches, max seq len = {}.",
+
+                               batch_size, max_seq_len);
+
         return true;
     }
 
@@ -227,22 +286,24 @@ namespace tff::core::runtime {
                 layer_node->set_name(weight.first);
                 auto iter = this->_layer_map[layer_info.first].find(layer_index);
                 if (iter != this->_layer_map[layer_info.first].end()) {
-                    iter->second.insert(std::make_pair(tensor->get_tensor_type(),layer_node));
-                }else {
-                    std::unordered_map<tff::core::memory::ModelTensorType,std::shared_ptr<tff::core::graph::GraphNode>>
-                    tensor_type_graph_map;
-                    tensor_type_graph_map.insert(std::make_pair(tensor->get_tensor_type(),layer_node));
-                    this->_layer_map[layer_info.first].insert(std::make_pair(layer_index,tensor_type_graph_map));
+                    iter->second.insert(std::make_pair(tensor->get_tensor_type(), layer_node));
+                } else {
+                    std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                                tff::core::graph::GraphNode> >
+                            tensor_type_graph_map;
+                    tensor_type_graph_map.insert(std::make_pair(tensor->get_tensor_type(), layer_node));
+                    this->_layer_map[layer_info.first].insert(std::make_pair(layer_index, tensor_type_graph_map));
                 }
 
-                const auto iter_tmp = this->_layer_map.find(tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+                const auto iter_tmp = this->_layer_map.find(
+                    tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
                 if (iter_tmp != this->_layer_map.end()) {
-                    auto iter_tensor = iter_tmp->second.begin()->second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K);
+                    auto iter_tensor = iter_tmp->second.begin()->second.find(
+                        tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K);
                     if (iter_tensor != iter_tmp->second.begin()->second.end()) {
                         this->_model_config._kv_data_type = iter_tensor->second.get()->data_type();
                     }
                 }
-
             }
         }
         return true;

@@ -24,55 +24,10 @@ namespace tff::core::graph::op {
         template<typename T>
         auto get_xgemm_callback() {
             return tff::factory::FunctionFactory::instance()->get_callback(
-                CREATE_LAYER_FLAG, tff::kernel::XGemm<T>::get_op_name());
+                CREATE_LAYER_FLAG, tff::kernel::XGemm<T>::get_opthis->_node_metadata._name());
         }
 
     public:
-        bool init() override {
-            // 调用基类 init 做通用检查
-            if (!GraphNode::init()) {
-                return false;
-            }
-
-            // MatMul 特有检查
-            if (_src_tensors_ptr.size() != 2) {
-                tff::log::Logger::error("[MatMulNode]: %s: requires 2 inputs, got :%d input!!\n", _name.c_str(),
-                                        this->_src_tensors_ptr.size());
-                return false;
-            }
-
-            auto A = _src_tensors_ptr[0];
-            auto B = _src_tensors_ptr[1];
-            auto C = std::make_shared<tff::core::memory::Tensor>();
-
-            const auto &shape_a = A->get_shape();
-            const auto &shape_b = B->get_shape();
-
-            if (shape_a.size() < 2 || shape_b.size() < 2) {
-                tff::log::Logger::error("[MatMulNode]: %s: inputs must be at least 2D!!\n", _name.c_str());
-                return false;
-            }
-
-            int64_t m = shape_a[shape_a.size() - 2];
-            int64_t k1 = shape_a[shape_a.size() - 1];
-            int64_t k2 = shape_b[shape_b.size() - 2];
-            int64_t n = shape_b[shape_b.size() - 1];
-
-            if (k1 != k2) {
-                tff::log::Logger::error("[MatMulNode]: shape mismatch");
-                return false;
-            }
-
-            // 设置输出 shape: [..., m, n]
-            auto out_shape = std::vector<int64_t>(shape_a.begin(), shape_a.end() - 1);
-            out_shape.push_back(n);
-            C->set_shape(out_shape);
-            C->set_data_type(A->get_data_type()); // 输出类型与输入一致
-            C->set_allocator(A->get_allocator());
-            C->allocate();
-            this->_dst_tensors_ptr.push_back(std::move(C));
-            return true;
-        }
 
         bool forward() override {
             if (!GraphNode::forward()) {
@@ -142,38 +97,10 @@ namespace tff::core::graph::op {
         template<typename T>
         auto get_read_buffer_callback() {
             return tff::factory::FunctionFactory::instance()->get_callback(
-                CREATE_LAYER_FLAG, tff::kernel::XGemm<T>::get_op_name());
+                CREATE_LAYER_FLAG, tff::kernel::XGemm<T>::get_opthis->_node_metadata._name());
         }
 
     public:
-        bool init() override {
-            // 调用基类 init 做通用检查
-            if (!GraphNode::init()) {
-                return false;
-            }
-
-            // MatMul 特有检查
-            if (_src_tensors_ptr.empty()) {
-                tff::log::Logger::error("[MatMulNode]: %s: requires 1 inputs, got :%d input!!\n", _name.c_str(),
-                                        this->_src_tensors_ptr.size());
-                return false;
-            } else {
-                if (this->_src_tensors_ptr[0]->get_allocator()->device_type() ==
-                    tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU) {
-                    tff::log::Logger::error("[MatMulNode]: %s: requires 1 inputs, got :%d input!!\n", _name.c_str(),
-                                            this->_src_tensors_ptr.size());
-                    return false;
-                }
-            }
-
-            auto A = _src_tensors_ptr[0];
-            auto B = _src_tensors_ptr[1];
-
-            const auto &shape_a = A->get_shape();
-            const auto &shape_b = B->get_shape();
-            //todo
-            return true;
-        }
 
         bool forward() override {
             if (!GraphNode::forward()) {
@@ -205,19 +132,6 @@ namespace tff::core::graph::op {
         ~AddNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) {
-                return false;
-            }
-            if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                return false;
-            }
-            auto A = _src_tensors_ptr[0].get();
-            auto B = _src_tensors_ptr[1].get();
-            auto C = _dst_tensors_ptr[0].get();
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
                 tff::log::Logger::error("[AddNode]: forward() failed!!\n");
@@ -243,38 +157,6 @@ namespace tff::core::graph::op {
         ~RMSNormNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) {
-                return false;
-            }
-            // RMSNorm 通常需要 2 个输入：输入 X 和权重 Weight
-            if (_src_tensors_ptr.size() != 2) {
-                tff::log::Logger::error("[RMSNormNode]: %s: requires 2 inputs (X, Weight), got %d input(s)!!\n",
-                                        _name.c_str(), static_cast<int>(_src_tensors_ptr.size()));
-                return false;
-            }
-            auto X = _src_tensors_ptr[0];
-            auto Weight = _src_tensors_ptr[1];
-
-            // 检查 Weight 形状是否与 X 的最后一个维度匹配
-            const auto &shape_x = X->get_shape();
-            const auto &shape_weight = Weight->get_shape();
-            if (shape_weight.size() != 1 || shape_weight[0] != shape_x.back()) {
-                tff::log::Logger::error("[RMSNormNode]: %s: Weight shape mismatch. Expected [last_dim_of_X], got %d.\n",
-                                        _name.c_str(), shape_weight[0]);
-                return false;
-            }
-
-            // 输出形状通常与输入 X 相同
-            auto Y = std::make_shared<tff::core::memory::Tensor>();
-            Y->set_shape(shape_x);
-            Y->set_data_type(X->get_data_type());
-            Y->set_allocator(X->get_allocator());
-            Y->allocate();
-            this->_dst_tensors_ptr.clear();
-            this->_dst_tensors_ptr.push_back(std::move(Y));
-            return true;
-        }
 
         bool forward() override {
             if (!GraphNode::forward()) {
@@ -284,7 +166,7 @@ namespace tff::core::graph::op {
 
             if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
                 tff::log::Logger::error("[RMSNormNode]: %s: Incorrect number of inputs/outputs in forward.\n",
-                                        _name.c_str());
+                                        this->_node_metadata._name.c_str());
                 return false;
             }
 
@@ -293,7 +175,8 @@ namespace tff::core::graph::op {
             auto Y = _dst_tensors_ptr[0].get();
 
             // --- Kernel 调用 ---
-            tff::log::Logger::info("[RMSNormNode]: %s: forward logic not implemented.\n", _name.c_str());
+            tff::log::Logger::info("[RMSNormNode]: %s: forward logic not implemented.\n",
+                                   this->_node_metadata._name.c_str());
             return true;
         }
     };
@@ -308,24 +191,6 @@ namespace tff::core::graph::op {
         ~NoneNode() override = default;
 
     public:
-        bool init() override {
-            if (!_src_tensors_ptr.empty()) {
-                auto output = std::make_shared<tff::core::memory::Tensor>();
-
-                output->set_shape(_src_tensors_ptr[0]->get_shape());
-
-                output->set_data_type(_src_tensors_ptr[0]->get_data_type());
-
-                output->set_allocator(_src_tensors_ptr[0]->get_allocator());
-
-                output->allocate();
-
-                _dst_tensors_ptr.push_back(std::move(output));
-            }
-
-            return true;
-        }
-
 
         bool forward() override {
             if (_src_tensors_ptr.empty() || _dst_tensors_ptr.empty()) {
@@ -344,21 +209,6 @@ namespace tff::core::graph::op {
             set_op_type(TFF_OP_DUP);
         }
 
-        bool init() override {
-            if (_src_tensors_ptr.size() != 1) {
-                tff::log::Logger::error("[DupNode]: %s: requires 1 input, got %d inputs\n",
-                                        _name.c_str(), static_cast<int>(_src_tensors_ptr.size()));
-                return false;
-            }
-            auto input = _src_tensors_ptr[0];
-            auto output = std::make_shared<tff::core::memory::Tensor>();
-            output->set_shape(input->get_shape());
-            output->set_data_type(input->get_data_type());
-            output->set_allocator(input->get_allocator());
-            output->allocate();
-            _dst_tensors_ptr.push_back(std::move(output));
-            return true;
-        }
 
         bool forward() override {
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
@@ -379,25 +229,6 @@ namespace tff::core::graph::op {
         }
 
     public:
-        bool init() override {
-            if (_src_tensors_ptr.size() != 1) {
-                tff::log::Logger::error("[SqrNode]: %s: requires 1 input, got %d inputs\n",
-
-                                        _name.c_str(), static_cast<int>(_src_tensors_ptr.size()));
-                return false;
-            }
-
-
-            auto input = _src_tensors_ptr[0];
-            auto output = std::make_shared<tff::core::memory::Tensor>();
-            output->set_shape(input->get_shape());
-            output->set_data_type(input->get_data_type());
-            output->set_allocator(input->get_allocator());
-            output->allocate();
-            _dst_tensors_ptr.push_back(std::move(output));
-            return true;
-        }
-
         bool forward() override {
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 return false;
@@ -410,7 +241,7 @@ namespace tff::core::graph::op {
             //     CREATE_LAYER_FLAG, "sqr");
             //
             // if (!callback) {
-            //     tff::log::Logger::error("[SqrNode]: %s: failed to get sqr kernel\n", _name.c_str());
+            //     tff::log::Logger::error("[SqrNode]: %s: failed to get sqr kernel\n", this->_node_metadata._name.c_str());
             //
             //     return false;
             // }
@@ -431,24 +262,6 @@ namespace tff::core::graph::op {
         }
 
     public:
-        bool init() override {
-            if (_src_tensors_ptr.size() != 1) {
-                tff::log::Logger::error("[SqrtNode]: %s: requires 1 input, got %d inputs\n",
-
-                                        _name.c_str(), static_cast<int>(_src_tensors_ptr.size()));
-                return false;
-            }
-
-
-            auto input = _src_tensors_ptr[0];
-            auto output = std::make_shared<tff::core::memory::Tensor>();
-            output->set_shape(input->get_shape());
-            output->set_data_type(input->get_data_type());
-            output->set_allocator(input->get_allocator());
-            output->allocate();
-            _dst_tensors_ptr.push_back(std::move(output));
-            return true;
-        }
 
         bool forward() override {
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
@@ -464,7 +277,7 @@ namespace tff::core::graph::op {
             //     CREATE_LAYER_FLAG, "sqrt");
             //
             // if (!callback) {
-            //     tff::log::Logger::error("[SqrtNode]: %s: failed to get sqrt kernel\n", _name.c_str());
+            //     tff::log::Logger::error("[SqrtNode]: %s: failed to get sqrt kernel\n", this->_node_metadata._name.c_str());
             //
             //     return false;
             // }
@@ -487,15 +300,6 @@ namespace tff::core::graph::op {
         ~SubNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-            if (_src_tensors_ptr.size() != 2) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
@@ -517,10 +321,6 @@ namespace tff::core::graph::op {
 
         ~MulNode() override = default;
 
-        bool init() override {
-            /* ... */
-        }
-
         bool forward() override {
             /* ... */
         }
@@ -532,10 +332,6 @@ namespace tff::core::graph::op {
         explicit DivNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_DIV); }
 
         ~DivNode() override = default;
-
-        bool init() override {
-            /* ... */
-        }
 
         bool forward() override {
             /* ... */
@@ -550,15 +346,6 @@ namespace tff::core::graph::op {
         ~ReshapeNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-            if (_src_tensors_ptr.size() < 1 || _src_tensors_ptr.size() > 2) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
@@ -581,15 +368,6 @@ namespace tff::core::graph::op {
         ~TransposeNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) { return false; }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
@@ -608,16 +386,6 @@ namespace tff::core::graph::op {
         ~SoftmaxNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
@@ -639,16 +407,6 @@ namespace tff::core::graph::op {
         ~RopeNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
@@ -670,25 +428,22 @@ namespace tff::core::graph::op {
         ~MapCPUBufferNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
-                /* log error */
                 return false;
             }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
+            if (this->_params_ptr->get_param_count() != 1) {
+                tff::log::Logger::error("MapCPUBufferNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return false;
             }
+            if (this->_op_type != TFF_OP_MAP2CPU) {
+                tff::log::Logger::error("MapCPUBufferNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return false;
+            }
+            auto callback = device()->get_op_func(this->_op_type);
+
+
             return true;
         }
     };
@@ -701,16 +456,6 @@ namespace tff::core::graph::op {
         ~MemCpyNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
@@ -732,15 +477,6 @@ namespace tff::core::graph::op {
         ~TokenizeNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
 
         bool forward() override {
             if (!GraphNode::forward()) {
@@ -754,6 +490,7 @@ namespace tff::core::graph::op {
             return true;
         }
     };
+
     //
     class MemRefNode final : public tff::core::graph::GraphNode {
     public:
@@ -762,15 +499,6 @@ namespace tff::core::graph::op {
         ~MemRefNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
 
         bool forward() override {
             if (!GraphNode::forward()) {
@@ -784,6 +512,7 @@ namespace tff::core::graph::op {
             return true;
         }
     };
+
     //
     class FlashAttnNode final : public tff::core::graph::GraphNode {
     public:
@@ -792,16 +521,6 @@ namespace tff::core::graph::op {
         ~FlashAttnNode() override = default;
 
     public:
-        bool init() override {
-            if (!GraphNode::init()) return false;
-
-            if (_src_tensors_ptr.size() != 1) {
-                /* log error */
-                return false;
-            }
-            return true;
-        }
-
         bool forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
@@ -813,7 +532,6 @@ namespace tff::core::graph::op {
             }
             return true;
         }
-
     };
 }
 

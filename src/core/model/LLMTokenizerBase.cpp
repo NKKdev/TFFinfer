@@ -80,26 +80,24 @@ namespace tff::core::model {
             std::string left_token = std::string(left_symbol._text, left_symbol._n);
             std::string right_token = std::string(right_symbol._text, right_symbol._n);
             if (left_token + right_token != tuple._text) {
-                continue;  // Skip this bigram if it's outdated
+                continue;
             }
 
-            // merge the right sym into the left one
             left_symbol._n += right_symbol._n;
             right_symbol._n = 0;
 
-            // remove the right sym from the chain
             left_symbol._next = right_symbol._next;
             if (right_symbol._next >= 0) {
                 _symbol_vec[right_symbol._next]._prev = tuple._left;
             }
 
-            this->add_tuple(left_symbol._prev, tuple._left, vocabulary_ptr);  // left side of current symbol
-            this->add_tuple(tuple._left, left_symbol._next, vocabulary_ptr);  // right side of current symbol
+            this->add_tuple(left_symbol._prev, tuple._left, vocabulary_ptr);
+            this->add_tuple(tuple._left, left_symbol._next, vocabulary_ptr);
         }
     }
 
     void LLMTokenizerBPE::update_symbol(std::vector<LLMSymbol> &symbol_vec) {
-        int32_t prev_index = -1;
+        int32_t prev_index = symbol_vec.size() - 1;
         for (auto & sym : this->_symbol_vec) {
             if (sym._n > 0) {
                 sym._prev = prev_index;
