@@ -147,6 +147,8 @@ namespace tff::core::model {
         for (size_t i = 0; i < this->_n_tensors; i++) {
             tff::core::model::GGUFTensorInfo tensor_info;
             file_loader->read(tensor_info._name);
+            //
+            tff::log::Logger::info("tensor info name:%s", tensor_info._name.c_str());
             for (auto &j: gguf_ctx->_tensor_info) {
                 if (tensor_info._name == j._name) {
                     bRet &= false;

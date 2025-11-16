@@ -38,6 +38,20 @@ namespace tff::kernel {
             return std::string(it->second) + DEVICE_BACKEND_TYPE_CPU;
         }
     };
+    //
+    template <typename T>
+    class MemCpy :public base::OPCreatorBase<MemCpy<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+        static std::string get_op_name() {
+            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
+            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
+                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
+                return "";
+            }
+            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+        }
+    };
 
 
 }

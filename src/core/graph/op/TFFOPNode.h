@@ -430,11 +430,6 @@ namespace tff::core::graph::op {
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             std::lock_guard<std::mutex> lock(_mutex);
-            if (_op_type == TFF_OP_NONE) {
-                tff::log::Logger::error("Node '%s': op_type is TFF_OP_NONE", this->_node_metadata._name.c_str());
-                return nullptr;
-            }
-
             const auto dev = device();
             if (!dev) {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
@@ -464,15 +459,23 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            const auto dev = device();
+            if (!dev) {
+                tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
+            if (this->_params_ptr->get_param_count() != 1) {
+                tff::log::Logger::error("MemCpyNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-            //return true;
+            if (this->_op_type != TFF_OP_MEM_CPY) {
+                tff::log::Logger::error("MemCpyNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+
+            auto callback = device()->get_op_func(this->_op_type);
+            return callback;
         }
     };
 

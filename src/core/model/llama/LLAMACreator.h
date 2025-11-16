@@ -161,7 +161,7 @@ namespace tff::core::model {
 
 
             auto tokenize_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_TOKENIZE);
-            tff::core::graph::NodeMetadata meta_tokenize_node{true, false, node_name + "tokenize_node"};
+            tff::core::graph::NodeMetadata meta_tokenize_node{true, false, node_name};
             tokenize_node->set_node_meta(meta_tokenize_node);
 
             graph_ptr->add_node(tokenize_node);

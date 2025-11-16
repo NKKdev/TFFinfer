@@ -43,7 +43,11 @@ namespace tff::core::runtime {
                     tff::factory::ModuleKeyType(tff::core::global::TaskFlowType::TFF_FLOW_LLM)));
         }
 
-        ~LLMInferRuntime() = default;
+        ~LLMInferRuntime() {
+            if (this->_graph_ptr != nullptr) {
+                this->_graph_ptr->release();
+            }
+        }
 
     public:
         //

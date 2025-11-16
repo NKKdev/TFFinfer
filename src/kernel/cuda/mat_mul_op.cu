@@ -12,4 +12,17 @@ namespace tff::kernel {
     template class tff::kernel::XGemm<double>;
     REGISTER_OP_OBJECT(XGemm, float);
     REGISTER_OP_OBJECT(XGemm, double);
+    //
+    template<typename T>
+    void tff::kernel::MemCpy<T>::compute( std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        tff::log::Logger::info("op: %s compute!!");
+    }
+    template class tff::kernel::MemCpy<float>;
+    template class tff::kernel::MemCpy<double>;
+    template class tff::kernel::MemCpy<int32_t>;
+    template class tff::kernel::MemCpy<int64_t>;
+    REGISTER_OP_OBJECT(MemCpy, float);
+    REGISTER_OP_OBJECT(MemCpy, double);
+    REGISTER_OP_OBJECT(MemCpy, int32_t);
+    REGISTER_OP_OBJECT(MemCpy, int64_t);
 }
