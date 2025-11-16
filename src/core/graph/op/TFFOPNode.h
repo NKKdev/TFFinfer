@@ -29,14 +29,14 @@ namespace tff::core::graph::op {
 
     public:
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 tff::log::Logger::error("[MatMulNode]: forward() failed!!\n");
-                return false;
+                return nullptr;
             }
 
             if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                return false;
+                return nullptr;
             }
 
             auto A = _src_tensors_ptr[0].get();
@@ -80,7 +80,7 @@ namespace tff::core::graph::op {
             //              0,
             //              c_buffer, 0, m);
             // }
-            return true;
+            //return true;
         }
     };
 
@@ -102,14 +102,14 @@ namespace tff::core::graph::op {
 
     public:
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 tff::log::Logger::error("[MatMulNode]: forward() failed!!\n");
-                return false;
+                return nullptr;
             }
 
             if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                return false;
+                return nullptr;
             }
 
             auto A = _src_tensors_ptr[0].get();
@@ -118,7 +118,7 @@ namespace tff::core::graph::op {
 
             //kernel compute todo
 
-            return true;
+            //return true;
         }
     };
 
@@ -132,18 +132,18 @@ namespace tff::core::graph::op {
         ~AddNode() override = default;
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 tff::log::Logger::error("[AddNode]: forward() failed!!\n");
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                return false;
+                return nullptr;
             }
             auto A = _src_tensors_ptr[0].get();
             auto B = _src_tensors_ptr[1].get();
             auto C = _dst_tensors_ptr[0].get();
-            return true;
+            //return true;
         }
     };
 
@@ -158,16 +158,16 @@ namespace tff::core::graph::op {
 
     public:
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 tff::log::Logger::error("[RMSNormNode]: forward() failed!!\n");
-                return false;
+                return nullptr;
             }
 
             if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
                 tff::log::Logger::error("[RMSNormNode]: %s: Incorrect number of inputs/outputs in forward.\n",
                                         this->_node_metadata._name.c_str());
-                return false;
+                return nullptr;
             }
 
             auto X = _src_tensors_ptr[0].get();
@@ -177,7 +177,7 @@ namespace tff::core::graph::op {
             // --- Kernel 调用 ---
             tff::log::Logger::info("[RMSNormNode]: %s: forward logic not implemented.\n",
                                    this->_node_metadata._name.c_str());
-            return true;
+            //return true;
         }
     };
 
@@ -192,13 +192,13 @@ namespace tff::core::graph::op {
 
     public:
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (_src_tensors_ptr.empty() || _dst_tensors_ptr.empty()) {
-                return true;
+                ////return true;
             }
             auto src = _src_tensors_ptr[0].get();
             auto dst = _dst_tensors_ptr[0].get();
-            return true;
+            //return true;
         }
     };
 
@@ -210,14 +210,14 @@ namespace tff::core::graph::op {
         }
 
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                return false;
+                return nullptr;
             }
 
             auto src = _src_tensors_ptr[0].get();
             auto dst = _dst_tensors_ptr[0].get();
-            return true;
+            //return true;
         }
     };
 
@@ -229,9 +229,9 @@ namespace tff::core::graph::op {
         }
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                return false;
+                return nullptr;
             }
 
             auto input = _src_tensors_ptr[0].get();
@@ -243,14 +243,14 @@ namespace tff::core::graph::op {
             // if (!callback) {
             //     tff::log::Logger::error("[SqrNode]: %s: failed to get sqr kernel\n", this->_node_metadata._name.c_str());
             //
-            //     return false;
+            //     return nullptr;
             // }
 
             auto in_buffer = tff::kernel::Buffer<float>((float *) (input->get_buffer()->ptr()), input->get_allocator());
 
             auto out_buffer = tff::kernel::Buffer<float>((float *) (output->get_buffer()->ptr()),
                                                          output->get_allocator());
-            return true;
+            //return true;
         }
     };
 
@@ -263,9 +263,9 @@ namespace tff::core::graph::op {
 
     public:
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                return false;
+                return nullptr;
             }
             auto input = _src_tensors_ptr[0].get();
             auto output = _dst_tensors_ptr[0].get();
@@ -279,7 +279,7 @@ namespace tff::core::graph::op {
             // if (!callback) {
             //     tff::log::Logger::error("[SqrtNode]: %s: failed to get sqrt kernel\n", this->_node_metadata._name.c_str());
             //
-            //     return false;
+            //     return nullptr;
             // }
 
 
@@ -288,7 +288,7 @@ namespace tff::core::graph::op {
             auto out_buffer = tff::kernel::Buffer<float>((float *) (output->get_buffer()->ptr()),
                                                          output->get_allocator());
 
-            return true;
+            //return true;
         }
     };
 
@@ -300,17 +300,17 @@ namespace tff::core::graph::op {
         ~SubNode() override = default;
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
 
-            return true;
+            //return true;
         }
     };
 
@@ -321,7 +321,7 @@ namespace tff::core::graph::op {
 
         ~MulNode() override = default;
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             /* ... */
         }
     };
@@ -333,7 +333,7 @@ namespace tff::core::graph::op {
 
         ~DivNode() override = default;
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             /* ... */
         }
     };
@@ -346,17 +346,17 @@ namespace tff::core::graph::op {
         ~ReshapeNode() override = default;
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
 
             auto input = _src_tensors_ptr[0].get();
 
             auto output = _dst_tensors_ptr[0].get();
 
-            return true;
+            //return true;
         }
     };
 
@@ -368,13 +368,13 @@ namespace tff::core::graph::op {
         ~TransposeNode() override = default;
 
     public:
-        bool forward() override {
-            if (!GraphNode::forward()) { return false; }
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+            if (!GraphNode::forward()) { return nullptr; }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
-            return true;
+            //return true;
         }
     };
 
@@ -386,16 +386,16 @@ namespace tff::core::graph::op {
         ~SoftmaxNode() override = default;
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
-            return true;
+            //return true;
         }
     };
 
@@ -407,16 +407,16 @@ namespace tff::core::graph::op {
         ~RopeNode() override = default;
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
-            return true;
+            ////return true;
         }
     };
 
@@ -428,23 +428,30 @@ namespace tff::core::graph::op {
         ~MapCPUBufferNode() override = default;
 
     public:
-        bool forward() override {
-            if (!GraphNode::forward()) {
-                return false;
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (_op_type == TFF_OP_NONE) {
+                tff::log::Logger::error("Node '%s': op_type is TFF_OP_NONE", this->_node_metadata._name.c_str());
+                return nullptr;
+            }
+
+            const auto dev = device();
+            if (!dev) {
+                tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
+                return nullptr;
             }
             if (this->_params_ptr->get_param_count() != 1) {
                 tff::log::Logger::error("MapCPUBufferNode param count is %d(expect 1)",
                     this->_params_ptr->get_param_count());
-                return false;
+                return nullptr;
             }
             if (this->_op_type != TFF_OP_MAP2CPU) {
                 tff::log::Logger::error("MapCPUBufferNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return false;
+                return nullptr;
             }
+
             auto callback = device()->get_op_func(this->_op_type);
-
-
-            return true;
+            return callback;
         }
     };
 
@@ -456,16 +463,16 @@ namespace tff::core::graph::op {
         ~MemCpyNode() override = default;
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
-            return true;
+            //return true;
         }
     };
 
@@ -478,16 +485,16 @@ namespace tff::core::graph::op {
 
     public:
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
-            return true;
+            //return true;
         }
     };
 
@@ -500,16 +507,16 @@ namespace tff::core::graph::op {
 
     public:
 
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
-            return true;
+            //return true;
         }
     };
 
@@ -521,16 +528,16 @@ namespace tff::core::graph::op {
         ~FlashAttnNode() override = default;
 
     public:
-        bool forward() override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (!GraphNode::forward()) {
                 /* log error */
-                return false;
+                return nullptr;
             }
             if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
                 /* log error */
-                return false;
+                return nullptr;
             }
-            return true;
+            //return true;
         }
     };
 }

@@ -7,6 +7,8 @@
 #include "ModuleFactory.h"
 #define TFF_MAX_OP_PARAMS      64
 #define TASK_FLOW_MANAGER_FLAG "TASK_FLOW_MANAGER"
+#define WEIGHT_MEM_BUFFER_MANAGER_FLAG "WEIGHT_MEM_BUFFER_MANAGER"
+#define BATCH_MANAGER_FLAG "BATCH_MANAGER"
 
 #define MODEL_CREATOR_FLAG "MODELCreator"
 #define MODEL_DETECTOR_FLAG "ModelDetector"
@@ -33,7 +35,8 @@
 #define MAX_PARAM_COUNT 64
     //OP
 #define OP_NODE_FLAG "OP_NODE"
-
+//
+#define MAX_PREFETCH_BUFFER_SIZE 2
 namespace tff::core::global {
 
     //

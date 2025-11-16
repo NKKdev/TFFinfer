@@ -12,12 +12,14 @@
 #include "../model/LLAMADefine.h"
 #include "fmt/format.h"
 using namespace tff::core::model;
+
 namespace tff::core::global {
     enum TaskFlowType {
         TFF_FLOW_LLM,
         TFF_FLOW_CNN,
         TFF_FLOW_COUNT
     };
+
     static const std::unordered_map<tff::core::model::ModelArchitectureType, const char *> LLM_ARCH_NAMES = {
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_UNKNOWN, "unknow"},
         {tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA, "llama"},
@@ -1054,6 +1056,10 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_OPT_STEP_SGD, "opt_step_sgd"},
 
         {tff::core::graph::TffOpType::TFF_OP_GLU, "glu"},
+        {tff::core::graph::TffOpType::TFF_OP_MAP2CPU, "map2cpu"},
+        {tff::core::graph::TffOpType::TFF_OP_MEM_CPY, "memcpy"},
+        {tff::core::graph::TffOpType::TFF_OP_MEM_REF, "mem_ref"},
+        {tff::core::graph::TffOpType::TFF_OP_TOKENIZE, "tokenize"},
     };
 
     template<typename T>

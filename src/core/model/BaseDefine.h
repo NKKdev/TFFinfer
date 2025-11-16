@@ -216,7 +216,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         size_t _alignment = GGUF_DEFAULT_ALIGNMENT;
         size_t _offset = 0;
         size_t _size = 0;
-        float _max_tensor_bytesize = 0;
+        size_t _max_tensor_byte_size = 0;
 
         std::shared_ptr<tff::core::memory::Memory> _data_memory_ptr;
 

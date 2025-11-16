@@ -93,7 +93,7 @@ namespace tff::core::runtime {
         }
 
         //预留模型上下文至少一层权重和其他开销的显存;
-        const size_t context_reserve = this->_model_loader->get_model_context()->_max_tensor_bytesize * 2;
+        const size_t context_reserve = this->_model_loader->get_model_context()->_max_tensor_byte_size * 2;
         free_mem_sum -= context_reserve;
         tff::log::Logger::info("Reserved memory for model context and overhead: {} bytes", context_reserve);
 
@@ -131,9 +131,14 @@ namespace tff::core::runtime {
             tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
             return false;
         }
-        //
-        this->init_graph();
-        tff::log::Logger::info("LLMInferRuntime context initialized successfully.");
+        //init weight mem buffer;
+        if (this->_weight_mem_manager_ptr->init(this->_model_loader->get_model_context()->_max_tensor_byte_size)) {
+            tff::log::Logger::info("LLMInferRuntime context initialized successfully.");
+            return true;
+        }else {
+            tff::log::Logger::info("LLMInferRuntime context initialized failed.");
+            return false;
+        }
         return true; // 初始化成功
     }
 
@@ -156,11 +161,13 @@ namespace tff::core::runtime {
         }
 
         const size_t batch_size = prompt_batches.size();
+        std::unordered_map<int, std::string> seq_prompts;
         std::vector<std::vector<int> > tokenized_batch;
         size_t max_seq_len = 0;
         for (size_t i = 0; i < batch_size; ++i) {
+            const auto &batch = prompt_batches[i];
             std::vector<int> tokens;
-            this->_vocabulary_ptr->tokenize(prompt_batches[i], tokens);
+            this->_vocabulary_ptr->tokenize(batch, tokens);
 
             if (tokens.size() > this->_model_config._n_ctx) {
                 tff::log::Logger::warning("Prompt {} length ({}) exceeds context length ({}). Truncating.",
@@ -169,9 +176,15 @@ namespace tff::core::runtime {
             }
             max_seq_len = std::max(max_seq_len, tokens.size());
             tokenized_batch.push_back(std::move(tokens));
+            seq_prompts[i] = batch;
             tff::log::Logger::info("Batch {}: tokenized {} tokens.", i, tokens.size());
         }
-
+        //batch managet init;
+        this->_llm_batch_manager_ptr->init(seq_prompts, this->_vocabulary_ptr);
+        if (!this->_graph_ptr) {
+            //
+            this->init_graph();
+        }
         for (auto &tokens: tokenized_batch) {
             tokens.resize(max_seq_len, 0);
         }
@@ -198,13 +211,12 @@ namespace tff::core::runtime {
         this->_kv_cache_ptr->begine_prefill(batch_size, max_seq_len);
 
         try {
-            this->_graph_ptr->forward();
+            this->_task_manager->build_task_schedule(this->_graph_ptr);
+            this->_task_manager->run();
         } catch (const std::exception &e) {
             tff::log::Logger::error("Prefill forward failed: {}", e.what());
             return false;
         }
-
-        // Step 7: finalize KV cache
         this->_kv_cache_ptr->end_prefill();
 
         tff::log::Logger::info("Prefill completed successfully for {} batches, max seq len = {}.",

@@ -60,10 +60,7 @@ namespace tff::core::model {
 
             tff::core::graph::NodeMetadata meta_map2cpu{layer->name() + "_MAP2CPU"};
             current_map2cpu_node->set_node_meta(meta_map2cpu);
-            auto dev_cpu = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
-                DEVICE_BACKEND_FLAG,
-                tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
-            current_map2cpu_node->bind_devices(dev_cpu);
+            current_map2cpu_node->bind_devices(layer->device());
 
             auto param_ptr = std::make_shared<tff::core::global::ParamBaseObject>();
             param_ptr->set_param(0, this->_model_loader);

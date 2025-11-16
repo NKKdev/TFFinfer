@@ -23,7 +23,7 @@ namespace tff::core::memory {
 
         [[nodiscard]] void *allocate(size_t byte_size) const override;
 
-        void memcpy(const void *src_ptr, void *dest_ptr, size_t byte_size,
+        void memcpy(void *src_ptr, void *dest_ptr, size_t byte_size,
                     tff::core::memory::MemCpyKind _memcpy_kind) const override;
         void memcpy_async(const void* src_ptr, void* dest_ptr, size_t byte_size,
                 tff::core::memory::MemCpyKind _memcpy_kind) const override;

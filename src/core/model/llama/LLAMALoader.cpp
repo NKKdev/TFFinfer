@@ -197,9 +197,9 @@ namespace tff::core::model {
                 return bRet;
             }
             gguf_ctx->_size += padded_size;
-            gguf_ctx->_max_tensor_bytesize = gguf_ctx->_max_tensor_bytesize < padded_size
+            gguf_ctx->_max_tensor_byte_size = gguf_ctx->_max_tensor_byte_size < padded_size
                                                  ? padded_size
-                                                 : gguf_ctx->_max_tensor_bytesize;
+                                                 : gguf_ctx->_max_tensor_byte_size;
         }
         //
         for (size_t i = 0; i < gguf_ctx->_tensor_info.size(); ++i) {

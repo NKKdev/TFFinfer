@@ -39,7 +39,7 @@ namespace tff::core::device::cpu {
     };
 
 
-    REGISTER_MODULE_OBJECT(DeviceCPU, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CPU);
+
 }
 
 #endif //TFFINFER_DEVICECPU_H

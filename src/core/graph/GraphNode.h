@@ -129,28 +129,13 @@ namespace tff::core::graph {
         std::shared_ptr<tff::core::device::DeviceBaseObject> device() const {
             return _devices.empty() ? nullptr : *_devices.begin();
         }
-
+        //
+        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() {
+            return nullptr;
+        } ;
         //
         virtual void release() {
         }
-
-        //
-        virtual bool forward() {
-            std::lock_guard<std::mutex> lock(_mutex);
-            if (_op_type == TFF_OP_NONE) {
-                tff::log::Logger::error("Node '%s': op_type is TFF_OP_NONE", this->_node_metadata._name.c_str());
-                return false;
-            }
-
-            auto dev = device();
-            if (!dev) {
-                tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
-                return false;
-            }
-
-            return true;
-        }
-
         //
         inline void set_node_meta(const NodeMetadata &meta) {
             this->_node_metadata = meta;
@@ -171,6 +156,14 @@ namespace tff::core::graph {
         //
         inline std::shared_ptr<tff::core::global::ParamBaseObject> get_params() const {
             return this->_params_ptr;
+        }
+        //
+        inline std::vector<std::weak_ptr<GraphNode>> get_predecessors() const {
+            return this->_prev_nodes;
+        }
+        //
+        inline std::vector<std::weak_ptr<GraphNode> > get_successors() const {
+            return this->_next_nodes;
         }
 
     protected:

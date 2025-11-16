@@ -100,16 +100,16 @@ namespace tff::factory {
         template<typename Base>
         struct SingletonInstanceMap {
             static std::unordered_map<ModuleKeyType, std::weak_ptr<Base>, ModuleKeyHash, ModuleKeyEqual> instances;
-            static std::mutex mtx;
+            //static std::mutex mtx;
         };
 
         template<typename Base>
         std::shared_ptr<Base> get_singleton_instance(const ModuleKeyType &key,
                                                      const std::function<std::shared_ptr<Base>()> &creator) {
             auto &map = SingletonInstanceMap<Base>::instances;
-            auto &mtx = SingletonInstanceMap<Base>::mtx;
+            //auto &mtx = SingletonInstanceMap<Base>::mtx;
 
-            std::lock_guard<std::mutex> lock(mtx);
+            //std::lock_guard<std::mutex> lock(mtx);
             auto it = map.find(key);
             if (it != map.end()) {
                 std::shared_ptr<Base> ptr = it->second.lock();
@@ -252,8 +252,8 @@ namespace tff::factory {
     std::unordered_map<ModuleKeyType, std::weak_ptr<Base>, ModuleKeyHash, ModuleKeyEqual>
     ModuleFactory::SingletonInstanceMap<Base>::instances;
 
-    template<typename Base>
-    std::mutex ModuleFactory::SingletonInstanceMap<Base>::mtx;
+    // template<typename Base>
+    // std::mutex ModuleFactory::SingletonInstanceMap<Base>::mtx;
 
 
 #define REGISTER_MODULE_OBJECT_PROTOTYPE(T, Base, type, key, ...) \

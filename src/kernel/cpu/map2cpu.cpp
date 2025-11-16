@@ -7,7 +7,7 @@
 namespace tff::kernel {
     template<typename T>
     void tff::kernel::MemMap2Cpu<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-
+        tff::log::Logger::info("op:%s compute!", tff::kernel::MemMap2Cpu<T>::get_op_name().c_str());
     }
 
     template class tff::kernel::MemMap2Cpu<float>;

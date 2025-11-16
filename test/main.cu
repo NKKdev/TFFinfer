@@ -16,6 +16,7 @@ int main(int argc,char *argv[]) {
     model_files.push_back(model_file);
     llm_runtime.load_model(model_files, cfg);
     llm_runtime.init_runtime_context();
+
     std::string prompt = "Hello my name is";
     std::string respone_str = "";
     const int n_predict = 256;

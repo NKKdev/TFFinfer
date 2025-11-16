@@ -21,7 +21,7 @@ namespace tff::core::memory {
                 this->ptr_ = ptr;
                 this->use_external_ = use_external;
             }
-
+            this->reset();
         }
 
         virtual ~Memory() {
@@ -33,6 +33,17 @@ namespace tff::core::memory {
             }
         }
     public:
+        //
+        inline void set(size_t byte_size, void* ptr = nullptr,bool use_external = false,
+            std::shared_ptr<MemBufferAllocatorBaseObject> allocator = nullptr) {
+            this->byte_size_ = byte_size;
+            this->_allocator = std::move(allocator);
+            if (use_external) {
+                this->ptr_ = ptr;
+                this->use_external_ = use_external;
+            }
+            this->reset();
+        }
         bool allocate();
 
         void copy_from(const Memory &_mem);
@@ -51,12 +62,26 @@ namespace tff::core::memory {
         std::shared_ptr<Memory> get_shared_from_this();
 
         bool is_external() const;
+        //
+        inline bool is_used() const {
+            return this->_is_used;
+        }
+        //
+        inline void reset() {
+            this->_is_used = false;
+        }
+        //
+        inline void occupy() {
+            this->_is_used = true;
+        }
     private:
         size_t byte_size_ = 0;
         void* ptr_ = nullptr;
         bool use_external_ = false;
         tff::core::device::DeviceType device_type_ = tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_UNKNOWN;
         std::shared_ptr<MemBufferAllocatorBaseObject> _allocator;
+        //
+        bool _is_used = false;
     };
 
     inline bool Memory::allocate() {

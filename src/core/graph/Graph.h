@@ -9,7 +9,6 @@
 #include <set>
 #include <unordered_set>
 #include "GraphNode.h"
-
 namespace tff::core::graph {
 
     class Graph final : public std::enable_shared_from_this<Graph> {
@@ -100,6 +99,8 @@ namespace tff::core::graph {
         std::shared_ptr<GraphNode> _input_node;
         std::shared_ptr<GraphNode> _output_node;
         mutable std::mutex _mutex;
+        //
+
     };
 }
 

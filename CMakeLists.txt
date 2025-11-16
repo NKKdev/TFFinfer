@@ -134,7 +134,9 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/core/runtime/LLMTaskFlowManager.h
         src/core/global/ParamBaseObject.cpp
         src/core/global/ParamBaseObject.h
-        src/kernel/cpu/map2cpu.cpp)
+        src/kernel/cpu/map2cpu.cpp
+        src/core/runtime/LLMWeightMemManager.cpp
+        src/core/runtime/LLMWeightMemManager.h)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)

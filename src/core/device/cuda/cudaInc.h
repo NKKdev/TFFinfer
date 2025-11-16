@@ -34,12 +34,12 @@ namespace tff::core::device::cuda
 
 		if (error != cudaSuccess)
 		{
-			fprintf(stderr, "cuda error %s : %d %s, api: %s \n", file, line, cudaGetErrorString(error), _code_str);
+			//fprintf(stderr, "cuda error %s : %d %s, api: %s \n", file, line, cudaGetErrorString(error), _code_str);
 			tff::log::Logger::error("cuda error %s : %d %s, api: %s \n", file, line, cudaGetErrorString(error), _code_str);
 			std::string error_code(_code_str);
 			std::string sub_str = error_code.substr(0, error_code.find_first_of("("));
 			std::string result_str = sub_str + " " + cudaGetErrorString(error);
-			throw result_str.c_str();
+			//throw result_str.c_str();
 		}
 	}
 	template <typename T, class Fn, class Ret>

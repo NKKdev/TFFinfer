@@ -74,14 +74,14 @@ namespace tff::core::runtime {
         std::vector<int8_t> _logits;
     };
 
-    class LLMBatchManager :public std::enable_shared_from_this<LLMBatchManager>{
+    class LLMBatchManager final :public tff::module::ModuleObject{
     public:
         LLMBatchManager() = default;
 
-        ~LLMBatchManager() = default;
+        ~LLMBatchManager() override = default;
 
     public:
-        bool init(const std::map<int, std::string> &seq_prompt,
+        bool init(const std::unordered_map<int, std::string> &seq_prompt,
                   const std::shared_ptr<tff::core::model::LLMLLaMaVocabulary> &vocabulary_ptr,
                   bool output_all = false);
 

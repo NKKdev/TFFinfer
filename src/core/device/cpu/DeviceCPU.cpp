@@ -6,7 +6,9 @@
 #include "FunctionFactory.h"
 #include "global/ModelGlobalVar.h"
 
+
 namespace tff::core::device::cpu {
+    REGISTER_MODULE_OBJECT(DeviceCPU, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CPU);
     void DeviceCPU::get_device_id(std::vector<int> &_device_list) {
     }
 
@@ -29,6 +31,9 @@ namespace tff::core::device::cpu {
     }
 
     std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCPU::get_device_buffer_allocator() {
+        return tff::factory::ModuleFactory::instance()->create_shared<
+                        tff::core::memory::MemBufferAllocatorBaseObject>(MEMORY_ALLOCATOR_FLAG,
+                                                                         tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
     }
 
     //
