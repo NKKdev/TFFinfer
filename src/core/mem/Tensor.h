@@ -15,7 +15,7 @@ namespace tff::core::memory {
     class Tensor {
     public:
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
-               std::vector<int64_t> shapes = std::vector<int64_t>(), bool use_external = false,
+               std::vector<uint32_t> shapes = std::vector<uint32_t>(), bool use_external = false,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false),_use_external(use_external), _data_type(data_type), _shape(std::move(shapes)),
                                   _allocator(std::move(alloc)) {
@@ -70,7 +70,7 @@ namespace tff::core::memory {
         }
 
         //
-        inline std::vector<int64_t> &get_shape() {
+        inline std::vector<uint32_t> &get_shape() {
             return _shape;
         }
 
@@ -80,7 +80,7 @@ namespace tff::core::memory {
         }
 
         //
-        inline void set_shape(const std::vector<int64_t> &shape) {
+        inline void set_shape(const std::vector<uint32_t> &shape) {
             this->_shape = shape;
             this->set_dims(this->_shape.size());
         }
@@ -150,9 +150,9 @@ namespace tff::core::memory {
         tff::core::memory::DataType _data_type;
         tff::core::memory::ModelTensorType _tensor_type;
         size_t _type_size{};
-        int64_t _blk_size{};
-        std::vector<int64_t> _shape;
-        std::array<int64_t, 4> _shape_bytes;
+        uint32_t _blk_size{};
+        std::vector<uint32_t> _shape;
+        std::array<uint32_t, 4> _shape_bytes;
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
     };

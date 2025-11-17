@@ -158,7 +158,7 @@ namespace tff::core::model {
             //
             uint32_t n_dims = 0;
             file_loader->read(n_dims);
-            std::vector<int64_t> shapes(n_dims);
+            std::vector<uint32_t> shapes(n_dims);
             for (size_t j = 0; j < n_dims; j++) {
                 int64_t shape_dim = 0;
                 file_loader->read(shape_dim);
@@ -182,19 +182,19 @@ namespace tff::core::model {
         gguf_ctx->_offset = file_loader->tell();
         //
         for (size_t i = 0; i < gguf_ctx->_tensor_info.size(); ++i) {
-            GGUFTensorInfo &info = gguf_ctx->_tensor_info[i];
-            if (info._offset != gguf_ctx->_size) {
+            auto &[_name, _offset, _byte_size, _tensor_ptr] = gguf_ctx->_tensor_info[i];
+            if (_offset != gguf_ctx->_size) {
                 tff::log::Logger::error("%s: tensor '%s' has offset %d, expected %ld \n",
-                                        __func__, info._name.c_str(), info._offset, gguf_ctx->_size);
+                                        __func__, _name.c_str(), _offset, gguf_ctx->_size);
                 tff::log::Logger::error("%s: failed to read tensor data\n", __func__);
                 bRet = false;
                 return bRet;
             }
-            float padded_size = TFF_PAD(info._tensor_ptr->get_bytes(), gguf_ctx->_alignment);
-            info._byte_size = padded_size;
+            float padded_size = TFF_PAD(_tensor_ptr->get_bytes(), gguf_ctx->_alignment);
+            _byte_size = padded_size;
             if (SIZE_MAX - gguf_ctx->_size < padded_size) {
                 tff::log::Logger::error("%s: tensor '%s' size overflow, cannot accumulate size %zu + %zu\n",
-                                        __func__, info._name.c_str(), gguf_ctx->_size, padded_size);
+                                        __func__, _name.c_str(), gguf_ctx->_size, padded_size);
                 bRet = false;
                 return bRet;
             }
@@ -202,17 +202,16 @@ namespace tff::core::model {
             gguf_ctx->_max_tensor_byte_size = gguf_ctx->_max_tensor_byte_size < padded_size
                                                  ? padded_size
                                                  : gguf_ctx->_max_tensor_byte_size;
-        }
-        //
-        for (size_t i = 0; i < gguf_ctx->_tensor_info.size(); ++i) {
-            const GGUFTensorInfo &info = gguf_ctx->_tensor_info[i];
+
             //
             ModelWeight model_weight;
             model_weight._idx = file_index;
-            model_weight._offs = gguf_ctx->_offset + info._offset;
-            model_weight._tensor_ptr = info._tensor_ptr;
-            this->_weight_map.emplace(info._name, model_weight);
+            model_weight._offs = gguf_ctx->_offset + _offset;
+            model_weight._byte_size = _byte_size;
+            model_weight._tensor_ptr = _tensor_ptr;
+            this->_weight_map.emplace(_name, model_weight);
         }
+
         return bRet;
     }
 

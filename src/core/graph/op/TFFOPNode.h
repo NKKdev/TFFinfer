@@ -30,57 +30,12 @@ namespace tff::core::graph::op {
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                tff::log::Logger::error("[MatMulNode]: forward() failed!!\n");
+            if (this->_op_type != TFF_OP_MUL_MAT) {
+                tff::log::Logger::error("MatMulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                return nullptr;
-            }
-
-            auto A = _src_tensors_ptr[0].get();
-            auto B = _src_tensors_ptr[1].get();
-            auto C = _dst_tensors_ptr[0].get();
-
-            //kernel compute
-            // using CallBack = std::function<callback_para>;
-            // CallBack callback;
-            // switch (A->get_data_type()) {
-            //     case memory::TFF_DATA_TYPE_F32: {
-            //         callback = get_xgemm_callback<float>();
-            //         break;
-            //     }
-            //
-            //     case memory::TFF_DATA_TYPE_F64: {
-            //         callback = get_xgemm_callback<double>();
-            //         break;
-            //     }
-            //     default:
-            //         throw std::runtime_error("Unsupported data type");
-            // }
-            // //
-            // if (callback) {
-            //     const auto &shape_a = A->get_shape();
-            //     const auto &shape_b = B->get_shape();
-            //     int64_t m = shape_a[shape_a.size() - 2];
-            //     int64_t k1 = shape_a[shape_a.size() - 1];
-            //     int64_t k2 = shape_b[shape_b.size() - 2];
-            //     int64_t n = shape_b[shape_b.size() - 1];
-            //     auto a_buffer = tff::kernel::Buffer<float>((float *) (A->get_buffer()->ptr()), A->get_allocator());
-            //     auto b_buffer = tff::kernel::Buffer<float>((float *) (B->get_buffer()->ptr()), B->get_allocator());
-            //     auto c_buffer = tff::kernel::Buffer<float>((float *) (C->get_buffer()->ptr()), C->get_allocator());
-            //     callback(tff::kernel::base::Layout::kColMajor,
-            //              tff::kernel::base::Transpose::kNo,
-            //              tff::kernel::base::Transpose::kNo,
-            //              m, n, k1,
-            //              0,
-            //              a_buffer, 0, m,
-            //              b_buffer, 0, n,
-            //              0,
-            //              c_buffer, 0, m);
-            // }
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -103,22 +58,17 @@ namespace tff::core::graph::op {
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                tff::log::Logger::error("[MatMulNode]: forward() failed!!\n");
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("UploadBuffer param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-
-            if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
+            if (this->_op_type != TFF_OP_GET_ROWS) {
+                tff::log::Logger::error("UploadBuffer op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            auto A = _src_tensors_ptr[0].get();
-            auto B = _src_tensors_ptr[1].get();
-            auto C = _dst_tensors_ptr[0].get();
-
-            //kernel compute todo
-
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -133,17 +83,12 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                tff::log::Logger::error("[AddNode]: forward() failed!!\n");
+            if (this->_op_type != TFF_OP_ADD) {
+                tff::log::Logger::error("AddNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                return nullptr;
-            }
-            auto A = _src_tensors_ptr[0].get();
-            auto B = _src_tensors_ptr[1].get();
-            auto C = _dst_tensors_ptr[0].get();
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -159,25 +104,12 @@ namespace tff::core::graph::op {
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                tff::log::Logger::error("[RMSNormNode]: forward() failed!!\n");
+            if (this->_op_type != TFF_OP_RMS_NORM) {
+                tff::log::Logger::error("RMSNormNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                tff::log::Logger::error("[RMSNormNode]: %s: Incorrect number of inputs/outputs in forward.\n",
-                                        this->_node_metadata._name.c_str());
-                return nullptr;
-            }
-
-            auto X = _src_tensors_ptr[0].get();
-            auto Weight = _src_tensors_ptr[1].get();
-            auto Y = _dst_tensors_ptr[0].get();
-
-            // --- Kernel 调用 ---
-            tff::log::Logger::info("[RMSNormNode]: %s: forward logic not implemented.\n",
-                                   this->_node_metadata._name.c_str());
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -193,12 +125,17 @@ namespace tff::core::graph::op {
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (_src_tensors_ptr.empty() || _dst_tensors_ptr.empty()) {
-                ////return true;
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("NoneNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
+                return nullptr;
             }
-            auto src = _src_tensors_ptr[0].get();
-            auto dst = _dst_tensors_ptr[0].get();
-            //return true;
+            if (this->_op_type != TFF_OP_NONE) {
+                tff::log::Logger::error("NoneNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -211,13 +148,17 @@ namespace tff::core::graph::op {
 
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("DupNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-
-            auto src = _src_tensors_ptr[0].get();
-            auto dst = _dst_tensors_ptr[0].get();
-            //return true;
+            if (this->_op_type != TFF_OP_DUP) {
+                tff::log::Logger::error("DupNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -230,27 +171,17 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("SqrNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-
-            auto input = _src_tensors_ptr[0].get();
-            auto output = _dst_tensors_ptr[0].get();
-
-            // auto callback = tff::factory::FunctionFactory::instance()->get_callback(
-            //     CREATE_LAYER_FLAG, "sqr");
-            //
-            // if (!callback) {
-            //     tff::log::Logger::error("[SqrNode]: %s: failed to get sqr kernel\n", this->_node_metadata._name.c_str());
-            //
-            //     return nullptr;
-            // }
-
-            auto in_buffer = tff::kernel::Buffer<float>((float *) (input->get_buffer()->ptr()), input->get_allocator());
-
-            auto out_buffer = tff::kernel::Buffer<float>((float *) (output->get_buffer()->ptr()),
-                                                         output->get_allocator());
-            //return true;
+            if (this->_op_type != TFF_OP_SQR) {
+                tff::log::Logger::error("SqrNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -264,31 +195,17 @@ namespace tff::core::graph::op {
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("SqrtNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-            auto input = _src_tensors_ptr[0].get();
-            auto output = _dst_tensors_ptr[0].get();
-
-            using callback_para = void(size_t, const float *, float *);
-
-            // auto callback = tff::factory::FunctionFactory::instance()->get_callback(
-            //
-            //     CREATE_LAYER_FLAG, "sqrt");
-            //
-            // if (!callback) {
-            //     tff::log::Logger::error("[SqrtNode]: %s: failed to get sqrt kernel\n", this->_node_metadata._name.c_str());
-            //
-            //     return nullptr;
-            // }
-
-
-            auto in_buffer = tff::kernel::Buffer<float>((float *) (input->get_buffer()->ptr()), input->get_allocator());
-
-            auto out_buffer = tff::kernel::Buffer<float>((float *) (output->get_buffer()->ptr()),
-                                                         output->get_allocator());
-
-            //return true;
+            if (this->_op_type != TFF_OP_SQRT) {
+                tff::log::Logger::error("SqrtNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -301,16 +218,17 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("SubNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 2 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
+            if (this->_op_type != TFF_OP_SUB) {
+                tff::log::Logger::error("SubNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -322,7 +240,12 @@ namespace tff::core::graph::op {
         ~MulNode() override = default;
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            /* ... */
+            if (this->_op_type != TFF_OP_MUL) {
+                tff::log::Logger::error("MulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -334,7 +257,17 @@ namespace tff::core::graph::op {
         ~DivNode() override = default;
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            /* ... */
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("DivNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
+                return nullptr;
+            }
+            if (this->_op_type != TFF_OP_DIV) {
+                tff::log::Logger::error("DivNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -347,16 +280,12 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            if (this->_op_type != TFF_OP_RESHAPE) {
+                tff::log::Logger::error("ReshapeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            auto input = _src_tensors_ptr[0].get();
-
-            auto output = _dst_tensors_ptr[0].get();
-
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -369,12 +298,17 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) { return nullptr; }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("TransposeNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-            //return true;
+            if (this->_op_type != TFF_OP_TRANSPOSE) {
+                tff::log::Logger::error("TransposeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -387,15 +321,17 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("SoftmaxNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
+            if (this->_op_type != TFF_OP_SOFT_MAX) {
+                tff::log::Logger::error("SoftmaxNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -408,15 +344,12 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            if (this->_op_type != TFF_OP_ROPE) {
+                tff::log::Logger::error("RopeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
-                return nullptr;
-            }
-            ////return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -429,13 +362,7 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            std::lock_guard<std::mutex> lock(_mutex);
-            const auto dev = device();
-            if (!dev) {
-                tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
-                return nullptr;
-            }
-            if (this->_params_ptr->get_param_count() != 1) {
+            if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("MapCPUBufferNode param count is %d(expect 1)",
                     this->_params_ptr->get_param_count());
                 return nullptr;
@@ -444,8 +371,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("MapCPUBufferNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            auto callback = device()->get_op_func(this->_op_type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -459,67 +385,60 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            const auto dev = device();
-            if (!dev) {
-                tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
-                return nullptr;
-            }
-            if (this->_params_ptr->get_param_count() != 1) {
-                tff::log::Logger::error("MemCpyNode param count is %d(expect 1)",
-                    this->_params_ptr->get_param_count());
-                return nullptr;
-            }
             if (this->_op_type != TFF_OP_MEM_CPY) {
                 tff::log::Logger::error("MemCpyNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            auto callback = device()->get_op_func(this->_op_type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
 
     //
-    class TokenizeNode final : public tff::core::graph::GraphNode {
+    class EmbeddingNode final : public tff::core::graph::GraphNode {
     public:
-        explicit TokenizeNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_MEM_CPY); }
+        explicit EmbeddingNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_EMBEDDING); }
 
-        ~TokenizeNode() override = default;
+        ~EmbeddingNode() override = default;
 
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("EmbeddingNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
+            if (this->_op_type != TFF_OP_EMBEDDING) {
+                tff::log::Logger::error("EmbeddingNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
     //
     class MemRefNode final : public tff::core::graph::GraphNode {
     public:
-        explicit MemRefNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_FLASH_ATTN_EXT); }
+        explicit MemRefNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_MEM_REF); }
 
         ~MemRefNode() override = default;
 
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            if (this->_params_ptr->get_param_count() < 4) {
+                tff::log::Logger::error("MemRefNode param count is %d(expect 1)",
+                    this->_params_ptr->get_param_count());
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
+            if (this->_op_type != TFF_OP_MEM_REF) {
+                tff::log::Logger::error("MemRefNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 
@@ -532,15 +451,12 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (!GraphNode::forward()) {
-                /* log error */
+            if (this->_op_type != TFF_OP_FLASH_ATTN_EXT) {
+                tff::log::Logger::error("FlashAttnNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            if (_src_tensors_ptr.size() != 1 || _dst_tensors_ptr.size() != 1) {
-                /* log error */
-                return nullptr;
-            }
-            //return true;
+            auto callback = GraphNode::forward();
+            return callback;
         }
     };
 }

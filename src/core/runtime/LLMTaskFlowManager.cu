@@ -24,18 +24,20 @@ namespace tff::core::runtime {
         std::unordered_map<std::shared_ptr<tff::core::graph::GraphNode>, tf::Task> node_to_task;
         node_to_task.reserve(topo.size());
         for (const auto& node : topo) {
+            //tff::log::Logger::info("layer node: %s build op callback\n", node->name().c_str());
             if (!node || !node->device()) {
-                return false;
+                continue;
             }
+
             auto callable = node->forward();
             if (!callable) {
-                return false;
+                tff::log::Logger::error("layer node: %s has not op callback!", node->name().c_str());
+                continue;
             }
             auto params_ptr = node->get_params();
             if (!params_ptr) {
-                return false;
+                continue;
             }
-
             tf::Task task = _task_scheduler->add_task(node->name(), std::move(callable), params_ptr);
             node_to_task.emplace(node, std::move(task));
         }

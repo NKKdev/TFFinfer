@@ -136,8 +136,13 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/core/global/ParamBaseObject.h
         src/kernel/cpu/map2cpu.cpp
         src/core/runtime/LLMWeightMemManager.cpp
-        src/core/runtime/LLMWeightMemManager.h)
+        src/core/runtime/LLMWeightMemManager.h
+)
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-D_DEBUG)
+    message("-- cmake_build_type:" ${CMAKE_BUILD_TYPE})
+endif ()
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/log)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty)

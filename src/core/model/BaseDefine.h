@@ -178,6 +178,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
     struct ModelWeight {
         uint16_t _idx;
         size_t _offs;
+        double _byte_size;
         std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
     };
 
@@ -215,8 +216,8 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
 
         size_t _alignment = GGUF_DEFAULT_ALIGNMENT;
         size_t _offset = 0;
-        size_t _size = 0;
-        size_t _max_tensor_byte_size = 0;
+        float _size = 0;
+        float _max_tensor_byte_size = 0;
 
         std::shared_ptr<tff::core::memory::Memory> _data_memory_ptr;
 

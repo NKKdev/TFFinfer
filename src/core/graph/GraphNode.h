@@ -54,10 +54,22 @@ namespace tff::core::graph {
     public:
         explicit GraphNode(const std::string &name = "") {
             this->_node_metadata._name = name;
+            this->_params_ptr = std::make_shared<tff::core::global::ParamBaseObject>();
         };
 
         virtual ~GraphNode() = default;
-
+    public:
+        //
+        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() {
+            const auto dev = device();
+            if (!dev) {
+                tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
+                return nullptr;
+            }
+            auto callback = device()->get_op_func(this->_op_type);
+            return callback;
+        };
+    public:
         // 获取节点名称
         const std::string &name() const { return this->_node_metadata._name; }
         //
@@ -116,10 +128,6 @@ namespace tff::core::graph {
             return data_type;
         }
 
-
-        std::shared_ptr<tff::core::global::ParamBaseObject> op_params() { return this->_params_ptr; }
-        std::shared_ptr<tff::core::global::ParamBaseObject> op_params() const { return this->_params_ptr; }
-
         const auto &devices() const { return _devices; }
         //
         inline void bind_devices(const std::shared_ptr<tff::core::device::DeviceBaseObject> &device) {
@@ -129,10 +137,7 @@ namespace tff::core::graph {
         std::shared_ptr<tff::core::device::DeviceBaseObject> device() const {
             return _devices.empty() ? nullptr : *_devices.begin();
         }
-        //
-        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() {
-            return nullptr;
-        } ;
+
         //
         virtual void release() {
         }

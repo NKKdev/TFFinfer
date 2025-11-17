@@ -209,7 +209,7 @@ namespace tff::core::global {
         tff::core::model::ModelTensorLayerType, tff::core::graph::TffOpType> > LLM_LAYER_OP_INFOS = {
         {
             tff::core::memory::LLM_TENSOR_TOKEN_EMBD,
-            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_EMBEDDING}
         },
         {
             tff::core::memory::LLM_TENSOR_POS_EMBD,
@@ -1059,7 +1059,7 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_MAP2CPU, "map2cpu"},
         {tff::core::graph::TffOpType::TFF_OP_MEM_CPY, "memcpy"},
         {tff::core::graph::TffOpType::TFF_OP_MEM_REF, "mem_ref"},
-        {tff::core::graph::TffOpType::TFF_OP_TOKENIZE, "tokenize"},
+        {tff::core::graph::TffOpType::TFF_OP_EMBEDDING, "embedding"},
     };
 
     template<typename T>

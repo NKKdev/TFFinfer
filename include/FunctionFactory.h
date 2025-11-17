@@ -35,9 +35,15 @@ namespace tff::factory {
             std::function<Func> get_callback(const std::string& flag, const std::string& key) {
                 std::lock_guard<std::mutex> lock(_mutex);
                 auto it = _functions.find(flag);
-                if (it == _functions.end()) tff::log::Logger::error("Flag not found");
+                if (it == _functions.end()) {
+                    tff::log::Logger::error("Flag not found");
+                    return nullptr;
+                }
                 auto it2 = it->second.find(key);
-                if (it2 == it->second.end()) tff::log::Logger::error("Callback not found");
+                if (it2 == it->second.end()) {
+                    tff::log::Logger::error("Callback not found");
+                    return nullptr;
+                }
                 return std::any_cast<std::function<Func>>(it2->second);
             }
 
