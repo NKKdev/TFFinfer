@@ -7,7 +7,6 @@
 #include "model/FileLoader.h"
 #include "runtime/LLMWeightMemManager.h"
 namespace tff::kernel {
-
     //
     template<typename T>
     void tff::kernel::Embedding<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
