@@ -362,11 +362,11 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("MapCPUBufferNode param count is %d(expect 1)",
-                    this->_params_ptr->get_param_count());
-                return nullptr;
-            }
+            // if (this->_params_ptr->get_param_count() < 4) {
+            //     tff::log::Logger::error("MapCPUBufferNode param count is %d(expect 1)",
+            //         this->_params_ptr->get_param_count());
+            //     return nullptr;
+            // }
             if (this->_op_type != TFF_OP_MAP2CPU) {
                 tff::log::Logger::error("MapCPUBufferNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -404,11 +404,11 @@ namespace tff::core::graph::op {
     public:
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("EmbeddingNode param count is %d(expect 1)",
-                    this->_params_ptr->get_param_count());
-                return nullptr;
-            }
+            // if (this->_params_ptr->get_param_count() < 4) {
+            //     tff::log::Logger::error("EmbeddingNode param count is %d(expect 1)",
+            //         this->_params_ptr->get_param_count());
+            //     return nullptr;
+            // }
             if (this->_op_type != TFF_OP_EMBEDDING) {
                 tff::log::Logger::error("EmbeddingNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;

@@ -13,6 +13,7 @@
 #include "global/ParamBaseObject.h"
 #include "device/DeviceBaseObject.h"
 #include "Logger.h"
+#include "runtime/LLMWeightMemManager.h"
 class Graph;
 
 namespace tff::core::graph {
@@ -55,6 +56,10 @@ namespace tff::core::graph {
         explicit GraphNode(const std::string &name = "") {
             this->_node_metadata._name = name;
             this->_params_ptr = std::make_shared<tff::core::global::ParamBaseObject>();
+            this->_weight_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMWeightMemManager>(
+                tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
+                    WEIGHT_MEM_BUFFER_MANAGER_FLAG,
+                    tff::factory::ModuleKeyType(WEIGHT_MEM_BUFFER_MANAGER_FLAG)));
         };
 
         virtual ~GraphNode() = default;
@@ -66,6 +71,11 @@ namespace tff::core::graph {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
                 return nullptr;
             }
+            auto params_ptr = this->get_params();
+            params_ptr->set_param(params_ptr->get_param_count(),this->inputs());
+            params_ptr->set_param(params_ptr->get_param_count(),this->outputs());
+            params_ptr->set_param(params_ptr->get_param_count(),this->_weight_mem_manager_ptr);
+
             auto callback = device()->get_op_func(this->_op_type);
             return callback;
         };
@@ -156,7 +166,7 @@ namespace tff::core::graph {
         }
         //
         inline void set_params(const std::shared_ptr<tff::core::global::ParamBaseObject> &params) {
-            this->_params_ptr = params;
+            *this->_params_ptr = *params;
         }
         //
         inline std::shared_ptr<tff::core::global::ParamBaseObject> get_params() const {
@@ -191,6 +201,8 @@ namespace tff::core::graph {
                 tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_NONE;
 
         std::set<std::shared_ptr<tff::core::device::DeviceBaseObject>, tff::core::device::DevicePtrComparator> _devices;
+        //
+        std::shared_ptr<tff::core::runtime::LLMWeightMemManager> _weight_mem_manager_ptr;
     };
 
     struct CompareByLayerID {

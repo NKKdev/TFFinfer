@@ -89,12 +89,12 @@ namespace tff::core::model {
             graph_ptr = std::make_shared<tff::core::graph::Graph>();
         }
         //
-        auto add_nodes_to_graph = [&graph_ptr](
-            const std::shared_ptr<tff::core::graph::GraphNode> &node) {
-            if (node) {
-                graph_ptr->add_node(node);
-            }
-        };
+        // auto add_nodes_to_graph = [&graph_ptr](
+        //     const std::shared_ptr<tff::core::graph::GraphNode> &node) {
+        //     if (node) {
+        //         graph_ptr->add_node(node);
+        //     }
+        // };
 
         const auto input_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT);
@@ -117,11 +117,11 @@ namespace tff::core::model {
                 const auto &repeating_layer_map = repeating_layer_iter->second; // Assume it's a std::set or similar
                 for (size_t layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
 #ifdef _DEBUG
-                    {
-                        if (layer_id > 3) {
-                            continue;
-                        }
-                    }
+                    // {
+                    //     if (layer_id >= 0) {
+                    //         continue;
+                    //     }
+                    // }
 #endif
                     tff::log::Logger::info("build layer :%d graph\n", layer_id);
                     auto &layer_map = repeating_layer_map.find(layer_id)->second;
@@ -156,7 +156,7 @@ namespace tff::core::model {
                         k_rope_node->bind_devices(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->device());
                         NodeMetadata meta_k_rope_node{attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_rope"};
                         k_rope_node->set_node_meta(meta_k_rope_node);
-                        add_nodes_to_graph(k_rope_node);
+                        graph_ptr->add_node(k_rope_node);
                         graph_ptr->add_edge(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, k_rope_node);
                         attn_k_node[TFF_GRAPH_NODE_COMPUTE] = k_rope_node;
 
@@ -176,9 +176,9 @@ namespace tff::core::model {
                         build_ffn(layer_map, graph_ptr, ffn_inp_node, ffn_node);
 
                         auto result_node = build_add_node(
-                            graph_ptr, input_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
+                            graph_ptr, ffn_inp_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
                             ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-                        NodeMetadata meta_result_node{ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_add_bios_node"};
+                        NodeMetadata meta_result_node{ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_add_ffn_inp_node"};
                         result_node->set_node_meta(meta_result_node);
 
                         input_node[TFF_GRAPH_NODE_COMPUTE] = result_node;
@@ -189,10 +189,6 @@ namespace tff::core::model {
 
         NodeType output_norm_node;
         build_output_norm(output_layer_iter->second.begin()->second, graph_ptr, input_node, output_norm_node);
-
-        auto output_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MUL_MAT);
-        graph_ptr->add_node(output_node);
-        graph_ptr->add_edge(output_norm_node.find(TFF_GRAPH_NODE_COMPUTE)->second, output_node);
     }
 
     std::shared_ptr<tff::core::graph::GraphNode> LLAMACreator::build_mul_node(
@@ -243,16 +239,16 @@ namespace tff::core::model {
         NodeType &out_put_node) {
         auto current_map2cpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
         graph_ptr->add_node(current_map2cpu_node);
-
-        tff::core::graph::NodeMetadata meta_map2cpu{layer->name() + "_map2cpu"};
-        current_map2cpu_node->set_node_meta(meta_map2cpu);
-
         auto device = tff::factory::ModuleFactory::instance()->create_shared<
             tff::core::device::DeviceBaseObject>(
             DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
 
         current_map2cpu_node->bind_devices(device);
         current_map2cpu_node->set_params(layer->get_params());
+        tff::core::graph::NodeMetadata meta_map2cpu{layer->name() + "_map2cpu"};
+        current_map2cpu_node->set_node_meta(meta_map2cpu);
+        current_map2cpu_node->get_params()->set_param(0,meta_map2cpu._name);
+        current_map2cpu_node->set_inputs(layer->inputs());
 
         if (this->_current_mem_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU) == this->
             _current_mem_node.end()) {
@@ -349,7 +345,7 @@ namespace tff::core::model {
         build_cpu_node(embedding_layer, graph_ptr, input_node);
         build_gpu_node(embedding_layer, graph_ptr, input_node, true);
 
-        tff::core::graph::NodeMetadata meta_tokenize_node{true, false, embedding_layer->name()+ "_embedding"};
+        const tff::core::graph::NodeMetadata meta_tokenize_node{true, false, embedding_layer->name()+ "_embedding"};
         embedding_layer->set_node_meta(meta_tokenize_node);
 
         graph_ptr->add_node(embedding_layer);
@@ -537,13 +533,14 @@ namespace tff::core::model {
         }
         auto rms_norm_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
         NodeMetadata meta_ffn_norm_node{node_name + "_ffn_rms_norm_node"};
+        rms_norm_node->bind_devices(layer->device());
         rms_norm_node->set_node_meta(meta_ffn_norm_node);
         graph_ptr->add_node(rms_norm_node);
         graph_ptr->add_edge(input_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE)->second,
                             rms_norm_node);
 
 
-        auto ffn_norm_w_node = build_mul_mat_node(layer, graph_ptr,
+        auto ffn_norm_w_node = build_mul_node(layer, graph_ptr,
                                              ffn_node.find(TFF_GRAPH_NODE_CPU2GPU)->second, rms_norm_node);
         tff::core::graph::NodeMetadata meta_ffn_norm_w_node{node_name + "_ffn_norm_mul_w_node"};
         ffn_norm_w_node->set_node_meta(meta_ffn_norm_w_node);
@@ -559,10 +556,10 @@ namespace tff::core::model {
         build_ffn_up(layer_map, graph_ptr, ffn_node, ffn_up_node);
 
         NodeType ffn_gate_node;
-        build_ffn_up(layer_map, graph_ptr, ffn_up_node, ffn_gate_node);
+        build_ffn_gate(layer_map, graph_ptr, ffn_up_node, ffn_gate_node);
 
         NodeType ffn_down_node;
-        build_ffn_up(layer_map, graph_ptr, ffn_gate_node, ffn_down_node);
+        build_ffn_down(layer_map, graph_ptr, ffn_gate_node, ffn_down_node);
 
         ffn_node[TFF_GRAPH_NODE_COMPUTE] = ffn_down_node.find(TFF_GRAPH_NODE_COMPUTE)->second;
     }
@@ -593,11 +590,9 @@ namespace tff::core::model {
         rms_norm_node->set_node_meta(meta_rms_norm_node);
 
 
-        auto output_norm_w_node = build_mul_mat_node(layer,
+        auto output_norm_w_node = build_mul_node(layer,
                                                      graph_ptr,
                                                      output_norm_node.find(TFF_GRAPH_NODE_CPU2GPU)->second, rms_norm_node);
-        tff::core::graph::NodeMetadata meta_output_norm_w_node{node_name + "output_norm_w_node"};
-        output_norm_w_node->set_node_meta(meta_output_norm_w_node);
 
         auto output_norm_b_node = build_add_node(graph_ptr,
                                                  output_norm_node.find(TFF_GRAPH_NODE_CPU2GPU)->second,

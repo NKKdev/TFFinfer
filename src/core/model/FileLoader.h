@@ -178,7 +178,7 @@ namespace tff::core::model {
     public:
         FileMMap(const FileMMap &) = delete;
 
-        explicit FileMMap(const std::unique_ptr<FileLoader> &file_loader,
+        explicit FileMMap(const std::shared_ptr<FileLoader> &file_loader,
                           size_t prefetch = static_cast<size_t>(-1), bool numa = false) {
             _size = file_loader->size();
             const int fd = file_loader->file_id();

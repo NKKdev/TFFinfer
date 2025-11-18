@@ -12,6 +12,7 @@
 #include "graph/Graph.h"
 #include "graph/GraphNode.h"
 #include "model/BaseDefine.h"
+#include "model/FileLoader.h"
 namespace tff::core::model {
     enum class ModelLoadResult {
         SUCCESS,
@@ -33,7 +34,7 @@ namespace tff::core::model {
         virtual ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) = 0;
 
         // 【必须】获取模型上下文（包含权重、缓冲区等）
-        virtual std::unique_ptr<tff::core::model::ModelContext> &get_model_context() = 0;
+        virtual std::shared_ptr<tff::core::model::ModelContext> &get_model_context() = 0;
 
         virtual ModelLoadResult convert_to_gguf(const std::string & output_path) {
             return ModelLoadResult::UNSUPPORTED_ARCH;
@@ -53,6 +54,8 @@ namespace tff::core::model {
         virtual std::vector<std::string> get_tensor_names() const = 0;
         //
         virtual const std::unordered_map<std::string, ModelWeight> &get_weight_map() const = 0;
+        //
+        virtual std::shared_ptr<FileMMap> get_file_map(const int &index) = 0;
     };
 }
 

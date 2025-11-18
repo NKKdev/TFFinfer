@@ -46,16 +46,17 @@ namespace tff::core::memory {
 
         ~PageManager() {
             std::lock_guard<std::mutex> lock(_mutex);
-            for (int i = 0; i < _total_pages; ++i) {
-                auto &page = _pages[i];
-                if (page->_k) {
-                    page->_k->release();
-                }
-                if (page->_v) {
-                    page->_v->release();
-                }
-                _free_list.clear();
-            }
+            // for (int i = 0; i < _total_pages; ++i) {
+            //     auto &page = _pages[i];
+            //     if (page->_k) {
+            //         page->_k->release();
+            //     }
+            //     if (page->_v) {
+            //         page->_v->release();
+            //     }
+            //
+            // }
+            _free_list.clear();
             _pages.clear();
             _total_pages = 0;
         }

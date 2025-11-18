@@ -39,7 +39,7 @@ namespace tff::core::device::cpu {
     //
     std::function<tff::kernel::base::OP_CALLBACK_TYPE> DeviceCPU::get_op_func(
         const tff::core::graph::TffOpType &op_type) {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
+        auto it = core::global::TFF_OP_TYPE_MAP.find(op_type);
         if (it == core::global::TFF_OP_TYPE_MAP.end()) {
             tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
             return nullptr;

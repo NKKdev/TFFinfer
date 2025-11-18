@@ -1090,7 +1090,7 @@ namespace tff::core::global {
     //
     template<class Key, class ValueType, class DataType>
     std::vector<DataType> get_general_value(const std::string key_value,
-                                            const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
+                                            const std::shared_ptr<tff::core::model::ModelContext> &ctx) {
         std::vector<DataType> result;
 
 
@@ -1160,7 +1160,7 @@ namespace tff::core::global {
     //
     template<class Key, class ValueType, class DataType>
     std::vector<DataType> get_value(Key key_value,
-                                    const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
+                                    const std::shared_ptr<tff::core::model::ModelContext> &ctx) {
         std::vector<DataType> result;
         std::string key_name(
             tff::core::global::LLM_KV_NAMES.find(key_value)->second);

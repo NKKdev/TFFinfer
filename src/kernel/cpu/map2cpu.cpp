@@ -3,36 +3,96 @@
 //
 
 #include "include/TFFOPCreator.h"
+#include "model/base/ModelLoaderBase.h"
+#include "model/FileLoader.h"
+#include "runtime/LLMWeightMemManager.h"
 
 namespace tff::kernel {
     template<typename T>
+    static void mem_map2cpu_kernel_cpu(const int &model_file_index,
+                                       const int &offset,
+                                       const double &data_size,
+                                       const std::shared_ptr<tff::core::model::ModelLoaderBase> &model_loader_ptr,
+                                       std::vector<std::shared_ptr<tff::core::memory::Tensor> > &inputs,
+                                       std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs,
+                                       std::shared_ptr<
+                                           tff::core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
+        if (model_file_index < 0) {
+            tff::log::Logger::error("Model file index is invalid");
+            return;
+        }
+        if (data_size < 0) {
+            tff::log::Logger::error("Data size is invalid");
+            return;
+        }
+        if (offset < 0) {
+            tff::log::Logger::error("Offset is invalid");
+            return;
+        }
+        if (inputs.size() != 1) {
+            tff::log::Logger::error("Number of input tensors provided is invalid");
+            return;
+        }
+        auto file_map_ptr = model_loader_ptr->get_file_map(model_file_index);
+        if (file_map_ptr == nullptr) {
+            tff::log::Logger::error("Failed to get file map");
+            return;
+        }
+        auto buffer = (uint8_t *) file_map_ptr->addr() + offset;
+        auto input_tensor = inputs[0];
+        if (input_tensor->is_allocated()) {
+            tff::log::Logger::error("mem_map2cpu_kernel_cpu Input tensor is already allocated");
+            return;
+        }
+        auto mem_buffer = mem_buffer_manager_ptr->get_cpu_mapped_memory();
+        if (mem_buffer.second == nullptr) {
+            tff::log::Logger::error("Failed to get memory mapped memory");
+            return;
+        }
+        input_tensor->set_buffer_data(mem_buffer.second, input_tensor->get_bytes(), mem_buffer.first);
+
+
+        auto device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
+            DEVICE_BACKEND_FLAG,
+            tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
+        if (device == nullptr) {
+            tff::log::Logger::error("Failed to create device object");
+            return;
+        }
+        auto allocator = device->get_device_buffer_allocator();
+        if (allocator == nullptr) {
+            tff::log::Logger::error("Failed to create device buffer allocator");
+            return;
+        }
+
+        std::shared_ptr<tff::core::memory::Tensor> output_tensor = input_tensor;
+        allocator->memcpy((void*)buffer, mem_buffer.second, data_size);
+        outputs.push_back(output_tensor);
+    }
+
+    template<typename T>
     void tff::kernel::MemMap2Cpu<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto name = para_ptr->get_param<std::string>(0);
-        tff::log::Logger::info("layer node : %s, op:%s compute!",name.c_str(), tff::kernel::MemMap2Cpu<T>::get_op_name().c_str());
-        //auto para1 = para_ptr->get_param<T>(0);
+        const auto &name = get_param_value<std::string>(0, para_ptr);
+        const auto model_file_index = get_param_value<uint16_t>(1, para_ptr);
+        const auto offset = get_param_value<size_t>(2, para_ptr);
+        const auto data_size = get_param_value<double>(3, para_ptr);
+        const auto model_loader_ptr = get_param_value<std::shared_ptr<tff::core::model::ModelLoaderBase> >(4, para_ptr);
+        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            5, para_ptr);
+        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            6, para_ptr);
+        std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
+            std::shared_ptr<
+                tff::core::runtime::LLMWeightMemManager> >(7, para_ptr);
+
+        mem_map2cpu_kernel_cpu<T>(model_file_index, offset, data_size, model_loader_ptr, input_tensors, output_tensors,
+                                  mem_buffer_manager_ptr);
     }
 
     template class tff::kernel::MemMap2Cpu<float>;
     template class tff::kernel::MemMap2Cpu<double>;
     template class tff::kernel::MemMap2Cpu<int32_t>;
     REGISTER_OP_OBJECT(MemMap2Cpu, float);
-
     REGISTER_OP_OBJECT(MemMap2Cpu, double);
-
     REGISTER_OP_OBJECT(MemMap2Cpu, int32_t);
-
-    //
-    template<typename T>
-    void tff::kernel::Embedding<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto name = para_ptr->get_param<std::string>(0);
-        tff::log::Logger::info("layer node : %s, op:%s compute!",name.c_str(), tff::kernel::MemMap2Cpu<T>::get_op_name().c_str());
-        //auto para1 = para_ptr->get_param<T>(0);
-    }
-
-    template class tff::kernel::Embedding<float>;
-    template class tff::kernel::Embedding<double>;
-    template class tff::kernel::Embedding<int32_t>;
-    REGISTER_OP_OBJECT(Embedding, float);
-    REGISTER_OP_OBJECT(Embedding, double);
-    REGISTER_OP_OBJECT(Embedding, int32_t);
 }

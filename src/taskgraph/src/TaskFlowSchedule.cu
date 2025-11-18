@@ -9,8 +9,19 @@ namespace tff::schedule {
             throw std::runtime_error("CUDA Graph mode not fully implemented yet.");
         }
         _future = _executor.run(_task_flow);
-        auto dump_str = _task_flow.dump();
-        tff::log::Logger::info("task flow graph: %s\n", dump_str.c_str());
+        wait_until_completion();
+#ifdef _DEBUG
+        std::string dump_str = _task_flow.dump();
+        const char* graph_dump_path = "task_flow_graph.json";
+        std::ofstream file(graph_dump_path);
+        if (file.is_open()) {
+            file << dump_str;
+            file.close();
+            tff::log::Logger::info("Task flow graph dumped to: %s\n", graph_dump_path);
+        } else {
+            tff::log::Logger::warning("Failed to open file for dumping task graph: %s\n", graph_dump_path);
+        }
+#endif
     }
 
     void HybridScheduler::wait_until_completion() {

@@ -24,12 +24,12 @@ namespace tff::core::memory {
         [[nodiscard]] void *allocate(size_t byte_size) const override;
 
         void memcpy(void *src_ptr, void *dest_ptr, size_t byte_size,
-                    tff::core::memory::MemCpyKind _memcpy_kind) const override;
+                    tff::core::memory::MemCpyKind _memcpy_kind = TFF_MEM_CPY_TYPE_NORMAL) const override;
         void memcpy_async(const void* src_ptr, void* dest_ptr, size_t byte_size,
                 tff::core::memory::MemCpyKind _memcpy_kind) const override;
         void memset_zero(void *ptr, size_t byte_size) override;
     };
-    REGISTER_MODULE_OBJECT(MemBufferAllocatorCPU, MemBufferAllocatorBaseObject,MEMORY_ALLOCATOR_FLAG, DEVICE_BACKEND_TYPE_CPU)
+
 }
 
 #endif //TFFINFER_MEMBUFFERALLOCATORCPU_H

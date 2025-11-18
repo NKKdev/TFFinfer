@@ -36,7 +36,7 @@
     //OP
 #define OP_NODE_FLAG "OP_NODE"
 //
-#define MAX_PREFETCH_BUFFER_SIZE 2
+#define MAX_PREFETCH_BUFFER_SIZE 3
 namespace tff::core::global {
 
     //

@@ -14,7 +14,7 @@ namespace tff::core::model {
     class LLAMALoader : public ModelLoaderBase {
     public:
         LLAMALoader() {
-            _model_ctx = std::make_unique<tff::core::model::ModelContext>();
+            _model_ctx = std::make_shared<tff::core::model::ModelContext>();
         };
 
         ~LLAMALoader() override = default;
@@ -24,7 +24,7 @@ namespace tff::core::model {
         ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap,
                                        bool check_tensors) override;
 
-        std::unique_ptr<tff::core::model::ModelContext> &get_model_context() override;
+        std::shared_ptr<tff::core::model::ModelContext> &get_model_context() override;
 
         ModelLoadResult convert_to_gguf(const std::string &output_path) override {
             return ModelLoadResult::UNSUPPORTED_ARCH;
@@ -44,6 +44,10 @@ namespace tff::core::model {
         inline const std::unordered_map<std::string, ModelWeight> &get_weight_map() const {
             return this->_weight_map;
         };
+        //
+        std::shared_ptr<FileMMap> get_file_map(const int &index) override {
+            return this->_files_mmap[index];
+        }
 
     protected:
         bool load(const std::vector<std::string> &model_files_name,
@@ -51,22 +55,22 @@ namespace tff::core::model {
                   bool check_tensors);
 
         //
-        [[nodiscard]] bool check_file(const std::unique_ptr<FileLoader> &file_loader) const;
+        [[nodiscard]] bool check_file(const std::shared_ptr<FileLoader> &file_loader) const;
 
         //
         bool load_header(const size_t &file_index,
-                         const std::unique_ptr<FileLoader> &file_loader,
-                         const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+                         const std::shared_ptr<FileLoader> &file_loader,
+                         const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx);
 
         //
         bool load_kv_meta(const size_t &file_index,
-                          const std::unique_ptr<FileLoader> &file_loader,
-                          const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+                          const std::shared_ptr<FileLoader> &file_loader,
+                          const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx);
 
         //
         template<typename T>
-        bool load_array_meta(const std::unique_ptr<FileLoader> &file_loader,
-                             const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx, const std::string &key,
+        bool load_array_meta(const std::shared_ptr<FileLoader> &file_loader,
+                             const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx, const std::string &key,
                              const size_t &n,
                              const bool is_array = false) {
             if (is_array) {
@@ -95,8 +99,8 @@ namespace tff::core::model {
         };
         //
         template<GGUFType T>
-        bool handle_gguf_kv(const std::unique_ptr<FileLoader> &file_loader,
-                            const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx,
+        bool handle_gguf_kv(const std::shared_ptr<FileLoader> &file_loader,
+                            const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx,
                             const std::string &key, const uint64_t &n, const bool is_array = false) {
             using cpp_type = typename gguf_type_to_cpp<T>::type;
             static_assert(!std::is_same_v<cpp_type, void>, "Unsupported GGUF type");
@@ -105,19 +109,19 @@ namespace tff::core::model {
 
         //
         bool load_tensor_info(const size_t &file_index,
-                              const std::unique_ptr<FileLoader> &file_loader,
-                              const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+                              const std::shared_ptr<FileLoader> &file_loader,
+                              const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx);
 
         //
-        bool load_tensor_data(const std::unique_ptr<FileLoader> &file_loader,
-                              const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx);
+        bool load_tensor_data(const std::shared_ptr<FileLoader> &file_loader,
+                              const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx);
 
         //
-        bool load_model_config(const std::unique_ptr<FileLoader> &file_loader,
-                               const std::unique_ptr<tff::core::model::ModelContext> &ctx);
+        bool load_model_config(const std::shared_ptr<FileLoader> &file_loader,
+                               const std::shared_ptr<tff::core::model::ModelContext> &ctx);
 
         //
-        inline std::unique_ptr<tff::core::model::ModelContext> &get_model_ctx() {
+        inline std::shared_ptr<tff::core::model::ModelContext> &get_model_ctx() {
             return this->_model_ctx;
         };
         //
@@ -135,9 +139,9 @@ namespace tff::core::model {
         bool _check_tensors{};
         bool _alloc = false;
 
-        std::unordered_map<int, std::unique_ptr<FileLoader> > _files_loader;
-        std::unordered_map<int, std::unique_ptr<FileMMap> > _files_mmap;
-        std::unordered_map<int, std::unique_ptr<FileLock> > _files_lock;
+        std::unordered_map<int, std::shared_ptr<FileLoader> > _files_loader;
+        std::unordered_map<int, std::shared_ptr<FileMMap> > _files_mmap;
+        std::unordered_map<int, std::shared_ptr<FileLock> > _files_lock;
 
         //
         tff::core::model::ModelConfig _model_config;
@@ -145,7 +149,7 @@ namespace tff::core::model {
         //
         std::unordered_map<std::string, ModelWeight> _weight_map;
         //
-        std::unique_ptr<tff::core::model::ModelContext> _model_ctx;
+        std::shared_ptr<tff::core::model::ModelContext> _model_ctx;
     };
 
 

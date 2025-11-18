@@ -7,6 +7,8 @@
 #include "device/cuda/cudaInc.h"
 
 namespace tff::core::memory {
+    REGISTER_MODULE_OBJECT(MemBufferAllocatorCUDA, MemBufferAllocatorBaseObject, MEMORY_ALLOCATOR_FLAG, DEVICE_BACKEND_TYPE_CUDA)
+
     void tff::core::memory::MemBufferAllocatorCUDA::release(void *ptr) const {
         if (ptr != nullptr) {
             CudaSafeCall(cudaFree(ptr));

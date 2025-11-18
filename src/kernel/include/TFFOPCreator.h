@@ -10,6 +10,15 @@
 #include "global/ParamBaseObject.h"
 #include "log/Logger.h"
 namespace tff::kernel {
+    template<typename T>
+    static T get_param_value(const int &index, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto opt = para_ptr->get_param<T>(index);
+        if (!opt.has_value()) {
+            tff::log::Logger::error("Failed to get param[%d]", index);
+            return T{};
+        }
+        return opt.value();
+    }
     template <typename T>
     class XGemm :public base::OPCreatorBase<XGemm<T>, T>{
     public:
@@ -54,7 +63,7 @@ namespace tff::kernel {
     };
     //
     template <typename T>
-    class Embedding :public base::OPCreatorBase<MemCpy<T>, T> {
+    class Embedding :public base::OPCreatorBase<Embedding<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
         static std::string get_op_name() {

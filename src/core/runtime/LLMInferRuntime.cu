@@ -92,8 +92,8 @@ namespace tff::core::runtime {
             free_mem_sum += free_mem;
         }
 
-        //预留模型上下文至少2层权重和其他开销的显存;
-        const size_t context_reserve = this->_model_loader->get_model_context()->_max_tensor_byte_size * 3;
+        //预留模型上下文至少MAX_PREFETCH_BUFFER_SIZE层权重和其他开销的显存;
+        const size_t context_reserve = this->_model_loader->get_model_context()->_max_tensor_byte_size * MAX_PREFETCH_BUFFER_SIZE;
         free_mem_sum -= context_reserve;
         tff::log::Logger::info("Reserved memory for model context and overhead: {%lld} bytes", context_reserve);
 
@@ -304,13 +304,11 @@ namespace tff::core::runtime {
                 }
                 layer_node->set_file_idx(weight.second._idx);
                 layer_node->set_name(get_layer_name(weight.first));
-                layer_node->get_params()->set_param(0, weight.first);
+                layer_node->get_params()->set_param(0, get_layer_name(weight.first));
                 layer_node->get_params()->set_param(1, weight.second._idx);
                 layer_node->get_params()->set_param(2, weight.second._offs);
                 layer_node->get_params()->set_param(3, weight.second._byte_size);
                 layer_node->get_params()->set_param(4, this->_model_loader);
-
-
                 auto iter = this->_layer_map[layer_info.first].find(layer_index);
                 if (iter != this->_layer_map[layer_info.first].end()) {
                     iter->second.insert(std::make_pair(tensor->get_tensor_type(), layer_node));

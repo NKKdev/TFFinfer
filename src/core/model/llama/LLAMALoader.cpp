@@ -22,7 +22,7 @@ namespace tff::core::model {
         }
     }
 
-    std::unique_ptr<tff::core::model::ModelContext> &tff::core::model::LLAMALoader::get_model_context() {
+    std::shared_ptr<tff::core::model::ModelContext> &tff::core::model::LLAMALoader::get_model_context() {
         return this->get_model_ctx();
     }
 
@@ -56,14 +56,14 @@ namespace tff::core::model {
         bool bRet = true;
         for (size_t i = 0; i < model_files_name.size(); i++) {
             const std::string &model_file_name = model_files_name[i];
-            this->_files_loader.insert(std::make_pair(i, std::make_unique<FileLoader>(model_file_name.c_str(), "rb")));
+            this->_files_loader.insert(std::make_pair(i, std::make_shared<FileLoader>(model_file_name.c_str(), "rb")));
             const auto &it = this->_files_loader.find(i);
             if (use_mmap) {
                 auto cpu_device_size = tff::core::device::get_device_size("CPU");
                 bool is_numa = cpu_device_size > 1 ? true : false;
                 _files_mmap.insert(
                     std::make_pair(
-                        i, std::make_unique<FileMMap>(it->second, -1, is_numa)));
+                        i, std::make_shared<FileMMap>(it->second, -1, is_numa)));
             }
 
             bRet &= this->check_file(it->second);
@@ -78,7 +78,7 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::check_file(const std::unique_ptr<FileLoader> &file_loader) const {
+    bool LLAMALoader::check_file(const std::shared_ptr<FileLoader> &file_loader) const {
         std::vector<char> buffer_format;
         file_loader->read<char>(buffer_format, 4);
         for (uint32_t i = 0; i < buffer_format.size(); i++) {
@@ -95,8 +95,8 @@ namespace tff::core::model {
         return true;
     }
 
-    bool LLAMALoader::load_header(const size_t &file_index, const std::unique_ptr<FileLoader> &file_loader,
-                                  const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+    bool LLAMALoader::load_header(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
+                                  const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         bRet &= file_loader->read(gguf_ctx->_version);
         bRet &= gguf_ctx->check_version();
@@ -105,8 +105,8 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::load_kv_meta(const size_t &file_index, const std::unique_ptr<FileLoader> &file_loader,
-                                   const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+    bool LLAMALoader::load_kv_meta(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
+                                   const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         for (size_t i = 0; i < this->_n_kv; i++) {
             std::string key;
@@ -141,8 +141,8 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::load_tensor_info(const size_t &file_index, const std::unique_ptr<FileLoader> &file_loader,
-                                       const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+    bool LLAMALoader::load_tensor_info(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
+                                       const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         for (size_t i = 0; i < this->_n_tensors; i++) {
             tff::core::model::GGUFTensorInfo tensor_info;
@@ -215,8 +215,8 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::load_tensor_data(const std::unique_ptr<FileLoader> &file_loader,
-                                       const std::unique_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+    bool LLAMALoader::load_tensor_data(const std::shared_ptr<FileLoader> &file_loader,
+                                       const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         if (this->_alloc) {
             std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator =
                     tff::factory::ModuleFactory::instance()->create_shared<
@@ -237,8 +237,8 @@ namespace tff::core::model {
         return true;
     }
 
-    bool LLAMALoader::load_model_config(const std::unique_ptr<FileLoader> &file_loader,
-                                        const std::unique_ptr<tff::core::model::ModelContext> &ctx) {
+    bool LLAMALoader::load_model_config(const std::shared_ptr<FileLoader> &file_loader,
+                                        const std::shared_ptr<tff::core::model::ModelContext> &ctx) {
         LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                        this->_model_config._arch_name);
         LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,
