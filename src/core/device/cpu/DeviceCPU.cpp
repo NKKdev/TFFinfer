@@ -44,7 +44,7 @@ namespace tff::core::device::cpu {
             tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
             return nullptr;
         }
-        std::string op_name = std::string(it->second) + DEVICE_BACKEND_TYPE_CPU;
+        std::string op_name = std::string(it->second) + std::string("_") +  DEVICE_BACKEND_TYPE_CPU;
 
         return tff::factory::FunctionFactory::instance()->get_callback<tff::kernel::base::OP_CALLBACK_TYPE>(OP_NODE_FLAG,
                                                                           op_name);

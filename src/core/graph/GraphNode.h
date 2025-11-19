@@ -76,6 +76,10 @@ namespace tff::core::graph {
             params_ptr->set_param(params_ptr->get_param_count(),this->outputs());
             params_ptr->set_param(params_ptr->get_param_count(),this->_weight_mem_manager_ptr);
 
+            if (inputs().empty()) {
+                tff::log::Logger::error("Node %s : no valid input", this->_node_metadata._name.c_str());
+                return nullptr;
+            }
             auto callback = device()->get_op_func(this->_op_type);
             return callback;
         };
@@ -97,17 +101,15 @@ namespace tff::core::graph {
         tff::core::model::ModelTensorLayerType layer_type() const { return _layer_type; }
 
         // 输入/输出 Tensor
-        const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &inputs() const { return _src_tensors_ptr; }
-        const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs() const { return _dst_tensors_ptr; }
+        const std::set<std::shared_ptr<tff::core::memory::Tensor> > &inputs() const { return _src_tensors_ptr; }
+        const std::set<std::shared_ptr<tff::core::memory::Tensor> > &outputs() const { return _dst_tensors_ptr; }
 
-        void set_inputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &inputs) {
-            _src_tensors_ptr.reserve(inputs.size());
-            _src_tensors_ptr.insert(_src_tensors_ptr.end(), inputs.begin(), inputs.end());
+        void set_inputs(const std::set<std::shared_ptr<tff::core::memory::Tensor> > &inputs) {
+            _src_tensors_ptr.insert(inputs.begin(), inputs.end());
         }
 
-        void set_outputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs) {
-            _dst_tensors_ptr.reserve(outputs.size());
-            _dst_tensors_ptr.insert(_dst_tensors_ptr.end(), outputs.begin(), outputs.end());
+        void set_outputs(const std::set<std::shared_ptr<tff::core::memory::Tensor> > &outputs) {
+            _dst_tensors_ptr.insert(outputs.begin(), outputs.end());
         }
 
         //
@@ -119,24 +121,6 @@ namespace tff::core::graph {
             this->_layer_type = _layer_type;
         }
 
-        //
-        inline tff::core::memory::DataType data_type() const {
-            tff::core::memory::DataType data_type = memory::DataType::TFF_DATA_TYPE_UNKNOWN;
-            switch (_layer_type) {
-                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT:
-                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT:
-                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING: {
-                    if (!_src_tensors_ptr.empty()) {
-                        data_type = _src_tensors_ptr[0]->get_data_type();
-                    }
-                    break;
-                }
-                case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_NONE:
-                default:
-                    data_type = memory::DataType::TFF_DATA_TYPE_UNKNOWN;
-            }
-            return data_type;
-        }
 
         const auto &devices() const { return _devices; }
         //
@@ -154,6 +138,7 @@ namespace tff::core::graph {
         //
         inline void set_node_meta(const NodeMetadata &meta) {
             this->_node_metadata = meta;
+            this->_params_ptr->set_param(0, _node_metadata._name);
         };
 
         inline bool is_input_node() const {
@@ -180,6 +165,13 @@ namespace tff::core::graph {
         inline std::vector<std::weak_ptr<GraphNode> > get_successors() const {
             return this->_next_nodes;
         }
+        //
+        inline tff::core::memory::DataType data_type() const {
+            if (!_src_tensors_ptr.empty()) {
+                auto tensor = *_src_tensors_ptr.begin();
+                return tensor->get_data_type();
+            }
+        }
 
     protected:
         NodeMetadata _node_metadata;
@@ -191,8 +183,8 @@ namespace tff::core::graph {
         uint32_t _layer_id = 0;
         uint32_t _file_idx = 0;
 
-        std::vector<std::shared_ptr<tff::core::memory::Tensor> > _src_tensors_ptr;
-        std::vector<std::shared_ptr<tff::core::memory::Tensor> > _dst_tensors_ptr;
+        std::set<std::shared_ptr<tff::core::memory::Tensor> > _src_tensors_ptr;
+        std::set<std::shared_ptr<tff::core::memory::Tensor> > _dst_tensors_ptr;
 
         TffOpType _op_type = TFF_OP_NONE;
         std::shared_ptr<tff::core::global::ParamBaseObject> _params_ptr;

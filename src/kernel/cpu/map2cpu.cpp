@@ -46,7 +46,7 @@ namespace tff::kernel {
         }
         auto mem_buffer = mem_buffer_manager_ptr->get_cpu_mapped_memory();
         if (mem_buffer.second == nullptr) {
-            tff::log::Logger::error("Failed to get memory mapped memory");
+            //tff::log::Logger::error("Failed to get memory mapped memory");
             return;
         }
         input_tensor->set_buffer_data(mem_buffer.second, input_tensor->get_bytes(), mem_buffer.first);
@@ -73,6 +73,8 @@ namespace tff::kernel {
     template<typename T>
     void tff::kernel::MemMap2Cpu<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
+        tff::log::Logger::info("layer node %s op:%s compute!",name.c_str(),MemMap2Cpu<T>::get_op_name().c_str());
+
         const auto model_file_index = get_param_value<uint16_t>(1, para_ptr);
         const auto offset = get_param_value<size_t>(2, para_ptr);
         const auto data_size = get_param_value<double>(3, para_ptr);

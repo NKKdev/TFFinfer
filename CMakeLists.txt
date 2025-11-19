@@ -128,7 +128,8 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCE_LIST
 #        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
+        src/kernel/cpu/mem_ref.cpp)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)

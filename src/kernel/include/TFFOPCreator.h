@@ -9,6 +9,7 @@
 #include "TFFOPCreatorBase.h"
 #include "global/ParamBaseObject.h"
 #include "log/Logger.h"
+
 namespace tff::kernel {
     template<typename T>
     static T get_param_value(const int &index, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
@@ -19,10 +20,12 @@ namespace tff::kernel {
         }
         return opt.value();
     }
-    template <typename T>
-    class XGemm :public base::OPCreatorBase<XGemm<T>, T>{
+
+    template<typename T>
+    class XGemm : public base::OPCreatorBase<XGemm<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         //
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MUL_MAT);
@@ -30,130 +33,228 @@ namespace tff::kernel {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
-
     };
-    template <typename T>
-    class MemMap2Cpu :public base::OPCreatorBase<MemMap2Cpu<T>, T> {
-        public:
+
+    template<typename T>
+    class MemMap2Cpu : public base::OPCreatorBase<MemMap2Cpu<T>, T> {
+    public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CPU;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
+
     //
-    template <typename T>
-    class MemCpy :public base::OPCreatorBase<MemCpy<T>, T> {
+    template<typename T>
+    class MemCpy : public base::OPCreatorBase<MemCpy<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
+
     //
-    template <typename T>
-    class Embedding :public base::OPCreatorBase<Embedding<T>, T> {
+    template<typename T>
+    class Embedding : public base::OPCreatorBase<Embedding<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_EMBEDDING);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CPU;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
+
     //
-    template <typename T>
-    class Mul :public base::OPCreatorBase<Mul<T>, T> {
+    template<typename T>
+    class Mul : public base::OPCreatorBase<Mul<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MUL);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
-    template <typename T>
-    class Reshape :public base::OPCreatorBase<Reshape<T>, T> {
+
+    template<typename T>
+    class Reshape : public base::OPCreatorBase<Reshape<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
-    template <typename T>
-    class Rope :public base::OPCreatorBase<Rope<T>, T> {
+
+    template<typename T>
+    class Rope : public base::OPCreatorBase<Rope<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_ROPE);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
-    template <typename T>
-    class FlashAttn :public base::OPCreatorBase<FlashAttn<T>, T> {
+
+    template<typename T>
+    class FlashAttn : public base::OPCreatorBase<FlashAttn<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
+
     //
-    template <typename T>
-    class Add :public base::OPCreatorBase<Add<T>, T> {
+    template<typename T>
+    class Add : public base::OPCreatorBase<Add<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_ADD);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
+
     //
-    template <typename T>
-    class RMSNorm :public base::OPCreatorBase<RMSNorm<T>, T> {
+    template<typename T>
+    class RMSNorm : public base::OPCreatorBase<RMSNorm<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
         static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
                 tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
                 return "";
             }
-            return std::string(it->second) + DEVICE_BACKEND_TYPE_CUDA;
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
+        }
+    };
+    //
+    template<typename T>
+    class MemRef : public base::OPCreatorBase<MemRef<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name() {
+            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MEM_REF);
+            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
+                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
+                return "";
+            }
+            std::string name = std::string(it->second);
+            name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
+            // if (std::is_same_v<T, float>) name += "_f32";
+            // else if (std::is_same_v<T, double>) name += "_f64";
+            // else if (std::is_same_v<T, int8_t>) name += "_i8";
+            // else if (std::is_same_v<T, int16_t>) name += "_i16";
+            return name;
         }
     };
 }

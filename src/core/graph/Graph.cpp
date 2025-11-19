@@ -22,7 +22,7 @@ namespace tff::core::graph {
         from->_next_nodes.push_back(to);
         to->_prev_nodes.push_back(from);
 
-        to->set_inputs(from->outputs());
+        //to->set_inputs(from->outputs());
         return true;
     }
 

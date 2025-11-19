@@ -20,6 +20,7 @@ namespace tff::core::memory {
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
                                   _allocator(std::move(alloc)) {
+            this->_strides.resize(this->_shape.size());
             this->set_dims(_shape.size());
             for (size_t i = 0; i < this->_shape.size(); ++i) {
                 this->set_shape(this->_shape[i], i);
@@ -44,7 +45,7 @@ namespace tff::core::memory {
             _blk_size = other._blk_size;
             _n_dims = other._n_dims;
             _shape = other._shape;
-            _shape_bytes = other._shape_bytes;
+            _strides = other._strides;
             _allocator = other._allocator;
             if (!_use_external) {
                 auto total_bytes = std::accumulate(
@@ -61,7 +62,7 @@ namespace tff::core::memory {
             } else {
                 if (other._buffer) {
                     _buffer = std::make_shared<tff::core::memory::Memory>(
-                        other._buffer->byte_size(),other._buffer->ptr(),true,_allocator
+                        other._buffer->byte_size(), other._buffer->ptr(), true, _allocator
                     );
                 }
                 _is_allocated = other._is_allocated;
@@ -83,7 +84,7 @@ namespace tff::core::memory {
             _blk_size = other._blk_size;
             _n_dims = other._n_dims;
             _shape = std::move(other._shape);
-            _shape_bytes = other._shape_bytes;
+            _strides = other._strides;
             _allocator = std::move(other._allocator);
             _buffer = std::move(other._buffer);
             other._is_allocated = false;
@@ -118,12 +119,12 @@ namespace tff::core::memory {
             const size_t blck_size = type_traits_auto[_data_type]._blck_size;
             if (blck_size == 1) {
                 for (int i = 0; i < _n_dims; ++i) {
-                    nbytes += (this->_shape[i]) * this->_shape_bytes[i];
+                    nbytes += (this->_shape[i]) * this->_strides[i];
                 }
             } else {
-                nbytes = this->_shape[0] * this->_shape_bytes[0] / blck_size;
+                nbytes = this->_shape[0] * this->_strides[0] / blck_size;
                 for (int i = 1; i < _n_dims; ++i) {
-                    nbytes += (this->_shape[i] - 1) * this->_shape_bytes[i];
+                    nbytes += (this->_shape[i] - 1) * this->_strides[i];
                 }
             }
 
@@ -137,6 +138,10 @@ namespace tff::core::memory {
         //
         inline std::vector<uint32_t> &get_shape() {
             return _shape;
+        }
+        //
+        inline std::vector<uint32_t> &get_strides() {
+            return this->_strides;
         }
 
         //
@@ -161,10 +166,10 @@ namespace tff::core::memory {
             _type_size = memory::type_traits_auto[tff::core::memory::DataType(data_type)]._type_size;
             _blk_size = memory::type_traits_auto[tff::core::memory::DataType(data_type)]._blck_size;
 
-            _shape_bytes[0] = _type_size;
-            _shape_bytes[1] = _shape_bytes[0] * (_shape[0] / _blk_size);
-            for (int j = 2; j < 4; ++j) {
-                _shape_bytes[j] = _shape_bytes[j - 1] * _shape[j - 1];
+            _strides[0] = _type_size;
+            _strides[1] = _strides[0] * (_shape[0] / _blk_size);
+            for (int j = 2; j < _shape.size(); ++j) {
+                _strides[j] = _strides[j - 1] * _shape[j - 1];
             }
         }
 
@@ -214,6 +219,48 @@ namespace tff::core::memory {
             return _buffer;
         }
 
+        //
+        template<typename T, typename... Args>
+        inline T &at(Args... indices) {
+            if (sizeof(T) != _type_size) {
+                throw std::runtime_error("Tensor::get<T>(): sizeof(T) != element size");
+            }
+            if (!_buffer || !_buffer->ptr()) {
+                throw std::runtime_error("Tensor buffer is null");
+            }
+            return *reinterpret_cast<T *>(_buffer->ptr() + compute_offset(indices...));
+        }
+
+        template<typename T, typename... Args>
+        inline const T &at(Args... indices) const {
+            if (sizeof(T) != _type_size) {
+                throw std::runtime_error("Tensor::get<T>(): sizeof(T) != element size");
+            }
+            if (!_buffer || !_buffer->ptr()) {
+                throw std::runtime_error("Tensor buffer is null");
+            }
+            return *reinterpret_cast<const T *>(_buffer->ptr() + compute_offset(indices...));
+        }
+
+    private:
+        template<typename... Args>
+        size_t compute_offset(Args... indices) const {
+            constexpr size_t num_indices = sizeof...(indices);
+            if (num_indices != _shape.size()) {
+                throw std::invalid_argument(
+                    "Number of indices (" + std::to_string(num_indices) +
+                    ") does not match tensor dimensions (" + std::to_string(_shape.size()) + ")"
+                );
+            }
+            std::array<size_t, num_indices> idxs{static_cast<size_t>(indices)...};
+            size_t offset = 0;
+            for (size_t i = 0; i < num_indices; ++i) {
+                offset += idxs[i] * _strides[i];
+            }
+
+            return offset;
+        }
+
     private:
         //
         bool _is_allocated;
@@ -225,7 +272,7 @@ namespace tff::core::memory {
         size_t _type_size{};
         uint32_t _blk_size{};
         std::vector<uint32_t> _shape;
-        std::array<uint32_t, 4> _shape_bytes;
+        std::vector<uint32_t> _strides;
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
     };

@@ -207,7 +207,8 @@ namespace tff::core::model {
             ModelWeight model_weight;
             model_weight._idx = file_index;
             model_weight._offs = gguf_ctx->_offset + _offset;
-            model_weight._byte_size = _byte_size;
+            model_weight._alignment_size = _byte_size;
+            model_weight._byte_size = _tensor_ptr->get_bytes();
             model_weight._tensor_ptr = _tensor_ptr;
             this->_weight_map.emplace(_name, model_weight);
         }

@@ -131,9 +131,6 @@ namespace tff::core::runtime {
             tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
             return false;
         }
-        if (!this->_graph_ptr) {
-            this->init_graph();
-        }
 
         //init weight mem buffer;
         if (this->_weight_mem_manager_ptr->init(this->_model_loader->get_model_context()->_max_tensor_byte_size)) {
@@ -161,6 +158,12 @@ namespace tff::core::runtime {
     bool LLMInferRuntime::prefill(const std::vector<std::string> &prompt_batches) {
         //encode seq;
         auto max_seq_len = this->encode(prompt_batches);
+        //build graph
+        if (!this->_graph_ptr) {
+            this->init_graph();
+        }
+
+
         this->_kv_cache_ptr->begine_prefill(prompt_batches.size(), max_seq_len);
 
         try {
@@ -210,12 +213,15 @@ namespace tff::core::runtime {
             tff::log::Logger::error("LLMInferRuntime batch init failed.");
             return -1;
         }
+
+        this->build_inputs();
+
+        //todo set input_pos_tensor ;
+        return max_seq_len;
+    }
+
+    void LLMInferRuntime::build_inputs() {
         //set embedding layer input
-        auto input_node = this->_graph_ptr->get_input_nodes();
-        if (input_node->op_type() != tff::core::graph::TffOpType::TFF_OP_EMBEDDING) {
-            tff::log::Logger::error("Input node {%s} is not embedding", input_node->name());
-            return -1;
-        }
         auto &tokens_data = this->_llm_batch_manager_ptr->_main_batch->_tokens;
         auto &input_pos = this->_llm_batch_manager_ptr->_main_batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(tff::core::memory::DataType::TFF_DATA_TYPE_I32,
@@ -223,14 +229,36 @@ namespace tff::core::runtime {
         token_tensor->set_buffer_data(tokens_data.data(),
                                       tokens_data.size() * memory::type_traits_auto[
                                           tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
+        token_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
+
         auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(
             tff::core::memory::DataType::TFF_DATA_TYPE_I32,
             std::vector<uint32_t>{static_cast<uint32_t>(input_pos.size())}, true);
         input_pos_tensor->set_buffer_data(input_pos.data(),
                                           input_pos.size() * memory::type_traits_auto[
                                               tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
-        input_node->set_inputs(std::vector<std::shared_ptr<tff::core::memory::Tensor> >{token_tensor, input_pos_tensor});
-        return max_seq_len;
+        input_pos_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_TOKEN_POS);
+
+        auto input_layer_iter = this->_layer_map.find(LLM_TENSOR_LAYER_INPUT);
+        if (input_layer_iter != this->_layer_map.end()) {
+            for (auto &layers : input_layer_iter->second) {
+                auto &layer = layers.second;
+                auto input_pos_layer = layer.find(memory::ModelTensorType::LLM_TENSOR_TOKEN_POS);
+                if (input_pos_layer == layer.end()) {
+                    std::shared_ptr<tff::core::graph::GraphNode> layer_node;
+                    this->_model_creator->build_layer(input_pos_tensor, layer_node);
+                    layer.insert(std::make_pair(input_pos_tensor->get_tensor_type(), layer_node));
+                }
+                //
+                auto input_token_embed_layer = layer.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
+                if (input_token_embed_layer == layer.end()) {
+                    std::shared_ptr<tff::core::graph::GraphNode> layer_node;
+                    this->_model_creator->build_layer(token_tensor, layer_node);
+                    layer.insert(std::make_pair(token_tensor->get_tensor_type(), layer_node));
+
+                }
+            }
+        }
     }
 
     void LLMInferRuntime::load_stats() {

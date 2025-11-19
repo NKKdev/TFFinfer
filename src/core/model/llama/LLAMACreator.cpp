@@ -22,9 +22,7 @@ namespace tff::core::model {
         // layer_node->set_params(layer_params_ptr);
         layer_node->set_layer_id(layer_index);
         layer_node->set_layer_type(layer_info.first);
-        std::vector<std::shared_ptr<tff::core::memory::Tensor> > _src_tensors_ptr;
-        _src_tensors_ptr.push_back(tensor_ptr);
-        layer_node->set_inputs(_src_tensors_ptr);
+        layer_node->set_inputs(std::set<std::shared_ptr<tff::core::memory::Tensor> >{tensor_ptr});
         switch (layer_info.first) {
             case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
                 auto device = tff::factory::ModuleFactory::instance()->create_shared<
@@ -117,11 +115,11 @@ namespace tff::core::model {
                 const auto &repeating_layer_map = repeating_layer_iter->second; // Assume it's a std::set or similar
                 for (size_t layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
 #ifdef _DEBUG
-                    // {
-                    //     if (layer_id >= 0) {
-                    //         continue;
-                    //     }
-                    // }
+                    {
+                        if (layer_id >= 2) {
+                            continue;
+                        }
+                    }
 #endif
                     tff::log::Logger::info("build layer :%d graph\n", layer_id);
                     auto &layer_map = repeating_layer_map.find(layer_id)->second;
@@ -247,7 +245,6 @@ namespace tff::core::model {
         current_map2cpu_node->set_params(layer->get_params());
         tff::core::graph::NodeMetadata meta_map2cpu{layer->name() + "_map2cpu"};
         current_map2cpu_node->set_node_meta(meta_map2cpu);
-        current_map2cpu_node->get_params()->set_param(0,meta_map2cpu._name);
         current_map2cpu_node->set_inputs(layer->inputs());
 
         if (this->_current_mem_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU) == this->
@@ -268,6 +265,7 @@ namespace tff::core::model {
         const std::shared_ptr<tff::core::graph::GraphNode> &layer,
         std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
         NodeType &out_put_node, bool is_input) {
+
         auto current_cpu2gpu_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
         graph_ptr->add_node(current_cpu2gpu_node);
         tff::core::graph::NodeMetadata meta_cpu2gpu{layer->name() + "_cpu2gpu"};
@@ -276,7 +274,7 @@ namespace tff::core::model {
             DEVICE_BACKEND_FLAG,
             tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
         current_cpu2gpu_node->bind_devices(dev_gpu);
-        current_cpu2gpu_node->set_params(layer->get_params());
+        current_cpu2gpu_node->get_params()->set_param(1, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE);
         if (!is_input) {
             graph_ptr->add_edge(
                 this->_current_mem_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU)->second,
@@ -287,11 +285,12 @@ namespace tff::core::model {
         if (this->_current_mem_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU) == this->
             _current_mem_node.end()) {
             this->_current_mem_node[tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU] = current_cpu2gpu_node;
-        } else {
-            graph_ptr->add_edge(
-                this->_current_mem_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU)->second,
-                current_cpu2gpu_node);
         }
+        //else {
+        //     graph_ptr->add_edge(
+        //         this->_current_mem_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU)->second,
+        //         current_cpu2gpu_node);
+        // }
         out_put_node.insert({tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU, current_cpu2gpu_node});
 
         //
@@ -305,33 +304,29 @@ namespace tff::core::model {
                                        NodeType &input_node,
                                        NodeType &attn_norm_node) {
         auto norm_layer = layer_map.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_NORM)->second;
-        //std::string node_name = norm_layer->name() + "_INPUT_NORM";
-        if (this->_is_input_norm_w || this->_is_input_norm_b) {
-            //加载 norm层权重;
-            build_cpu_node(norm_layer, graph_ptr, attn_norm_node);
-            build_gpu_node(norm_layer, graph_ptr, attn_norm_node);
-        }
+
+        build_cpu_node(norm_layer, graph_ptr, attn_norm_node);
+        build_gpu_node(norm_layer, graph_ptr, attn_norm_node);
+
 
         //
-        //auto rms_norm_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
-        graph_ptr->add_node(norm_layer);
-        graph_ptr->add_edge(input_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE)->second,
-                            norm_layer);
+        auto rms_norm_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
+        rms_norm_node->set_node_meta(NodeMetadata{norm_layer->name() + "_rms_norm_node"});
+        rms_norm_node->bind_devices(norm_layer->device());
 
-        std::shared_ptr<GraphNode> result_node;
+        graph_ptr->add_node(rms_norm_node);
+        graph_ptr->add_edge(input_node.find(tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_COMPUTE)->second,
+                            rms_norm_node);
+
         auto norm_w_node = build_mul_node(norm_layer,
                                           graph_ptr,
-                                          attn_norm_node.find(TFF_GRAPH_NODE_CPU2GPU)->second, norm_layer);
-        if (this->_is_input_norm_b) {
-            auto norm_b_node = build_add_node(graph_ptr,
+                                          attn_norm_node.find(TFF_GRAPH_NODE_CPU2GPU)->second, rms_norm_node);
+
+        auto norm_b_node = build_add_node(graph_ptr,
                                               attn_norm_node.find(TFF_GRAPH_NODE_CPU2GPU)->second, norm_w_node);
-            result_node = norm_b_node;
-        } else {
-            result_node = norm_w_node;
-        }
 
 
-        attn_norm_node.insert({TFF_GRAPH_NODE_COMPUTE, result_node});
+        attn_norm_node.insert({TFF_GRAPH_NODE_COMPUTE, norm_b_node});
     }
 
     //
@@ -348,8 +343,15 @@ namespace tff::core::model {
         const tff::core::graph::NodeMetadata meta_tokenize_node{true, false, embedding_layer->name()+ "_embedding"};
         embedding_layer->set_node_meta(meta_tokenize_node);
 
+
+        auto input_token_layer = layer_map.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN)->second;
+        input_token_layer->set_node_meta(NodeMetadata{embedding_layer->name() + "_input_token"});
+        graph_ptr->add_node(input_token_layer);
+
         graph_ptr->add_node(embedding_layer);
         graph_ptr->add_edge(input_node.find(TFF_GRAPH_NODE_MAP2CPU)->second, embedding_layer);
+        graph_ptr->add_edge(input_token_layer, embedding_layer);
+
         graph_ptr->add_edge(embedding_layer,
                             input_node.find(TFF_GRAPH_NODE_CPU2GPU)->second);
 

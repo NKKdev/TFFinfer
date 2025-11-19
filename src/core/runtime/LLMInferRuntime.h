@@ -73,6 +73,8 @@ namespace tff::core::runtime {
         bool decode(const int &n_predict, std::string &generate_str);
         //
         int encode(const std::vector<std::string> &prompt_batches);
+        //
+        void build_inputs();
 
     protected:
         void load_stats();

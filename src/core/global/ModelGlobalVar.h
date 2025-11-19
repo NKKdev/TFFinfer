@@ -208,6 +208,14 @@ namespace tff::core::global {
     static const std::unordered_map<tff::core::memory::ModelTensorType, std::pair<
         tff::core::model::ModelTensorLayerType, tff::core::graph::TffOpType> > LLM_LAYER_OP_INFOS = {
         {
+            tff::core::memory::ModelTensorType::LLM_TENSOR_TOKEN_POS,
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_MEM_REF}
+        },
+        {
+            tff::core::memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN,
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_MEM_REF}
+        },
+        {
             tff::core::memory::LLM_TENSOR_TOKEN_EMBD,
             {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_EMBEDDING}
         },

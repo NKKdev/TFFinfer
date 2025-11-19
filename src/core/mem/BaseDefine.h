@@ -13,7 +13,7 @@ namespace tff::core::memory {
         TFF_MEM_CPY_TYPE_NORMAL,
         TFF_MEM_CPY_TYPE_DEVICE2HOST = 1,
         TFF_MEM_CPY_TYPE_HOST2DEVICE = 2,
-        TFF_MEM_CPY_TYPE_DEVICE2DEVICE = 2,
+        TFF_MEM_CPY_TYPE_DEVICE2DEVICE = 3,
     };
 
     enum DataType {
@@ -55,6 +55,8 @@ namespace tff::core::memory {
     //
     enum ModelTensorType {
         LLM_TENSOR_TYPE_UNKNOWN = -1,
+        LLM_TENSOR_INPUT_TOKEN,
+        LLM_TENSOR_TOKEN_POS,
         LLM_TENSOR_TOKEN_EMBD,
         LLM_TENSOR_TOKEN_EMBD_NORM,
         LLM_TENSOR_TOKEN_TYPES,
@@ -236,61 +238,51 @@ namespace tff::core::memory {
 
 #define MAP_DATA_TYPE(gguf_enum, cpp_type) \
 template<> struct tff_data_type_to_cpp<gguf_enum> { using type = cpp_type; };
-
     MAP_DATA_TYPE(TFF_DATA_TYPE_I8, int8_t)
-
     MAP_DATA_TYPE(TFF_DATA_TYPE_I16, int16_t)
-
     MAP_DATA_TYPE(TFF_DATA_TYPE_I32, int32_t)
-
     MAP_DATA_TYPE(TFF_DATA_TYPE_I64, int64_t)
-
     MAP_DATA_TYPE(TFF_DATA_TYPE_F32, float)
-
     MAP_DATA_TYPE(TFF_DATA_TYPE_F64, double)
+    MAP_DATA_TYPE(TFF_DATA_TYPE_Q8_0, tff::core::quant::Q_8_0)
 
 
 #define TFF_DATA_TYPE_LIST \
-TFF_TRAITS(F32,      "f32",      1,              sizeof(float),           false, nullptr, nullptr) \
-TFF_TRAITS(I8,       "i8",       1,              sizeof(int8_t),          false, nullptr, nullptr)\
-TFF_TRAITS(I16,       "i16",       1,              sizeof(int8_t),          false, nullptr, nullptr)\
-TFF_TRAITS(I32,      "i32",      1,              sizeof(float),           false, nullptr, nullptr) \
-TFF_TRAITS(I64,       "i64",       1,              sizeof(int8_t),          false, nullptr, nullptr)\
-TFF_TRAITS(F64,       "f64",       1,              sizeof(int8_t),          false, nullptr, nullptr)\
-TFF_TRAITS(Q8_0,      "q8_0",      QK8_0,        sizeof(tff::core::quant::Q_8_0),          true, nullptr, nullptr)
-
-
-    using tff_to_float_t = std::function<void(
-        const void *src,
-        float *dst,
-        int64_t k
-    )>;
-    using tff_from_float_t = std::function<void(
-        const float *src,
-        void *dst,
-        int64_t k
-    )>;
+TFF_TRAITS(F32,      "f32",      1,              sizeof(float));\
+TFF_TRAITS(I8,       "i8",       1,              sizeof(int8_t))\
+TFF_TRAITS(I16,       "i16",       1,              sizeof(int8_t))\
+TFF_TRAITS(I32,      "i32",      1,              sizeof(float))\
+TFF_TRAITS(I64,       "i64",       1,              sizeof(int8_t))\
+TFF_TRAITS(F64,       "f64",       1,              sizeof(int8_t))\
+TFF_TRAITS(Q8_0,      "q8_0",      tff::core::quant::Q_8_0::BLOCK_SIZE, sizeof(tff::core::quant::Q_8_0));
 
     struct TFFTypeTraits {
         const char *_type_name;
         int64_t _blck_size;
         size_t _type_size;
+        //量化类型特有;
         bool _is_quantized;
-        tff_to_float_t dequantize_callback;
-        tff_from_float_t quantize_callback;
+        tff::core::quant::dequantize dequantize_callback;
+        tff::core::quant::quantize quantize_callback;
     };
 
 
     static std::array<TFFTypeTraits, TFF_DATA_TYPE_COUNT> make_type_traits() {
         std::array<TFFTypeTraits, TFF_DATA_TYPE_COUNT> traits{};
 
-#define TFF_TRAITS(enum_name, name_str, blk, sz, quant, dequantize_func, quantize_func) \
-traits[TFF_DATA_TYPE_##enum_name] = TFFTypeTraits{ name_str, blk, sz, quant, dequantize_func, quantize_func};
+#define TFF_TRAITS(enum_name, name_str, blk, sz) \
+traits[TFF_DATA_TYPE_##enum_name] = TFFTypeTraits{\
+        name_str, blk, sz,\
+        tff::core::quant::QuantScheme<tff_data_type_to_cpp<TFF_DATA_TYPE_##enum_name>::type>::is_quantized(), \
+        tff::core::quant::make_dequantize_wrapper<tff_data_type_to_cpp<TFF_DATA_TYPE_##enum_name>::type>(),\
+        tff::core::quant::make_quantize_wrapper<tff_data_type_to_cpp<TFF_DATA_TYPE_##enum_name>::type>()\
+        };\
 
         TFF_DATA_TYPE_LIST
         return traits;
     }
 
     static const auto type_traits_auto = make_type_traits();
+
 }
 #endif //TFFINFER_MEM_BASEDEFINE_H

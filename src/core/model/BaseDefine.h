@@ -179,6 +179,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         uint16_t _idx;
         size_t _offs;
         double _byte_size;
+        double _alignment_size;
         std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
     };
 
