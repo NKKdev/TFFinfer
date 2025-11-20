@@ -103,6 +103,23 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("AddNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
+            if (this->_prev_nodes.size() != 2) {
+                tff::log::Logger::error("MatMulNode previous node count is wrong!!");
+                return nullptr;
+            }
+            for (auto &prev_node : this->_prev_nodes) {
+                auto &pre_output_tensor = prev_node.lock()->outputs();
+                this->set_inputs(pre_output_tensor);
+            }
+
+            auto input_tensor_0 = *this->_src_tensors_ptr.begin();
+            auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
+            std::vector<uint32_t> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+                                                                             output_shape, false,
+                                                                             this->device()->
+                                                                             get_device_buffer_allocator());
+            this->set_outputs(std::set<std::shared_ptr<tff::core::memory::Tensor>>{output_tensor});
             auto callback = GraphNode::forward();
             return callback;
         }
@@ -126,6 +143,10 @@ namespace tff::core::graph::op {
             for (auto &prev_node : this->_prev_nodes) {
                 auto &pre_output_tensor = prev_node.lock()->outputs();
                 this->set_inputs(pre_output_tensor);
+            }
+            if (this->_src_tensors_ptr.empty()) {
+                tff::log::Logger::error("current node(%s) has invalid input", this->_node_metadata._name.c_str());
+                return nullptr;
             }
             auto input_tensor = *this->_src_tensors_ptr.begin();
             auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor->get_data_type(),
@@ -322,6 +343,22 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("ReshapeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
+            if (this->_prev_nodes.size() != 1) {
+                tff::log::Logger::error("MatMulNode previous node count is wrong!!");
+                return nullptr;
+            }
+            for (auto &prev_node : this->_prev_nodes) {
+                auto &pre_output_tensor = prev_node.lock()->outputs();
+                this->set_inputs(pre_output_tensor);
+            }
+
+            auto input_tensor_0 = *this->_src_tensors_ptr.begin();
+            std::vector<uint32_t> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+                                                                             output_shape, false,
+                                                                             this->device()->
+                                                                             get_device_buffer_allocator());
+            this->set_outputs(std::set<std::shared_ptr<tff::core::memory::Tensor>>{output_tensor});
             auto callback = GraphNode::forward();
             return callback;
         }
@@ -386,6 +423,22 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("RopeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
+            if (this->_prev_nodes.size() != 1) {
+                tff::log::Logger::error("MatMulNode previous node count is wrong!!");
+                return nullptr;
+            }
+            for (auto &prev_node : this->_prev_nodes) {
+                auto &pre_output_tensor = prev_node.lock()->outputs();
+                this->set_inputs(pre_output_tensor);
+            }
+
+            auto input_tensor_0 = *this->_src_tensors_ptr.begin();
+            std::vector<uint32_t> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+                                                                             output_shape, false,
+                                                                             this->device()->
+                                                                             get_device_buffer_allocator());
+            this->set_outputs(std::set<std::shared_ptr<tff::core::memory::Tensor>>{output_tensor});
             auto callback = GraphNode::forward();
             return callback;
         }
@@ -449,7 +502,7 @@ namespace tff::core::graph::op {
             // }
             auto &input_tensors = *this->_src_tensors_ptr.begin();
             auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensors->get_data_type(),
-                                                                             input_tensors->get_shape(), false,
+                                                                             input_tensors->get_shape(), true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
             this->set_outputs(std::set<std::shared_ptr<tff::core::memory::Tensor>>{output_tensor});
@@ -530,6 +583,22 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("FlashAttnNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
+            if (this->_prev_nodes.size() != 4) {
+                tff::log::Logger::error("FlashAttnNode prev_nodes size() is wrong!!");
+                return nullptr;
+            }
+            for (auto &prev_node : this->_prev_nodes) {
+                auto &pre_output_tensor = prev_node.lock()->outputs();
+                this->set_inputs(pre_output_tensor);
+            }
+            auto input_tensor_0 = *this->_src_tensors_ptr.begin();
+            auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
+            std::vector<uint32_t> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+                                                                             output_shape, false,
+                                                                             this->device()->
+                                                                             get_device_buffer_allocator());
+            this->set_outputs(std::set<std::shared_ptr<tff::core::memory::Tensor>>{output_tensor});
             auto callback = GraphNode::forward();
             return callback;
         }

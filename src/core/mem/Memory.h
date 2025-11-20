@@ -87,6 +87,9 @@ namespace tff::core::memory {
     inline bool Memory::allocate() {
         if (_allocator && byte_size_ > 0) {
             ptr_ = _allocator->allocate(byte_size_);
+            if (!ptr_) {
+                _allocator->memset_zero(ptr_, byte_size_);
+            }
         }
         return ptr_ != nullptr;
     }

@@ -28,12 +28,10 @@ namespace tff::core::model {
     public:
         //
         std::shared_ptr<tff::core::graph::GraphNode> build_mul_node(
-            const std::shared_ptr<tff::core::graph::GraphNode> &layer,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
             std::shared_ptr<tff::core::graph::GraphNode> &a_node, std::shared_ptr<tff::core::graph::GraphNode> &b_node) ;
         //
         std::shared_ptr<tff::core::graph::GraphNode> build_mul_mat_node(
-            const std::shared_ptr<tff::core::graph::GraphNode> &layer,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
             std::shared_ptr<tff::core::graph::GraphNode> &a_node, std::shared_ptr<tff::core::graph::GraphNode> &b_node) ;
 

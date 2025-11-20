@@ -6,6 +6,7 @@
 #define TFFINFER_UTIL_H
 #include <cstdint>
 #include <math.h>
+#include "libdivideInc.h"
 namespace tff::utils {
 #define TFF_PAD(x, n) (((x) + (n) - 1) & ~((n) - 1))
 
@@ -78,8 +79,34 @@ namespace tff::utils {
 
             return static_cast<uint16_t>(sign | ((exp + 15) << 10) | (mantissa >> 13));
         }
-
     }
+    //
+    static inline std::tuple<uint32_t, uint8_t> gen_magic_u32(const uint32_t divisor) {
+        auto [magic, more] = libdivide::libdivide_u32_gen(divisor);
+        return std::tuple<uint32_t, uint8_t>{magic, more};
+    }
+    static inline std::tuple<int32_t, uint8_t> gen_magic_s32(const int32_t divisor) {
+        auto [magic, more] = libdivide::libdivide_s32_gen(divisor);
+        return std::tuple<int32_t, uint8_t>{magic, more};
+    }
+    static inline std::tuple<uint64_t, uint8_t> gen_magic_u64(const uint64_t divisor) {
+        auto [magic, more] = libdivide::libdivide_u64_gen(divisor);
+        return std::tuple<uint64_t, uint8_t>{magic, more};
+    }
+    static inline std::tuple<int64_t, uint8_t> gen_magic_s64(const int64_t divisor) {
+        auto [magic, more] = libdivide::libdivide_u64_gen(divisor);
+        return std::tuple<int64_t, uint8_t>{magic, more};
+    }
+    static inline std::tuple<uint16_t, uint8_t> gen_magic_u16(const uint16_t divisor) {
+        auto [magic, more] = libdivide::libdivide_u64_gen(divisor);
+        return std::tuple<uint16_t, uint8_t>{magic, more};
+    }
+    static inline std::tuple<int16_t, uint8_t> gen_magic_s16(const int16_t divisor) {
+        auto [magic, more] = libdivide::libdivide_u64_gen(divisor);
+        return std::tuple<int16_t, uint8_t>{magic, more};
+    }
+
+
 
 }
 #endif //TFFINFER_UTIL_H

@@ -29,6 +29,7 @@
     //TOKENIZER
 #define TOKENIZER_FLAG "TOKENIZER"
     //
+#define MODEL_HIDDEN_DIM 960
 #define MAX_BATCH_SIZE 512
 #define MAX_SEQ_LENGTH 8192
 #define MAX_PARAM_BUFFER_SIZE 512
@@ -36,7 +37,7 @@
     //OP
 #define OP_NODE_FLAG "OP_NODE"
 //
-#define MAX_PREFETCH_BUFFER_SIZE 3
+#define MAX_PREFETCH_BUFFER_SIZE 32
 namespace tff::core::global {
 
     //

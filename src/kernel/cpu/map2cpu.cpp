@@ -13,8 +13,8 @@ namespace tff::kernel {
                                        const int &offset,
                                        const double &data_size,
                                        const std::shared_ptr<tff::core::model::ModelLoaderBase> &model_loader_ptr,
-                                       std::vector<std::shared_ptr<tff::core::memory::Tensor> > &inputs,
-                                       std::vector<std::shared_ptr<tff::core::memory::Tensor> > &outputs,
+                                       std::set<std::shared_ptr<tff::core::memory::Tensor> > &inputs,
+                                       std::set<std::shared_ptr<tff::core::memory::Tensor> > &outputs,
                                        std::shared_ptr<
                                            tff::core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
         if (model_file_index < 0) {
@@ -39,7 +39,7 @@ namespace tff::kernel {
             return;
         }
         auto buffer = (uint8_t *) file_map_ptr->addr() + offset;
-        auto input_tensor = inputs[0];
+        auto input_tensor = *inputs.begin();
         if (input_tensor->is_allocated()) {
             tff::log::Logger::error("mem_map2cpu_kernel_cpu Input tensor is already allocated");
             return;
@@ -67,7 +67,6 @@ namespace tff::kernel {
 
         std::shared_ptr<tff::core::memory::Tensor> output_tensor = input_tensor;
         allocator->memcpy((void*)buffer, mem_buffer.second, data_size);
-        outputs.push_back(output_tensor);
     }
 
     template<typename T>
@@ -79,9 +78,9 @@ namespace tff::kernel {
         const auto offset = get_param_value<size_t>(2, para_ptr);
         const auto data_size = get_param_value<double>(3, para_ptr);
         const auto model_loader_ptr = get_param_value<std::shared_ptr<tff::core::model::ModelLoaderBase> >(4, para_ptr);
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor> > >(
             5, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto output_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor> > >(
             6, para_ptr);
         std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<

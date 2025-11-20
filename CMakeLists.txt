@@ -12,8 +12,8 @@ enable_language(CUDA)
 find_package(CUDAToolkit REQUIRED)
 
 
-
 include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
 set(BUILD_SHARED_LIBS ON)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -48,7 +48,7 @@ endif ()
 FetchContent_Declare(
         fmt
         GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG        12.0.0  # 推荐稳定版本
+        GIT_TAG 12.0.0  # 推荐稳定版本
 )
 FetchContent_MakeAvailable(fmt)
 
@@ -65,7 +65,16 @@ if (NOT Taskflow_FOUND)
     message(STATUS "Include directories for taskflow: ${taskflow_include_dirs}")
     include_directories(${taskflow_include_dirs})
 endif ()
-
+#libdivide
+FetchContent_Declare(
+        libdivide
+        GIT_REPOSITORY https://github.com/ridiculousfish/libdivide.git
+        GIT_TAG v5.2.0
+)
+FetchContent_MakeAvailable(libdivide)
+get_target_property(libdivide_include_dirs libdivide INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "Include directories for libdivide: ${libdivide_include_dirs}")
+include_directories(${libdivide_include_dirs})
 
 set(${PROJECT_NAME}_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/)
 add_subdirectory(test)
@@ -129,7 +138,9 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCE_LIST
 
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        src/kernel/cpu/mem_ref.cpp)
+        src/kernel/cpu/mem_ref.cpp
+        src/3rdparty/libdivideInc.h
+        src/kernel/include/kernel_util.h)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)

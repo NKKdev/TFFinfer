@@ -76,16 +76,25 @@ namespace tff::core::runtime {
         //
         inline void reset_cpu_mapped_memory(const size_t &index) {
             std::lock_guard<std::mutex> lock(_mutex);
+            if (index < 0 || index >= this->_cpu_mapped_buffer.size()) {
+                return;
+            }
             this->_cpu_mapped_buffer[index]->reset();
         }
         //
         inline void reset_gpu_memory(const size_t &index) {
             std::lock_guard<std::mutex> lock(_mutex);
+            if (index < 0 || index >= this->_gpu_buffer.size()) {
+                return;
+            }
             this->_gpu_buffer[index]->reset();
         }
         //
         inline void reset_pinned_memory(const size_t &index) {
             std::lock_guard<std::mutex> lock(_mutex);
+            if (index < 0 || index >= this->_pinned_buffer.size()) {
+                return;
+            }
             this->_pinned_buffer[index]->reset();
         }
     private:

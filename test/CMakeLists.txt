@@ -49,7 +49,8 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
-add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
+add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
+        rms_norm_kernel.cu)
 
 message(" -- TFFInfer_SOURCE_ROOT " ${CMAKE_SOURCE_DIR})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/include)

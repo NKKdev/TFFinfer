@@ -179,6 +179,10 @@ namespace tff::core::memory {
             this->_external_memory_index = mem_buffer_index;
             this->_buffer = std::make_shared<tff::core::memory::Memory>(buffer_size, data, _use_external);
         }
+        //
+        inline int get_external_memory_index() const {
+            return _external_memory_index;
+        }
 
         //
         [[nodiscard]] inline tff::core::memory::ModelTensorType get_tensor_type() const {
