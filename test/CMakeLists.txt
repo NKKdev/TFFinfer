@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-SET(CMAKE_CUDA_ARCHITECTURES "86")
+set(CMAKE_CUDA_ARCHITECTURES "120")
 enable_language(CUDA)
 find_package(CUDAToolkit REQUIRED)
 
@@ -41,7 +41,15 @@ if (NOT glog_FOUND)
     get_target_property(GLOG_INCLUDE_DIRS glog::glog INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "Glog include directories: ${GLOG_INCLUDE_DIRS}")
 endif ()
-
+#cutlass
+FetchContent_Declare(
+        cutlass
+        GIT_REPOSITORY https://gitee.com/git_mirror/cutlass.git
+        GIT_TAG v3.7.0
+)
+FetchContent_MakeAvailable(cutlass)
+get_target_property(cutlass_INCLUDE_DIRS CUTLASS INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "cutlass include directories: ${cutlass_INCLUDE_DIRS}")
 
 file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cu
@@ -49,9 +57,22 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
-add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        rms_norm_kernel.cu)
 
+add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
+        rms_norm_kernel.cu
+        gemm_nt.cu)
+target_compile_options(${PROJECT_NAME}
+        PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:-O3>
+        $<$<COMPILE_LANGUAGE:CUDA>:--use_fast_math>
+        $<$<COMPILE_LANGUAGE:CXX>:-Wall>
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xptxas=-dlcm=ca>
+)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-D_DEBUG)
+    message("-- cmake_build_type:" ${CMAKE_BUILD_TYPE})
+endif ()
 message(" -- TFFInfer_SOURCE_ROOT " ${CMAKE_SOURCE_DIR})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src/log)
@@ -61,9 +82,12 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src/model)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src/factory)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src/kernel)
 target_include_directories(${PROJECT_NAME} PUBLIC ${json_include_dirs})
+target_include_directories(${PROJECT_NAME} PUBLIC ${cutlass_INCLUDE_DIRS})
 message(" -- CMAKE_LIBRARY_OUTPUT_DIRECTORY :" ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 target_link_directories(${PROJECT_NAME} PRIVATE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart nlohmann_json::nlohmann_json glog::glog TFFInfer)
+
+
 
 
 

@@ -156,6 +156,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/sr
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/)
 target_include_directories(${PROJECT_NAME} PUBLIC ${json_include_dirs})
+target_include_directories(${PROJECT_NAME} PUBLIC ${cutlass_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart nlohmann_json::nlohmann_json glog::glog fmt::fmt)
 

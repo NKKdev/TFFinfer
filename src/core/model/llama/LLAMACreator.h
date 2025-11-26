@@ -43,15 +43,14 @@ namespace tff::core::model {
 
         //
         void build_cpu_node(
-            const std::shared_ptr<tff::core::graph::GraphNode> &layer,
+            std::shared_ptr<GraphNode> &layer,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
             NodeType &out_put_node) ;
 
         //
         void build_gpu_node(
-            const std::shared_ptr<tff::core::graph::GraphNode> &layer,
-            std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            NodeType &out_put_node, bool is_input = false) ;
+            const std::string &node_name,
+            std::shared_ptr<tff::core::graph::Graph> &graph_ptr, NodeType &out_put_node, bool is_input = false) ;
 
         //
         void build_attn_norm(const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
@@ -68,8 +67,7 @@ namespace tff::core::model {
             NodeType &input_node) ;
 
         //
-        void build_qkv_node(const std::shared_ptr<
-                                tff::core::graph::GraphNode> &layer,
+        void build_qkv_node(std::shared_ptr<GraphNode> &layer,
                             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
                             NodeType &input_node,
                             NodeType &attn_qkv_node) ;

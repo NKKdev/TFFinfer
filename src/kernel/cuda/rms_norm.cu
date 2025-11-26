@@ -50,14 +50,22 @@ namespace tff::kernel {
 
     template<typename T>
     static void rms_norm_kernel_cuda(const float &eps, std::set<std::shared_ptr<tff::core::memory::Tensor> > &src,
-                                     std::set<std::shared_ptr<tff::core::memory::Tensor> > &dst) {
+                                     std::set<std::shared_ptr<tff::core::memory::Tensor> > &dst,
+                                     std::shared_ptr<core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
         auto &input_tensor = *src.begin();
         auto &weight_tensor = *src.rbegin();
         auto &output_tensor = *dst.begin();
         auto &src_shape = input_tensor->get_shape();
         const int src_dim0 = src_shape[0]; //D
         const int src_dim1 = src_shape[1]; //S
-        const int src_dim2 = src_shape[2]; //B
+        const int src_dim2 = 1; //B
+
+        auto mem_buffer = mem_buffer_manager_ptr->get_gpu_memory();
+        if (mem_buffer.second == nullptr) {
+            tff::log::Logger::error("rms_norm_kernel_cuda: mem_buffer_manager_ptr is nullptr!");
+            return;
+        }
+        output_tensor->set_buffer_data(mem_buffer.second, output_tensor->get_bytes(), mem_buffer.first);
 
         auto div_magic = tff::utils::gen_magic_u32(src_dim0);
         const dim3 grid(src_dim1, src_dim2, 1);
@@ -85,7 +93,7 @@ namespace tff::kernel {
             std::shared_ptr<
                 tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
 
-        if (input_tensors.size() != 1) {
+        if (input_tensors.size() != 2) {
             tff::log::Logger::error("memcpy kernel param is invalid!");
             return;
         }
@@ -93,6 +101,11 @@ namespace tff::kernel {
             tff::log::Logger::error("memcpy kernel param is invalid!");
             return;
         }
+        //
+        float eps = 1e10-7;
+        rms_norm_kernel_cuda<T>(eps, input_tensors, output_tensors, mem_buffer_manager_ptr);
+
+
     }
 
     template class tff::kernel::RMSNorm<float>;

@@ -101,14 +101,17 @@ namespace tff::core::graph {
         tff::core::model::ModelTensorLayerType layer_type() const { return _layer_type; }
 
         // 输入/输出 Tensor
-        const std::set<std::shared_ptr<tff::core::memory::Tensor> > &inputs() const { return _src_tensors_ptr; }
-        const std::set<std::shared_ptr<tff::core::memory::Tensor> > &outputs() const { return _dst_tensors_ptr; }
+        const std::set<std::shared_ptr<tff::core::memory::Tensor>, tff::core::memory::Tensor::TensorCompare > &inputs() const { return _src_tensors_ptr; }
+        const std::set<std::shared_ptr<tff::core::memory::Tensor> , tff::core::memory::Tensor::TensorCompare> &outputs() const { return _dst_tensors_ptr; }
 
-        void set_inputs(const std::set<std::shared_ptr<tff::core::memory::Tensor> > &inputs) {
+        void set_inputs(const std::set<std::shared_ptr<tff::core::memory::Tensor>, tff::core::memory::Tensor::TensorCompare> &inputs) {
+            for (auto &in : inputs) {
+                in->set_priority(_src_tensors_ptr.size());
+            }
             _src_tensors_ptr.insert(inputs.begin(), inputs.end());
         }
 
-        void set_outputs(const std::set<std::shared_ptr<tff::core::memory::Tensor> > &outputs) {
+        void set_outputs(const std::set<std::shared_ptr<tff::core::memory::Tensor> , tff::core::memory::Tensor::TensorCompare> &outputs) {
             _dst_tensors_ptr.insert(outputs.begin(), outputs.end());
         }
 
@@ -183,8 +186,8 @@ namespace tff::core::graph {
         uint32_t _layer_id = 0;
         uint32_t _file_idx = 0;
 
-        std::set<std::shared_ptr<tff::core::memory::Tensor> > _src_tensors_ptr;
-        std::set<std::shared_ptr<tff::core::memory::Tensor> > _dst_tensors_ptr;
+        std::set<std::shared_ptr<tff::core::memory::Tensor>, tff::core::memory::Tensor::TensorCompare> _src_tensors_ptr;
+        std::set<std::shared_ptr<tff::core::memory::Tensor>, tff::core::memory::Tensor::TensorCompare> _dst_tensors_ptr;
 
         TffOpType _op_type = TFF_OP_NONE;
         std::shared_ptr<tff::core::global::ParamBaseObject> _params_ptr;

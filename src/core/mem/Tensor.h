@@ -14,6 +14,12 @@
 namespace tff::core::memory {
     class Tensor {
     public:
+        struct TensorCompare {
+            bool operator()(const std::shared_ptr<Tensor> &a, const std::shared_ptr<Tensor> &b) const {
+                return  a->get_priority() < b->get_priority();
+            }
+        };
+    public:
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
                std::vector<uint32_t> shapes = std::vector<uint32_t>(), bool use_external = false,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
@@ -93,6 +99,31 @@ namespace tff::core::memory {
             other._shape.clear();
             return *this;
         }
+
+        // bool operator==(const Tensor& other) const {
+        //     if (_data_type != other._data_type ||
+        //         _shape != other._shape ||
+        //         _use_external != other._use_external) {
+        //         return false;
+        //         }
+        //     if (!_is_allocated && !other._is_allocated) {
+        //         return true;
+        //     }
+        //
+        //     if (!_is_allocated || !other._is_allocated) {
+        //         return false;
+        //     }
+        //     size_t this_bytes = get_bytes();
+        //     size_t other_bytes = other.get_bytes();
+        //     if (this_bytes != other_bytes) {
+        //         return false;
+        //     }
+        //     if (!_buffer || !_buffer->ptr() || !other._buffer || !other._buffer->ptr()) {
+        //         return false;
+        //     }
+        //     return std::memcmp(_buffer->ptr(), other._buffer->ptr(), this_bytes) == 0;
+        // }
+
 
         ~Tensor() = default;
 
@@ -214,13 +245,21 @@ namespace tff::core::memory {
         }
 
         //
-        inline bool is_allocated() const {
+        [[nodiscard]] inline bool is_allocated() const {
             return _is_allocated;
         }
 
         //
         inline std::shared_ptr<tff::core::memory::Memory> &get_buffer() {
             return _buffer;
+        }
+        //
+        [[nodiscard]] inline int get_priority() const {
+            return _priority;
+        }
+        //
+        inline void set_priority(const int &priority) {
+            _priority = priority;
         }
 
         //
@@ -267,6 +306,8 @@ namespace tff::core::memory {
 
     private:
         //
+        //
+        int _priority = 0;
         bool _is_allocated;
         bool _use_external = false;
         int _external_memory_index = -1;
@@ -280,6 +321,8 @@ namespace tff::core::memory {
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
     };
+    //
+
 }
 
 #endif //TFFINFER_TENSOR_H
