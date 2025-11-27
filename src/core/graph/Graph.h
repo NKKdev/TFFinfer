@@ -46,18 +46,12 @@ namespace tff::core::graph {
 
         // 前向执行整个图
         bool forward();
-        // 释放所有资源
-        inline void release() const {
+        // 清空图
+        inline void clear() {
             std::lock_guard<std::mutex> lock(_mutex);
             for (const auto &node: _nodes) {
                 node->release();
             }
-        }
-
-        // 清空图
-        inline void clear() {
-            std::lock_guard<std::mutex> lock(_mutex);
-            release();
             _nodes.clear();
             _node_set.clear();
         }

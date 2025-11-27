@@ -44,9 +44,6 @@ namespace tff::core::runtime {
         }
 
         ~LLMInferRuntime() {
-            if (this->_graph_ptr != nullptr) {
-                this->_graph_ptr->release();
-            }
         }
 
     public:

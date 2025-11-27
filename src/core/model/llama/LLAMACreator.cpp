@@ -23,7 +23,7 @@ namespace tff::core::model {
         layer_node->set_layer_id(layer_index);
         layer_node->set_layer_type(layer_info.first);
         layer_node->set_inputs(
-            std::set<std::shared_ptr<tff::core::memory::Tensor>, tff::core::memory::Tensor::TensorCompare>{tensor_ptr});
+            std::vector<std::shared_ptr<tff::core::memory::Tensor>>{tensor_ptr});
         switch (layer_info.first) {
             case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
                 auto device = tff::factory::ModuleFactory::instance()->create_shared<
@@ -99,13 +99,7 @@ namespace tff::core::model {
         if (!graph_ptr) {
             graph_ptr = std::make_shared<tff::core::graph::Graph>();
         }
-        //
-        // auto add_nodes_to_graph = [&graph_ptr](
-        //     const std::shared_ptr<tff::core::graph::GraphNode> &node) {
-        //     if (node) {
-        //         graph_ptr->add_node(node);
-        //     }
-        // };
+
 
         const auto input_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT);

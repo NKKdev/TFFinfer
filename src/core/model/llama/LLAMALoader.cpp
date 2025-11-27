@@ -148,7 +148,7 @@ namespace tff::core::model {
             tff::core::model::GGUFTensorInfo tensor_info;
             file_loader->read(tensor_info._name);
             //
-            tff::log::Logger::info("tensor info name:%s", tensor_info._name.c_str());
+            //tff::log::Logger::info("tensor info name:%s", tensor_info._name.c_str());
             for (auto &j: gguf_ctx->_tensor_info) {
                 if (tensor_info._name == j._name) {
                     bRet &= false;
@@ -158,7 +158,11 @@ namespace tff::core::model {
             //
             uint32_t n_dims = 0;
             file_loader->read(n_dims);
-            std::vector<uint32_t> shapes(n_dims);
+            if (n_dims == 0 || n_dims > 4) {
+                throw std::runtime_error("Invalid tensor shape dimension count");
+                continue;
+            }
+            std::vector<int64_t> shapes(n_dims);
             for (size_t j = 0; j < n_dims; j++) {
                 int64_t shape_dim = 0;
                 file_loader->read(shape_dim);

@@ -20,7 +20,7 @@ namespace tff::core::runtime {
         this->_model_creator = model_detector->create_creator();
         this->_model_creator->set_loader(this->_model_loader);
         this->_vocabulary_ptr = std::make_unique<tff::core::model::LLMLLaMaVocabulary>();
-        //
+
         this->load_hparams();
         this->load_vocab();
         this->load_layers();
@@ -170,7 +170,7 @@ namespace tff::core::runtime {
             this->_task_manager->build_task_schedule(this->_graph_ptr);
             this->_task_manager->run();
         } catch (const std::exception &e) {
-            tff::log::Logger::error("Prefill forward failed: {}", e.what());
+            tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
             return false;
         }
         this->_kv_cache_ptr->end_prefill();
@@ -199,14 +199,14 @@ namespace tff::core::runtime {
             this->_vocabulary_ptr->tokenize(batch, tokens);
 
             if (tokens.size() > this->_model_config._n_ctx) {
-                tff::log::Logger::warning("Prompt {} length ({}) exceeds context length ({}). Truncating.",
+                tff::log::Logger::warning("Prompt {%d} length ({%d}) exceeds context length ({%d}). Truncating.",
                                           i, tokens.size(), this->_model_config._n_ctx);
                 tokens.resize(this->_model_config._n_ctx);
             }
             max_seq_len = std::max(max_seq_len, tokens.size());
             //tokenized_batch.push_back(std::move(tokens));
             seq_prompts[i] = batch;
-            tff::log::Logger::info("Batch {}: tokenized {} tokens.", i, tokens.size());
+            tff::log::Logger::info("Batch {%d}: tokenized {%d} tokens.", i, tokens.size());
         }
         //batch manager init;
         if (!this->_llm_batch_manager_ptr->init(seq_prompts, this->_vocabulary_ptr)) {
@@ -225,7 +225,7 @@ namespace tff::core::runtime {
         auto &tokens_data = this->_llm_batch_manager_ptr->_main_batch->_tokens;
         auto &input_pos = this->_llm_batch_manager_ptr->_main_batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-                                                                        std::vector<uint32_t>{static_cast<uint32_t>(tokens_data.size())}, true);
+                                                                        std::vector<int64_t>{static_cast<int64_t>(tokens_data.size())}, true);
         token_tensor->set_buffer_data(tokens_data.data(),
                                       tokens_data.size() * memory::type_traits_auto[
                                           tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
@@ -233,7 +233,7 @@ namespace tff::core::runtime {
 
         auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(
             tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-            std::vector<uint32_t>{static_cast<uint32_t>(input_pos.size())}, true);
+            std::vector<int64_t>{static_cast<int64_t>(input_pos.size())}, true);
         input_pos_tensor->set_buffer_data(input_pos.data(),
                                           input_pos.size() * memory::type_traits_auto[
                                               tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);

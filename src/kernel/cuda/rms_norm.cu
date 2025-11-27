@@ -49,8 +49,9 @@ namespace tff::kernel {
     }
 
     template<typename T>
-    static void rms_norm_kernel_cuda(const float &eps, std::set<std::shared_ptr<tff::core::memory::Tensor> > &src,
-                                     std::set<std::shared_ptr<tff::core::memory::Tensor> > &dst,
+    static void rms_norm_kernel_cuda(const float &eps,
+                                     std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
+                                     std::vector<std::shared_ptr<tff::core::memory::Tensor> > &dst,
                                      std::shared_ptr<core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
         auto &input_tensor = *src.begin();
         auto &weight_tensor = *src.rbegin();
@@ -67,6 +68,18 @@ namespace tff::kernel {
         }
         output_tensor->set_buffer_data(mem_buffer.second, output_tensor->get_bytes(), mem_buffer.first);
 
+        if (input_tensor->get_buffer() == nullptr) {
+            tff::log::Logger::error("rms_norm_kernel_cuda: input_tensor is nullptr!");
+            return;
+        }
+        if (weight_tensor->get_buffer() == nullptr) {
+            tff::log::Logger::error("rms_norm_kernel_cuda: weight_tensor is nullptr!");
+            return;
+        }
+        if (output_tensor->get_buffer() == nullptr) {
+            tff::log::Logger::error("rms_norm_kernel_cuda: output_tensor is nullptr!");
+            return;
+        }
         auto div_magic = tff::utils::gen_magic_u32(src_dim0);
         const dim3 grid(src_dim1, src_dim2, 1);
         const dim3 block(32, 1, 1);
@@ -85,9 +98,9 @@ namespace tff::kernel {
     void tff::kernel::RMSNorm<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), RMSNorm<T>::get_op_name().c_str());
-        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             1, para_ptr);
-        auto output_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             2, para_ptr);
         std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
@@ -102,10 +115,8 @@ namespace tff::kernel {
             return;
         }
         //
-        float eps = 1e10-7;
-        rms_norm_kernel_cuda<T>(eps, input_tensors, output_tensors, mem_buffer_manager_ptr);
-
-
+        float eps = 1e10 - 7;
+        //rms_norm_kernel_cuda<T>(eps, input_tensors, output_tensors, mem_buffer_manager_ptr);
     }
 
     template class tff::kernel::RMSNorm<float>;

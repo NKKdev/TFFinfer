@@ -7,25 +7,30 @@
 
 #include <numeric>
 #include <utility>
-
+#include <mutex>
 #include "Memory.h"
 #include "BaseDefine.h"
 
 namespace tff::core::memory {
-    class Tensor {
+    class Tensor :public std::enable_shared_from_this<Tensor>{
     public:
         struct TensorCompare {
             bool operator()(const std::shared_ptr<Tensor> &a, const std::shared_ptr<Tensor> &b) const {
-                return  a->get_priority() < b->get_priority();
+                return a->get_priority() < b->get_priority();
             }
         };
+
     public:
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
-               std::vector<uint32_t> shapes = std::vector<uint32_t>(), bool use_external = false,
+               std::vector<int64_t> shapes = std::vector<int64_t>(), bool use_external = false,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
                                   _allocator(std::move(alloc)) {
+            if (_shape.empty()) {
+                tff::log::Logger::error("tensor shape is invalid!!");
+                return;
+            }
             this->_strides.resize(this->_shape.size());
             this->set_dims(_shape.size());
             for (size_t i = 0; i < this->_shape.size(); ++i) {
@@ -125,11 +130,14 @@ namespace tff::core::memory {
         // }
 
 
-        ~Tensor() = default;
+        ~Tensor() {
+            //tff::log::Logger::info("tensor released");
+        }
 
     public:
         //
         inline void allocate() {
+            std::lock_guard<std::mutex> lock(this->_mutex);
             if (!_use_external) {
                 _buffer = std::make_shared<tff::core::memory::Memory>(
                     type_traits_auto[this->_data_type]._type_size * std::accumulate(
@@ -167,11 +175,12 @@ namespace tff::core::memory {
         }
 
         //
-        inline std::vector<uint32_t> &get_shape() {
+        inline std::vector<int64_t> &get_shape() {
             return _shape;
         }
+
         //
-        inline std::vector<uint32_t> &get_strides() {
+        inline std::vector<int64_t> &get_strides() {
             return this->_strides;
         }
 
@@ -181,7 +190,7 @@ namespace tff::core::memory {
         }
 
         //
-        inline void set_shape(const std::vector<uint32_t> &shape) {
+        inline void set_shape(const std::vector<int64_t> &shape) {
             this->_shape = shape;
             this->set_dims(this->_shape.size());
         }
@@ -196,9 +205,14 @@ namespace tff::core::memory {
             this->_data_type = data_type;
             _type_size = memory::type_traits_auto[tff::core::memory::DataType(data_type)]._type_size;
             _blk_size = memory::type_traits_auto[tff::core::memory::DataType(data_type)]._blck_size;
-
+            if (this->_strides.empty()) {
+                tff::log::Logger::error("_strides is empty!!");
+                return;
+            }
             _strides[0] = _type_size;
-            _strides[1] = _strides[0] * (_shape[0] / _blk_size);
+            if (this->_strides.size() > 1) {
+                _strides[1] = _strides[0] * (_shape[0] / _blk_size);
+            }
             for (int j = 2; j < _shape.size(); ++j) {
                 _strides[j] = _strides[j - 1] * _shape[j - 1];
             }
@@ -206,12 +220,19 @@ namespace tff::core::memory {
 
         //
         inline void set_buffer_data(void *data, const size_t &buffer_size, int mem_buffer_index = -1) {
+            std::lock_guard<std::mutex> lock(this->_mutex);
+            if (this->_buffer != nullptr) {
+                tff::log::Logger::error("current tensor already has buffer!!");
+                return;
+            }
             _use_external = true;
             this->_external_memory_index = mem_buffer_index;
             this->_buffer = std::make_shared<tff::core::memory::Memory>(buffer_size, data, _use_external);
         }
+
         //
         inline int get_external_memory_index() const {
+            std::lock_guard<std::mutex> lock(this->_mutex);
             return _external_memory_index;
         }
 
@@ -251,12 +272,15 @@ namespace tff::core::memory {
 
         //
         inline std::shared_ptr<tff::core::memory::Memory> &get_buffer() {
+            std::lock_guard<std::mutex> lock(this->_mutex);
             return _buffer;
         }
+
         //
         [[nodiscard]] inline int get_priority() const {
             return _priority;
         }
+
         //
         inline void set_priority(const int &priority) {
             _priority = priority;
@@ -316,13 +340,16 @@ namespace tff::core::memory {
         tff::core::memory::ModelTensorType _tensor_type;
         size_t _type_size{};
         uint32_t _blk_size{};
-        std::vector<uint32_t> _shape;
-        std::vector<uint32_t> _strides;
+        std::vector<int64_t> _shape;
+        std::vector<int64_t> _strides;
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
-    };
-    //
 
+    private:
+        mutable std::mutex _mutex;
+    };
+
+    //
 }
 
 #endif //TFFINFER_TENSOR_H

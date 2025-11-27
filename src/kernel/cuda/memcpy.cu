@@ -36,9 +36,9 @@ namespace tff::kernel {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), MemCpy<T>::get_op_name().c_str());
         const auto memcpy_kind = get_param_value<tff::core::memory::MemCpyKind>(1, para_ptr);
-        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             2, para_ptr);
-        auto output_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             3, para_ptr);
         std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<

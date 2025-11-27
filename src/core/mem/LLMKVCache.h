@@ -35,7 +35,7 @@ namespace tff::core::memory {
             _pages.resize(total_pages);
             for (int i = 0; i < total_pages; ++i) {
                 _pages[i] = std::make_unique<KVPage>();
-                std::vector<uint32_t> shapes = {static_cast<uint32_t>(_d_h), static_cast<uint32_t>(_h_kv), static_cast<uint32_t>(page_size)};
+                std::vector<int64_t> shapes = {static_cast<int64_t>(_d_h), static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size)};
                 _pages[i]->_k = std::make_unique<tff::core::memory::Tensor>(data_type, shapes, false, allocator);
                 _pages[i]->_v = std::make_unique<tff::core::memory::Tensor>(data_type, shapes, false, allocator);
                 _pages[i]->_n_tokens = 0;
