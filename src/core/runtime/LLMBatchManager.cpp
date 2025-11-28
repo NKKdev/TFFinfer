@@ -4,12 +4,15 @@
 
 #include "LLMBatchManager.h"
 #include "Logger.h"
+#include "../../../../../../../../../usr/local/cuda/include/cuda/__ptx/ptx_dot_variants.h"
 
 namespace tff::core::runtime {
-    REGISTER_MODULE_OBJECT(LLMBatchManager, tff::module::ModuleObject, BATCH_MANAGER_FLAG,BATCH_MANAGER_FLAG);
+    REGISTER_MODULE_OBJECT(LLMBatchManager, tff::module::ModuleObject, BATCH_MANAGER_FLAG, BATCH_MANAGER_FLAG);
+
     bool tff::core::runtime::LLMBatchManager::init(const std::unordered_map<int, std::string> &seq_prompt,
                                                    const std::shared_ptr<tff::core::model::LLMLLaMaVocabulary> &
-                                                   vocabulary_ptr, const bool output_all) {
+                                                   vocabulary_ptr, const bool output_all,
+                                                   BatchSplitType batch_split_type) {
         if (!vocabulary_ptr) {
             tff::log::Logger::error("LLMBatchManager::init: vocabulary is null");
             return false;
@@ -18,14 +21,14 @@ namespace tff::core::runtime {
         this->_vocabulary = vocabulary_ptr;
         this->_sequence.clear();
         this->_main_batch = std::make_shared<LLMBatch>();
-        this->_max_seq_size = 0;
-        this->_max_batch_size = 0;
+        this->_max_seq_size = MAX_SEQ_LENGTH;
+        this->_max_batch_size = MAX_BATCH_SIZE;
         this->_ubatches.clear();
 
         std::vector<uint32_t> batch_tokens;
         std::vector<int32_t> batch_pos;
         std::vector<int8_t> batch_logits;
-        // Step 1: 所有 prompt 分词并排序（短优先，便于前缀匹配）
+
         std::vector<std::pair<int32_t, std::vector<int32_t> > > prompts;
         for (const auto &[sid, prompt]: seq_prompt) {
             auto seq_id = static_cast<int32_t>(sid);
@@ -44,19 +47,16 @@ namespace tff::core::runtime {
             prompts.emplace_back(seq_id, std::move(tokens));
         }
 
-        // 按长度升序排列，方便找前缀
         std::sort(prompts.begin(), prompts.end(),
                   [](const auto &a, const auto &b) {
                       return a.second.size() < b.second.size();
                   });
 
-        // Step 2: 构建共享关系
         for (size_t i = 0; i < prompts.size(); ++i) {
             const int32_t seq_id = prompts[i].first;
             const std::vector<int32_t> &tokens = prompts[i].second;
             auto llm_seq = this->_sequence[seq_id];
 
-            // 查找最佳父 sequence（最长前缀匹配）
             int32_t best_parent_id = -1;
             uint32_t max_shared_len = 0;
 
@@ -78,7 +78,6 @@ namespace tff::core::runtime {
                 }
             }
 
-            // 设置共享信息
             if (best_parent_id != -1 && max_shared_len > 0) {
                 llm_seq->_parent_seq_id = best_parent_id;
                 llm_seq->_shared_prefix_len = max_shared_len;
@@ -86,14 +85,13 @@ namespace tff::core::runtime {
                                        seq_id, max_shared_len, best_parent_id);
             }
 
-            // 写入 tokens 到 sequence
+
             for (int32_t token: tokens) {
                 llm_seq->append_token(token);
                 if (llm_seq->_is_finished) break;
             }
             llm_seq->_is_prefilled = true;
 
-            // Step 3: 将非共享部分加入 batch
             const uint32_t start_pos = llm_seq->_shared_prefix_len;
             for (size_t pos_in_seq = start_pos; pos_in_seq < tokens.size(); ++pos_in_seq) {
                 const int32_t token = tokens[pos_in_seq];
@@ -110,7 +108,6 @@ namespace tff::core::runtime {
             }
         }
 
-        // Step 4: 填充主 batch
         this->_main_batch->_n_tokens = static_cast<uint32_t>(batch_tokens.size());
         this->_main_batch->_tokens = std::move(batch_tokens);
         this->_main_batch->_pos = std::move(batch_pos);
@@ -118,6 +115,18 @@ namespace tff::core::runtime {
 
         this->_max_seq_size = static_cast<int32_t>(_sequence.size());
 
+        switch (batch_split_type) {
+            case TTF_BATCH_SPLIT_SEQ:
+                this->split_seq();
+                break;
+            case TTF_BATCH_SPLIT_EQUAL:
+                this->split_equal();
+                break;
+            case TTF_BATCH_SPLIT_SIMPLE:
+            default:
+                this->split_simple();
+                break;
+        }
         tff::log::Logger::info("LLMBatchManager::init: %d sequences, %u non-shared tokens in batch",
                                this->_max_seq_size, this->_main_batch->_n_tokens);
 

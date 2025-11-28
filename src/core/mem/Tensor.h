@@ -131,7 +131,6 @@ namespace tff::core::memory {
 
 
         ~Tensor() {
-            //tff::log::Logger::info("tensor released");
         }
 
     public:
@@ -157,12 +156,12 @@ namespace tff::core::memory {
             size_t nbytes = 0;
             const size_t blck_size = type_traits_auto[_data_type]._blck_size;
             if (blck_size == 1) {
-                for (int i = 0; i < _n_dims; ++i) {
+                for (int i = _n_dims - 1; i < _n_dims; ++i) {
                     nbytes += (this->_shape[i]) * this->_strides[i];
                 }
             } else {
                 nbytes = this->_shape[0] * this->_strides[0] / blck_size;
-                for (int i = 1; i < _n_dims; ++i) {
+                for (int i = _n_dims - 1; i < _n_dims; ++i) {
                     nbytes += (this->_shape[i] - 1) * this->_strides[i];
                 }
             }
@@ -284,6 +283,15 @@ namespace tff::core::memory {
         //
         inline void set_priority(const int &priority) {
             _priority = priority;
+        }
+        //
+        inline int get_ref_count() const {
+            try {
+                tff::log::Logger::info("current ref count: %d ", shared_from_this().use_count());
+                return shared_from_this().use_count();
+            } catch (const std::bad_weak_ptr& e) {
+                return -1;
+            }
         }
 
         //

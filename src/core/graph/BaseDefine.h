@@ -112,5 +112,11 @@ namespace tff::core::graph {
         TFF_OP_EMBEDDING,
         TFF_OP_COUNT,
     };
+    enum MatMulTransType {
+        TFF_NT = 0,
+        TFF_NN = 1,
+        TFF_TN = 2,
+        TFF_TT = 3,
+    };
 }
 #endif //TFFINFER_BASEDEFINE_H

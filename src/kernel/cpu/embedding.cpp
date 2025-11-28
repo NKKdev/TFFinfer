@@ -9,10 +9,7 @@
 
 namespace tff::kernel {
     template<typename T>
-    static void embedding_kernel_cpu(const int &model_file_index,
-                                     const int &offset,
-                                     const double &data_size,
-                                     const std::shared_ptr<tff::core::model::ModelLoaderBase> &model_loader_ptr,
+    static void embedding_kernel_cpu(
                                      std::vector<std::shared_ptr<tff::core::memory::Tensor>> &inputs,
                                      std::vector<std::shared_ptr<tff::core::memory::Tensor>> &outputs,
                                      std::shared_ptr<
@@ -30,12 +27,25 @@ namespace tff::kernel {
             return;
         }
         const auto& token_embed = *inputs.begin();
+        if (token_embed == nullptr || token_embed->get_buffer() == nullptr) {
+            tff::log::Logger::error("embedding kernel inputs is empty");
+            return;
+        }
         auto token_embed_buffer = token_embed->get_buffer();
+
         const auto& batch_token = *inputs.rbegin();
+        if (batch_token == nullptr || batch_token->get_buffer() == nullptr) {
+            tff::log::Logger::error("embedding kernel inputs is empty");
+            return;
+        }
         auto batch_token_buffer = batch_token->get_buffer();
         auto dequantize_callback = core::memory::type_traits_auto[token_embed->get_data_type()].dequantize_callback;
         //
         auto &output_tensor = *outputs.begin();
+        if (output_tensor == nullptr) {
+            tff::log::Logger::error("embedding output tensor is empty");
+            return;
+        }
         auto mem_buffer = mem_buffer_manager_ptr->get_cpu_mapped_memory();
         output_tensor->set_buffer_data(mem_buffer.second, output_tensor->get_bytes(), mem_buffer.first);
         auto output_tensor_buffer = mem_buffer.second;
@@ -57,19 +67,23 @@ namespace tff::kernel {
     void tff::kernel::Embedding<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         tff::log::Logger::info("layer node op:%s compute!", tff::kernel::Embedding<T>::get_op_name().c_str());
         const auto &name = get_param_value<std::string>(0, para_ptr);
-        const auto model_file_index = get_param_value<uint16_t>(1, para_ptr);
-        const auto offset = get_param_value<size_t>(2, para_ptr);
-        const auto data_size = get_param_value<double>(3, para_ptr);
-        const auto model_loader_ptr = get_param_value<std::shared_ptr<tff::core::model::ModelLoaderBase> >(4, para_ptr);
         auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>> >(
-            5, para_ptr);
+            1, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>> >(
-            6, para_ptr);
+            2, para_ptr);
         std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(7, para_ptr);
+                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
 
-        embedding_kernel_cpu<T>(model_file_index, offset, data_size, model_loader_ptr, input_tensors, output_tensors,
+        if (input_tensors.empty()) {
+            tff::log::Logger::error("embedding input tensors is empty");
+            return;
+        }
+        if (output_tensors.empty()) {
+            tff::log::Logger::error("embedding output tensors is empty");
+            return;
+        }
+        embedding_kernel_cpu<T>(input_tensors, output_tensors,
                                  mem_buffer_manager_ptr);
     }
 

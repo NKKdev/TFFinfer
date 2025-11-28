@@ -24,8 +24,6 @@ namespace tff::core::model {
         ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap,
                                        bool check_tensors) override;
 
-        std::shared_ptr<tff::core::model::ModelContext> &get_model_context() override;
-
         ModelLoadResult convert_to_gguf(const std::string &output_path) override {
             return ModelLoadResult::UNSUPPORTED_ARCH;
         }
@@ -121,7 +119,7 @@ namespace tff::core::model {
                                const std::shared_ptr<tff::core::model::ModelContext> &ctx);
 
         //
-        inline std::shared_ptr<tff::core::model::ModelContext> &get_model_ctx() {
+        inline std::shared_ptr<tff::core::model::ModelContext> get_model_ctx() {
             return this->_model_ctx;
         };
         //

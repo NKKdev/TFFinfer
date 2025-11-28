@@ -20,6 +20,7 @@ namespace tff::core::memory {
             if (use_external) {
                 this->ptr_ = ptr;
                 this->use_external_ = use_external;
+                this->_is_used = true;
             }
             this->reset();
         }
@@ -30,7 +31,9 @@ namespace tff::core::memory {
                 this->byte_size_ = 0;
                 device_type_ = tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_UNKNOWN;
                 _allocator = nullptr;
+                //tff::log::Logger::warning("memory buffer destroy");
             }
+            //tff::log::Logger::warning("memory destroy");
         }
     public:
         //

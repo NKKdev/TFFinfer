@@ -23,13 +23,20 @@ namespace tff::core::runtime {
             DEVICE_BACKEND_FLAG,
             tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
         if (cpu_device) {
-            this->_cpu_mapped_buffer.resize(MAX_PREFETCH_BUFFER_SIZE);
-            this->_pinned_buffer.resize(MAX_PREFETCH_BUFFER_SIZE);
+            this->_cpu_mapped_buffer.reserve(MAX_PREFETCH_BUFFER_SIZE);
+            this->_pinned_buffer.reserve(MAX_PREFETCH_BUFFER_SIZE);
             auto allocator = cpu_device->get_device_buffer_allocator();
             for (size_t i = 0; i < MAX_PREFETCH_BUFFER_SIZE; i++) {
-                auto &prefetch_buffer = this->_cpu_mapped_buffer[i];
-                prefetch_buffer = std::make_shared<tff::core::memory::Memory>(buffer_size, nullptr, false, allocator);
+                //auto &prefetch_buffer = this->_cpu_mapped_buffer[i];
+                auto prefetch_buffer = std::make_shared<tff::core::memory::Memory>(buffer_size, nullptr, false, allocator);
+                if (prefetch_buffer == nullptr) {
+                    continue;
+                }
                 ret &= prefetch_buffer->allocate();
+                if (ret == true) {
+                    this->_cpu_mapped_buffer.push_back(prefetch_buffer);
+                }
+
             }
             return ret;
         }else {
@@ -44,12 +51,19 @@ namespace tff::core::runtime {
             DEVICE_BACKEND_FLAG,
             tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
         if (gpu_device) {
-            this->_gpu_buffer.resize(MAX_PREFETCH_BUFFER_SIZE);
+            this->_gpu_buffer.reserve(MAX_PREFETCH_BUFFER_SIZE);
             auto allocator = gpu_device->get_device_buffer_allocator();
             for (size_t i = 0; i < MAX_PREFETCH_BUFFER_SIZE; i++) {
-                auto &prefetch_buffer = this->_gpu_buffer[i];
-                prefetch_buffer = std::make_shared<tff::core::memory::Memory>(buffer_size, nullptr, false, allocator);
+                //auto &prefetch_buffer = this->_gpu_buffer[i];
+                auto prefetch_buffer = std::make_shared<tff::core::memory::Memory>(buffer_size, nullptr, false, allocator);
+                if (prefetch_buffer == nullptr) {
+                    continue;
+                }
                 ret &= prefetch_buffer->allocate();
+                if (ret == true) {
+                    this->_gpu_buffer.push_back(prefetch_buffer);
+                }
+
             }
             return ret;
         }else {

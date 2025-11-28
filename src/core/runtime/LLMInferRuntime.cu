@@ -93,7 +93,8 @@ namespace tff::core::runtime {
         }
 
         //预留模型上下文至少MAX_PREFETCH_BUFFER_SIZE层权重和其他开销的显存;
-        const size_t context_reserve = this->_model_loader->get_model_context()->_max_tensor_byte_size * MAX_PREFETCH_BUFFER_SIZE;
+        const size_t context_reserve = this->_model_loader->get_model_ctx()->_max_tensor_byte_size *
+                                       MAX_PREFETCH_BUFFER_SIZE;
         free_mem_sum -= context_reserve;
         tff::log::Logger::info("Reserved memory for model context and overhead: {%lld} bytes", context_reserve);
 
@@ -131,15 +132,20 @@ namespace tff::core::runtime {
             tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
             return false;
         }
+        if (this->_weight_mem_manager_ptr == nullptr) {
+            tff::log::Logger::info("Memory Manager created failed.");
+            return false;
+        }
 
         //init weight mem buffer;
-        if (this->_weight_mem_manager_ptr->init(this->_model_loader->get_model_context()->_max_tensor_byte_size)) {
+        if (this->_weight_mem_manager_ptr->init(this->_model_loader->get_model_ctx()->_max_tensor_byte_size)) {
             tff::log::Logger::info("LLMInferRuntime context initialized successfully.");
             return true;
         } else {
             tff::log::Logger::info("LLMInferRuntime context initialized failed.");
             return false;
         }
+
         return true; // 初始化成功
     }
 
@@ -155,27 +161,22 @@ namespace tff::core::runtime {
         return true;
     }
 
-    bool LLMInferRuntime::prefill(const std::vector<std::string> &prompt_batches) {
-        //encode seq;
-        auto max_seq_len = this->encode(prompt_batches);
-        //build graph
-        if (!this->_graph_ptr) {
-            this->init_graph();
-        }
-
-
-        this->_kv_cache_ptr->begine_prefill(prompt_batches.size(), max_seq_len);
-
-        try {
-            this->_task_manager->build_task_schedule(this->_graph_ptr);
-            this->_task_manager->run();
-        } catch (const std::exception &e) {
-            tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
-            return false;
+    bool LLMInferRuntime::prefill() {
+        this->_kv_cache_ptr->begine_prefill(this->_llm_batch_manager_ptr->_ubatches.size(), this->_llm_batch_manager_ptr->_max_seq_size);
+        for (auto &batch: this->_llm_batch_manager_ptr->_ubatches) {
+            this->build_inputs(batch);
+            if (!this->_graph_ptr) {
+                this->init_graph();
+            }
+            try {
+                this->_task_manager->build_task_schedule(this->_graph_ptr);
+                this->_task_manager->run();
+            } catch (const std::exception &e) {
+                tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
+                return false;
+            }
         }
         this->_kv_cache_ptr->end_prefill();
-
-
         return true;
     }
 
@@ -209,23 +210,26 @@ namespace tff::core::runtime {
             tff::log::Logger::info("Batch {%d}: tokenized {%d} tokens.", i, tokens.size());
         }
         //batch manager init;
-        if (!this->_llm_batch_manager_ptr->init(seq_prompts, this->_vocabulary_ptr)) {
+        if (!this->_llm_batch_manager_ptr->init(seq_prompts, this->_vocabulary_ptr, false,
+                                                LLMBatchManager::BatchSplitType::TTF_BATCH_SPLIT_EQUAL)) {
             tff::log::Logger::error("LLMInferRuntime batch init failed.");
             return -1;
         }
 
-        this->build_inputs();
+        //this->build_inputs();
 
         //todo set input_pos_tensor ;
         return max_seq_len;
     }
 
-    void LLMInferRuntime::build_inputs() {
+    void LLMInferRuntime::build_inputs(std::shared_ptr<LLMBatch> &batch) {
         //set embedding layer input
-        auto &tokens_data = this->_llm_batch_manager_ptr->_main_batch->_tokens;
-        auto &input_pos = this->_llm_batch_manager_ptr->_main_batch->_pos;
+        auto &tokens_data = batch->_tokens;
+        auto &input_pos = batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-                                                                        std::vector<int64_t>{static_cast<int64_t>(tokens_data.size())}, true);
+                                                                        std::vector<int64_t>{
+                                                                            static_cast<int64_t>(tokens_data.size())
+                                                                        }, true);
         token_tensor->set_buffer_data(tokens_data.data(),
                                       tokens_data.size() * memory::type_traits_auto[
                                           tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
@@ -241,7 +245,7 @@ namespace tff::core::runtime {
 
         auto input_layer_iter = this->_layer_map.find(LLM_TENSOR_LAYER_INPUT);
         if (input_layer_iter != this->_layer_map.end()) {
-            for (auto &layers : input_layer_iter->second) {
+            for (auto &layers: input_layer_iter->second) {
                 auto &layer = layers.second;
                 auto input_pos_layer = layer.find(memory::ModelTensorType::LLM_TENSOR_TOKEN_POS);
                 if (input_pos_layer == layer.end()) {
@@ -255,7 +259,6 @@ namespace tff::core::runtime {
                     std::shared_ptr<tff::core::graph::GraphNode> layer_node;
                     this->_model_creator->build_layer(token_tensor, layer_node);
                     layer.insert(std::make_pair(token_tensor->get_tensor_type(), layer_node));
-
                 }
             }
         }
@@ -267,7 +270,7 @@ namespace tff::core::runtime {
     }
 
     void LLMInferRuntime::load_hparams() {
-        const auto &ctx = _model_loader->get_model_context();
+        const auto &ctx = _model_loader->get_model_ctx();
         LOAD_KEY_VALUE(std::string, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                        this->_arch_name);
         LOAD_KEY_VALUE(std::string, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_NAME, this->_name);
@@ -321,7 +324,7 @@ namespace tff::core::runtime {
             }
             auto get_layer_name = [](const std::string &layer_name) -> std::string {
                 const int pos0 = layer_name.find_last_of('.');
-                const std::string substr = layer_name.substr(0,pos0);
+                const std::string substr = layer_name.substr(0, pos0);
                 return substr;
             };
             if (this->_model_creator) {

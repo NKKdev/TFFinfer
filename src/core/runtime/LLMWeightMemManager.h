@@ -15,24 +15,24 @@ namespace tff::core::runtime {
         LLMWeightMemManager() = default;
 
         ~LLMWeightMemManager() override {
-            if (this->_cpu_mapped_buffer.size() > 0) {
-                this->_cpu_mapped_buffer.clear();
-            }
-            if (this->_gpu_buffer.size() > 0) {
-
-                this->_gpu_buffer.clear();
-            }
-            if (this->_pinned_buffer.size() > 0) {
-
-                this->_pinned_buffer.clear();
-            }
+            // if (this->_cpu_mapped_buffer.size() > 0) {
+            //     this->_cpu_mapped_buffer.clear();
+            // }
+            // if (this->_gpu_buffer.size() > 0) {
+            //
+            //     this->_gpu_buffer.clear();
+            // }
+            // if (this->_pinned_buffer.size() > 0) {
+            //
+            //     this->_pinned_buffer.clear();
+            // }
         };
     public:
         //
         bool init(const size_t &buffer_size);
         //
         inline std::pair<int, void*> get_cpu_mapped_memory() const {
-            std::lock_guard<std::mutex> lock(_mutex);
+            //std::lock_guard<std::mutex> lock(_mutex);
             int index = 0;
             for (const auto &it : _cpu_mapped_buffer) {
                 if ((it)->is_used()) {
@@ -42,12 +42,13 @@ namespace tff::core::runtime {
                 it->occupy();
                 return std::make_pair(index,it->ptr());
             }
+            tff::log::Logger::error("there are no valid cpu memory!!");
             return std::make_pair(-1,nullptr);;
         }
 
         //
         inline std::pair<int, void*> get_pinned_memory() const {
-            std::lock_guard<std::mutex> lock(_mutex);
+            //std::lock_guard<std::mutex> lock(_mutex);
             int index = 0;
             for (const auto &it : _pinned_buffer) {
                 if ((it)->is_used()) {
@@ -61,9 +62,12 @@ namespace tff::core::runtime {
         }
         //
         inline std::pair<int, void*> get_gpu_memory() const {
-            std::lock_guard<std::mutex> lock(_mutex);
+            //std::lock_guard<std::mutex> lock(_mutex);
             int index = 0;
             for (const auto &it : _gpu_buffer) {
+                if (it == nullptr) {
+                    continue;
+                }
                 if ((it)->is_used()) {
                     index++;
                     continue;
@@ -75,7 +79,7 @@ namespace tff::core::runtime {
         }
         //
         inline void reset_cpu_mapped_memory(const size_t &index) {
-            std::lock_guard<std::mutex> lock(_mutex);
+            //std::lock_guard<std::mutex> lock(_mutex);
             if (index < 0 || index >= this->_cpu_mapped_buffer.size()) {
                 return;
             }
@@ -83,7 +87,7 @@ namespace tff::core::runtime {
         }
         //
         inline void reset_gpu_memory(const size_t &index) {
-            std::lock_guard<std::mutex> lock(_mutex);
+            //std::lock_guard<std::mutex> lock(_mutex);
             if (index < 0 || index >= this->_gpu_buffer.size()) {
                 return;
             }
@@ -91,7 +95,7 @@ namespace tff::core::runtime {
         }
         //
         inline void reset_pinned_memory(const size_t &index) {
-            std::lock_guard<std::mutex> lock(_mutex);
+            //std::lock_guard<std::mutex> lock(_mutex);
             if (index < 0 || index >= this->_pinned_buffer.size()) {
                 return;
             }

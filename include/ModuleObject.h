@@ -14,29 +14,29 @@ namespace tff::module {
     public:
         ModuleObject() = default;
     public:
-        const std::type_info& get_instance_type() const {
-            return _impl.type();
-        }
-
+        // const std::type_info& get_instance_type() const {
+        //     return _impl.type();
+        // }
         //
-        void print_type() const {
-            std::cout << "ModuleObject holds type: " << _impl.type().name() << std::endl;
-        }
-
-        // 提取内部对象
-        template<typename T>
-        std::shared_ptr<T> get() const {
-            try {
-                return std::any_cast<std::shared_ptr<T>>(_impl);
-            } catch (const std::bad_any_cast&) {
-                return nullptr;
-            }
-        }
-
+        // //
+        // void print_type() const {
+        //     std::cout << "ModuleObject holds type: " << _impl.type().name() << std::endl;
+        // }
         //
-        template<typename T>
-        explicit ModuleObject(std::shared_ptr<T> impl) : _impl(std::move(impl)) {
-        }
+        // // 提取内部对象
+        // template<typename T>
+        // std::shared_ptr<T> get() const {
+        //     try {
+        //         return std::any_cast<std::shared_ptr<T>>(_impl);
+        //     } catch (const std::bad_any_cast&) {
+        //         return nullptr;
+        //     }
+        // }
+        //
+        // //
+        // template<typename T>
+        // explicit ModuleObject(std::shared_ptr<T> impl) : _impl(std::move(impl)) {
+        // }
 
         virtual ~ModuleObject() = default;
 
@@ -47,7 +47,7 @@ namespace tff::module {
     public:
         std::string m_module_name;
     private:
-        std::any _impl;
+        //std::any _impl;
     };
 } // namespace Module
 // namespace TFF

@@ -132,7 +132,8 @@ namespace tff::kernel {
                                                                               start_n, k, b, &b_sm[!flip_flag][0][0]);
             }
 
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
             __syncthreads();
             flip_flag ^= 1;
@@ -145,14 +146,16 @@ namespace tff::kernel {
                 load_tile_t<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, N, thread_x, thread_y,
                                                                               start_n, k, b, &b_sm[flip_flag][0][0]);
                 __syncthreads();
-                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                    thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
                 __syncthreads();
             }
         }
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<const int VEC_DIM_M, const int VEC_DIM_N,
@@ -180,14 +183,16 @@ namespace tff::kernel {
             load_tile_t<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, N, thread_x, thread_y,
                                                                           start_n, k, b, &b_sm[0][0]);
             __syncthreads();
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
             __syncthreads();
         }
 
         __syncthreads();
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<const int VEC_DIM_M, const int VEC_DIM_N,
@@ -232,7 +237,8 @@ namespace tff::kernel {
                                                                               start_n, k, b, &b_sm[!flip_flag][0][0]);
             }
 
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
             __syncthreads();
             flip_flag ^= 1;
@@ -245,14 +251,16 @@ namespace tff::kernel {
                 load_tile_n<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, K, thread_x, thread_y,
                                                                               start_n, k, b, &b_sm[flip_flag][0][0]);
                 __syncthreads();
-                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                    thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
                 __syncthreads();
             }
         }
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<const int VEC_DIM_M, const int VEC_DIM_N,
@@ -280,14 +288,16 @@ namespace tff::kernel {
             load_tile_n<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, K, thread_x, thread_y,
                                                                           start_n, k, b, &b_sm[0][0]);
             __syncthreads();
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
             __syncthreads();
         }
 
         __syncthreads();
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<const int VEC_DIM_M, const int VEC_DIM_N,
@@ -332,7 +342,8 @@ namespace tff::kernel {
                                                                               start_n, k, b, &b_sm[!flip_flag][0][0]);
             }
 
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
             __syncthreads();
             flip_flag ^= 1;
@@ -345,14 +356,16 @@ namespace tff::kernel {
                 load_tile_t<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, N, thread_x, thread_y,
                                                                               start_n, k, b, &b_sm[flip_flag][0][0]);
                 __syncthreads();
-                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                    thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
                 __syncthreads();
             }
         }
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<const int VEC_DIM_M, const int VEC_DIM_N,
@@ -380,14 +393,16 @@ namespace tff::kernel {
             load_tile_t<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, N, thread_x, thread_y,
                                                                           start_n, k, b, &b_sm[0][0]);
             __syncthreads();
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
             __syncthreads();
         }
 
         __syncthreads();
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<const int VEC_DIM_M, const int VEC_DIM_N,
@@ -432,7 +447,8 @@ namespace tff::kernel {
                                                                               start_n, k, b, &b_sm[!flip_flag][0][0]);
             }
 
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
             __syncthreads();
             flip_flag ^= 1;
@@ -445,14 +461,16 @@ namespace tff::kernel {
                 load_tile_n<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, K, thread_x, thread_y,
                                                                               start_n, k, b, &b_sm[flip_flag][0][0]);
                 __syncthreads();
-                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
+                compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                    thread_x, thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
 
                 __syncthreads();
             }
         }
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<const int VEC_DIM_M, const int VEC_DIM_N,
@@ -480,23 +498,35 @@ namespace tff::kernel {
             load_tile_n<VEC_DIM_M, VEC_DIM_N, N_DIM_SIZE, BLOCK_PAD_SIZE>(b_ld, K, thread_x, thread_y,
                                                                           start_n, k, b, &b_sm[0][0]);
             __syncthreads();
-            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
+            compute_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+                thread_x, thread_y, &a_sm[0][0], &b_sm[0][0], &c_reg[0]);
             __syncthreads();
         }
 
         __syncthreads();
-        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(a_ld, b_ld, c_ld, thread_x, thread_y,
-                   start_m, start_n, c,
-                   &c_reg[0]);
+        store_tile<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_PAD_SIZE>(
+            a_ld, b_ld, c_ld, thread_x, thread_y,
+            start_m, start_n, c,
+            &c_reg[0]);
     }
 
     template<typename T>
-    static void gemm_kernel_cuda(std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
+    static void gemm_kernel_cuda(const tff::core::graph::MatMulTransType &trans_type,
+                                 std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
                                  std::vector<std::shared_ptr<tff::core::memory::Tensor> > &dst,
                                  std::shared_ptr<core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
         auto &input_tensor_a = *src.begin();
         auto &input_tensor_b = *src.rbegin();
         auto &output_tensor = *dst.begin();
+        if (input_tensor_a->get_buffer() == nullptr) {
+            tff::log::Logger::error("Input tensor A is null.");
+            return;
+        }
+        if (input_tensor_b->get_buffer() == nullptr) {
+            tff::log::Logger::error("Input tensor B is null.");
+            return;
+        }
+
         auto &a_shape = input_tensor_a->get_shape();
         int D = 0;
         int S = 0;
@@ -538,24 +568,52 @@ namespace tff::kernel {
                   (D + BLOCK_SIZE - 1) / BLOCK_SIZE,
                   1);
         dim3 block(THREAD_BLOCK_SIZE / K_DIM_SIZE, K_DIM_SIZE, 1);
-        sgemm_nt_func<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_SIZE, BLOCK_PAD_SIZE><<<grid,
-                block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
-                         static_cast<float *>(input_tensor_b->get_buffer()->ptr()), static_cast<float *>(output_tensor->get_buffer()->ptr()));
+        switch (trans_type) {
+            case tff::core::graph::MatMulTransType::TFF_TT:
+                sgemm_tt_func<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_SIZE, BLOCK_PAD_SIZE><<<
+                        grid,
+                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                break;
+            case tff::core::graph::MatMulTransType::TFF_NT:
+                sgemm_nt_func<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_SIZE, BLOCK_PAD_SIZE><<<
+                        grid,
+                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                break;
+            case tff::core::graph::MatMulTransType::TFF_NN:
+                sgemm_nn_func<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_SIZE, BLOCK_PAD_SIZE><<<
+                        grid,
+                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                break;
+            case tff::core::graph::MatMulTransType::TFF_TN:
+                sgemm_nt_func<VEC_DIM_M, VEC_DIM_N, M_DIM_SIZE, N_DIM_SIZE, K_DIM_SIZE, BLOCK_SIZE, BLOCK_PAD_SIZE><<<
+                        grid,
+                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                break;
+        }
     }
 
     template<typename T>
     void tff::kernel::XGemm<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), XGemm<T>::get_op_name().c_str());
+        auto trans_type = get_param_value<tff::core::graph::MatMulTransType>(1, para_ptr);
         auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
-            1, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             2, para_ptr);
+        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            3, para_ptr);
         std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
+                tff::core::runtime::LLMWeightMemManager> >(4, para_ptr);
 
-        if (input_tensors.size() != 1) {
+        if (input_tensors.size() != 2) {
             tff::log::Logger::error("memcpy kernel param is invalid!");
             return;
         }
@@ -564,7 +622,7 @@ namespace tff::kernel {
             return;
         }
         //
-        gemm_kernel_cuda<T>(input_tensors, output_tensors, mem_buffer_manager_ptr);
+        gemm_kernel_cuda<T>(trans_type, input_tensors, output_tensors, mem_buffer_manager_ptr);
     }
 
     template class tff::kernel::XGemm<float>;

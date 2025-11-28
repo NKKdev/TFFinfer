@@ -76,6 +76,12 @@ namespace tff::core::runtime {
 
     class LLMBatchManager final :public tff::module::ModuleObject{
     public:
+        enum BatchSplitType {
+            TTF_BATCH_SPLIT_SIMPLE = 0,
+            TTF_BATCH_SPLIT_EQUAL = 1,
+            TTF_BATCH_SPLIT_SEQ = 2,
+        };
+    public:
         LLMBatchManager() = default;
 
         ~LLMBatchManager() override = default;
@@ -83,7 +89,7 @@ namespace tff::core::runtime {
     public:
         bool init(const std::unordered_map<int, std::string> &seq_prompt,
                   const std::shared_ptr<tff::core::model::LLMLLaMaVocabulary> &vocabulary_ptr,
-                  bool output_all = false);
+                  bool output_all = false, BatchSplitType batch_split_type = TTF_BATCH_SPLIT_SEQ);
 
         // 分割策略 1：简单打包（填满为止）
         void split_simple();

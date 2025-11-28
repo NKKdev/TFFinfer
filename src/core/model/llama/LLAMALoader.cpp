@@ -12,6 +12,7 @@ namespace tff::core::model {
     REGISTER_MODULE_OBJECT(LLAMALoader, ModelLoaderBase, MODEL_LOADER_FLAG,
                        std::string(LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA
                        )->second));
+
     tff::core::model::ModelLoadResult tff::core::model::LLAMALoader::load_from_file(
         const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
         bool bRet = this->load(model_files_name, use_mmap, check_tensors);
@@ -22,9 +23,6 @@ namespace tff::core::model {
         }
     }
 
-    std::shared_ptr<tff::core::model::ModelContext> &tff::core::model::LLAMALoader::get_model_context() {
-        return this->get_model_ctx();
-    }
 
     const char *tff::core::model::LLAMALoader::get_arch_name() const {
         return this->_model_config._arch_name.c_str();

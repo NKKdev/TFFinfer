@@ -116,7 +116,7 @@ namespace tff::kernel {
         }
         //
         float eps = 1e10 - 7;
-        //rms_norm_kernel_cuda<T>(eps, input_tensors, output_tensors, mem_buffer_manager_ptr);
+        rms_norm_kernel_cuda<T>(eps, input_tensors, output_tensors, mem_buffer_manager_ptr);
     }
 
     template class tff::kernel::RMSNorm<float>;

@@ -23,7 +23,7 @@ namespace tff::core::model {
         layer_node->set_layer_id(layer_index);
         layer_node->set_layer_type(layer_info.first);
         layer_node->set_inputs(
-            std::vector<std::shared_ptr<tff::core::memory::Tensor>>{tensor_ptr});
+            std::vector<std::shared_ptr<tff::core::memory::Tensor> >{tensor_ptr});
         switch (layer_info.first) {
             case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
                 auto device = tff::factory::ModuleFactory::instance()->create_shared<
@@ -135,60 +135,62 @@ namespace tff::core::model {
                     build_attn_norm(layer_map, graph_ptr, input_node, attn_norm_node);
                     //process qkv weight
                     {
-                        std::shared_ptr<GraphNode> attn_q_layer = layer_map.find(
+                        auto attn_q_layer = layer_map.find(
                                     tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q)->
                                 second;
                         NodeType attn_q_node;
                         build_qkv_node(attn_q_layer, graph_ptr, attn_norm_node, attn_q_node);
-                        auto &attn_k_layer = layer_map.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K)->
+
+                        auto attn_k_layer = layer_map.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K)->
                                 second;
-                        // NodeType attn_k_node;
-                        // build_qkv_node(attn_k_layer, graph_ptr, attn_norm_node, attn_k_node);
-                        // auto &attn_v_layer = layer_map.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V)->
-                        //         second;
-                        // NodeType attn_v_node;
-                        // build_qkv_node(attn_v_layer, graph_ptr, attn_norm_node, attn_v_node);
+                        NodeType attn_k_node;
+                        build_qkv_node(attn_k_layer, graph_ptr, attn_norm_node, attn_k_node);
+
+                        auto attn_v_layer = layer_map.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V)->
+                                second;
+                        NodeType attn_v_node;
+                        build_qkv_node(attn_v_layer, graph_ptr, attn_norm_node, attn_v_node);
+
                         //
-                        // //
-                        // auto q_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
-                        // q_rope_node->bind_devices(attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second->device());
-                        // NodeMetadata meta_q_rope_node{attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_rope"};
-                        // q_rope_node->set_node_meta(meta_q_rope_node);
-                        // graph_ptr->add_node(q_rope_node);
-                        // graph_ptr->add_edge(attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second, q_rope_node);
-                        // attn_q_node[TFF_GRAPH_NODE_COMPUTE] = q_rope_node;
+                        auto q_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
+                        q_rope_node->bind_devices(attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second->device());
+                        NodeMetadata meta_q_rope_node{attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_rope"};
+                        q_rope_node->set_node_meta(meta_q_rope_node);
+                        graph_ptr->add_node(q_rope_node);
+                        graph_ptr->add_edge(attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second, q_rope_node);
+                        attn_q_node[TFF_GRAPH_NODE_COMPUTE] = q_rope_node;
+
                         //
-                        // //
-                        // auto k_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
-                        // k_rope_node->bind_devices(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->device());
-                        // NodeMetadata meta_k_rope_node{attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_rope"};
-                        // k_rope_node->set_node_meta(meta_k_rope_node);
-                        // graph_ptr->add_node(k_rope_node);
-                        // graph_ptr->add_edge(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, k_rope_node);
-                        // attn_k_node[TFF_GRAPH_NODE_COMPUTE] = k_rope_node;
+                        auto k_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
+                        k_rope_node->bind_devices(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->device());
+                        NodeMetadata meta_k_rope_node{attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_rope"};
+                        k_rope_node->set_node_meta(meta_k_rope_node);
+                        graph_ptr->add_node(k_rope_node);
+                        graph_ptr->add_edge(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, k_rope_node);
+                        attn_k_node[TFF_GRAPH_NODE_COMPUTE] = k_rope_node;
+
                         //
-                        // //
-                        // NodeType attn_node;
-                        // build_attn(layer_map, graph_ptr, input_node, attn_q_node, attn_k_node, attn_v_node,
-                        //            attn_node);
-                        // //
-                        // NodeType ffn_inp_node;
-                        // auto ffn_inp = build_add_node(graph_ptr, attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
-                        //                               input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-                        // NodeMetadata meta_ffn_inp_node{attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name() + "_add_inp"};
-                        // ffn_inp->set_node_meta(meta_ffn_inp_node);
-                        // ffn_inp_node[TFF_GRAPH_NODE_COMPUTE] = ffn_inp;
-                        // //
-                        // NodeType ffn_node;
-                        // build_ffn(layer_map, graph_ptr, ffn_inp_node, ffn_node);
+                        NodeType attn_node;
+                        build_attn(layer_map, graph_ptr, input_node, attn_q_node, attn_k_node, attn_v_node,
+                                   attn_node);
                         //
-                        // auto result_node = build_add_node(
-                        //     graph_ptr, ffn_inp_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
-                        //     ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-                        // NodeMetadata meta_result_node{ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_add_ffn_inp_node"};
-                        // result_node->set_node_meta(meta_result_node);
+                        NodeType ffn_inp_node;
+                        auto ffn_inp = build_add_node(graph_ptr, attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
+                                                      input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
+                        NodeMetadata meta_ffn_inp_node{attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name() + "_add_inp"};
+                        ffn_inp->set_node_meta(meta_ffn_inp_node);
+                        ffn_inp_node[TFF_GRAPH_NODE_COMPUTE] = ffn_inp;
                         //
-                        // input_node[TFF_GRAPH_NODE_COMPUTE] = result_node;
+                        NodeType ffn_node;
+                        build_ffn(layer_map, graph_ptr, ffn_inp_node, ffn_node);
+
+                        auto result_node = build_add_node(
+                            graph_ptr, ffn_inp_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
+                            ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
+                        NodeMetadata meta_result_node{ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_add_ffn_inp_node"};
+                        result_node->set_node_meta(meta_result_node);
+
+                        input_node[TFF_GRAPH_NODE_COMPUTE] = result_node;
                     }
                 }
             }
@@ -343,6 +345,10 @@ namespace tff::core::model {
         embedding_node->bind_devices(layer->device());
         graph_ptr->add_node(embedding_node);
 
+        if (layer_map.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN) == layer_map.end()) {
+            tff::log::Logger::error("current batch has no valid input token layer");
+            return;
+        }
         auto input_token_layer = layer_map.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN)->second;
         input_token_layer->set_node_meta(NodeMetadata{node_name + "_input_token"});
         input_token_layer->bind_devices(layer->device());
@@ -381,6 +387,9 @@ namespace tff::core::model {
                                                tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_CPU2GPU)->second);
         tff::core::graph::NodeMetadata meta_qkv_w_mul_node{node_name + "_qkv_mul_w_node"};
         qkv_node->set_node_meta(meta_qkv_w_mul_node);
+        auto para_ptr = qkv_node->get_params();
+        para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
+
 
 
         auto q_reshape_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
@@ -425,6 +434,8 @@ namespace tff::core::model {
                                               flash_attn_node);
         tff::core::graph::NodeMetadata meta_attn_norm_w{node_name + "_attn_norm_mul_w_node"};
         attn_norm_w->set_node_meta(meta_attn_norm_w);
+        auto para_ptr = attn_norm_w->get_params();
+        para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
 
         out_put_node.insert({TFF_GRAPH_NODE_COMPUTE, attn_norm_w});
     }
@@ -445,6 +456,8 @@ namespace tff::core::model {
                                                 input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
         tff::core::graph::NodeMetadata meta_ffn_up_w_node{node_name + "_ffn_up_mul_w_node"};
         ffn_up_w_node->set_node_meta(meta_ffn_up_w_node);
+        auto para_ptr = ffn_up_w_node->get_params();
+        para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
 
         // auto ffn_up_b_node = build_add_node(graph_ptr, ffn_up_w_node,
         //                                     ffn_up_node.find(TFF_GRAPH_NODE_CPU2GPU)->second);
@@ -469,6 +482,8 @@ namespace tff::core::model {
                                                   input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
         tff::core::graph::NodeMetadata meta_ffn_gate_w_node{node_name + "_ffn_gate_mul_w_node"};
         ffn_gate_w_node->set_node_meta(meta_ffn_gate_w_node);
+        auto para_ptr = ffn_gate_w_node->get_params();
+        para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
 
         // auto ffn_gate_b_node = build_add_node(graph_ptr, ffn_gate_w_node,
         //                                       ffn_gate_node.find(TFF_GRAPH_NODE_CPU2GPU)->second);
@@ -493,6 +508,8 @@ namespace tff::core::model {
                                                   input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
         tff::core::graph::NodeMetadata meta_ffn_down_w_node{node_name + "_ffn_down_mul_w_node"};
         ffn_down_w_node->set_node_meta(meta_ffn_down_w_node);
+        auto para_ptr = ffn_down_w_node->get_params();
+        para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
 
         // auto ffn_down_b_node = build_add_node(graph_ptr, ffn_down_w_node,
         //                                       ffn_down_node.find(TFF_GRAPH_NODE_CPU2GPU)->second);

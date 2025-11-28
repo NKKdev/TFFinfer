@@ -14,7 +14,7 @@ namespace tff::core::model {
         const std::shared_ptr<tff::core::model::ModelLoaderBase> &model_loader) {
         bool bRet = true;
         this->_model_loader = model_loader;
-        const auto &ctx = this->_model_loader->get_model_context();
+        const auto &ctx = this->_model_loader->get_model_ctx();
         LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                                this->_arch_name);
         LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MODEL,
@@ -54,7 +54,7 @@ namespace tff::core::model {
     }
 
     bool LLMLLaMaVocabulary::load_bpe() {
-        const auto &ctx = _model_loader->get_model_context();
+        const auto &ctx = _model_loader->get_model_ctx();
         //
         std::vector<std::string> merge_vector;
         LOAD_KEY_VALUES(std::vector<std::string>,std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MERGES,
@@ -77,7 +77,7 @@ namespace tff::core::model {
     }
 
     bool LLMLLaMaVocabulary::load_token_data() {
-        const auto &ctx = _model_loader->get_model_context();
+        const auto &ctx = _model_loader->get_model_ctx();
         //
         std::vector<std::string> token_data;
         LOAD_KEY_VALUES(std::vector<std::string>, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_LIST,
@@ -128,7 +128,7 @@ namespace tff::core::model {
     }
 
     void LLMLLaMaVocabulary::process_special_tokens() {
-        const auto &ctx = _model_loader->get_model_context();
+        const auto &ctx = _model_loader->get_model_ctx();
         for (auto &pair: LLM_SPECIAL_TOKENS) {
             //
             LOAD_KEY_VALUE(ModelContext::BasicType,uint32_t, pair.first, pair.second);

@@ -64,14 +64,14 @@ namespace tff::core::runtime {
         bool init_graph();
 
         //
-        bool prefill(const std::vector<std::string> &prompt_batches);
+        bool prefill();
 
         //
         bool decode(const int &n_predict, std::string &generate_str);
         //
         int encode(const std::vector<std::string> &prompt_batches);
         //
-        void build_inputs();
+        void build_inputs(std::shared_ptr<LLMBatch> &batch);
 
     protected:
         void load_stats();

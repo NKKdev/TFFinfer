@@ -40,6 +40,10 @@ namespace tff::kernel {
         }
         auto buffer = (uint8_t *) file_map_ptr->addr() + offset;
         auto input_tensor = *inputs.begin();
+        if (input_tensor == nullptr) {
+            tff::log::Logger::error("Failed to get input tensor");
+            return;
+        }
         if (input_tensor->is_allocated()) {
             tff::log::Logger::error("mem_map2cpu_kernel_cpu Input tensor is already allocated");
             return;
