@@ -1291,9 +1291,9 @@ int main2(int argc, char *argv) {
         PopulateVector<float>(a_mat, mt, dist);
         PopulateVector<float>(b_mat, mt, dist);
 
-        sgemm_nn(m, n, k, m, n, m, a_mat, b_mat, c_mat);
-        sgemm_nn_func(m, n, k, m, n, m, a_mat, b_mat, c_mat);
-        sgemm_nn_double_buffer(m, n, k, m, n, m, a_mat, b_mat, c_mat);
+        //sgemm_nn(m, n, k, m, n, m, a_mat, b_mat, c_mat);
+        //sgemm_nn_func(m, n, k, m, n, m, a_mat, b_mat, c_mat);
+        //sgemm_nn_double_buffer(m, n, k, m, n, m, a_mat, b_mat, c_mat);
     }
 
     //

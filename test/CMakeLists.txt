@@ -60,7 +60,8 @@ message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         rms_norm_kernel.cu
-        gemm_nt.cu)
+        gemm_nt.cu
+        quant_8_1.cu)
 target_compile_options(${PROJECT_NAME}
         PRIVATE
         $<$<COMPILE_LANGUAGE:CUDA>:-O3>

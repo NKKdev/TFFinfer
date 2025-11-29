@@ -154,6 +154,16 @@
           <option name="unlockTimestamp" value="1764297667977" />
           <option name="unlocked" value="true" />
         </Achievement>
+        <Achievement>
+          <option name="type" value="WEEKEND_WARRIOR" />
+          <option name="unlockTimestamp" value="1764388589589" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="HAVE_INSIDER_ABORT_DEAL" />
+          <option name="unlockTimestamp" value="1764424833820" />
+          <option name="unlocked" value="true" />
+        </Achievement>
       </list>
     </option>
     <option name="codeStats">
@@ -190,20 +200,19 @@
           <option name="language" value="C++" />
         </CodeStats>
         <CodeStats>
-          <option name="addedLines" value="2096" />
-          <option name="deletedLines" value="605" />
+          <option name="addedLines" value="2223" />
+          <option name="deletedLines" value="618" />
           <option name="language" value="C/C++ Header" />
         </CodeStats>
       </list>
     </option>
-    <option name="complexPatternCount" value="1" />
+    <option name="complexPatternCount" value="2" />
     <option name="consecutiveDays" value="1" />
     <option name="largestSingleDelete" value="73" />
     <option name="maxFileLines" value="1763" />
-    <option name="saveCount" value="118" />
-    <option name="todoFixmeCount" value="10" />
+    <option name="saveCount" value="124" />
     <option name="lastActiveDate" value="2025-11-18" />
-    <option name="firstCodeTimeToday" value="2025-11-28T09:19:08.989782351" />
-    <option name="lastCodeTimeToday" value="2025-11-28T16:37:58.592010062" />
+    <option name="firstCodeTimeToday" value="2025-11-29T12:09:04.953877646" />
+    <option name="lastCodeTimeToday" value="2025-11-29T18:00:39.661423885" />
   </component>
 </project>
