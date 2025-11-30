@@ -42,14 +42,14 @@ if (NOT glog_FOUND)
     message(STATUS "Glog include directories: ${GLOG_INCLUDE_DIRS}")
 endif ()
 #cutlass
-FetchContent_Declare(
-        cutlass
-        GIT_REPOSITORY https://gitee.com/git_mirror/cutlass.git
-        GIT_TAG v3.7.0
-)
-FetchContent_MakeAvailable(cutlass)
-get_target_property(cutlass_INCLUDE_DIRS CUTLASS INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "cutlass include directories: ${cutlass_INCLUDE_DIRS}")
+#FetchContent_Declare(
+#        cutlass
+#        GIT_REPOSITORY https://gitee.com/git_mirror/cutlass.git
+#        GIT_TAG v3.7.0
+#)
+#FetchContent_MakeAvailable(cutlass)
+#get_target_property(cutlass_INCLUDE_DIRS CUTLASS INTERFACE_INCLUDE_DIRECTORIES)
+#message(STATUS "cutlass include directories: ${cutlass_INCLUDE_DIRS}")
 
 file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cu
@@ -61,14 +61,14 @@ message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         rms_norm_kernel.cu
         gemm_nt.cu
-        quant_8_1.cu)
-target_compile_options(${PROJECT_NAME}
-        PRIVATE
-        $<$<COMPILE_LANGUAGE:CUDA>:-O3>
-        $<$<COMPILE_LANGUAGE:CUDA>:--use_fast_math>
-        $<$<COMPILE_LANGUAGE:CXX>:-Wall>
-        $<$<COMPILE_LANGUAGE:CUDA>:-Xptxas=-dlcm=ca>
-)
+        quant_8_0.cu)
+#target_compile_options(${PROJECT_NAME}
+#        PRIVATE
+#        $<$<COMPILE_LANGUAGE:CUDA>:-O3>
+#        $<$<COMPILE_LANGUAGE:CUDA>:--use_fast_math>
+#        $<$<COMPILE_LANGUAGE:CXX>:-Wall>
+#        $<$<COMPILE_LANGUAGE:CUDA>:-Xptxas=-dlcm=ca>
+#)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)
