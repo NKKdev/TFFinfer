@@ -1229,7 +1229,7 @@ void sgemm_nt_double_buffer(int m, int n, int k,
     printf("sgemm sucess !!: \n");
 #endif
 }
-int main2(int argc, char *argv) {
+int main3(int argc, char *argv) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     printf("device prop sharedMemPerBlock:%d \n", device_prop.sharedMemPerBlock);
@@ -1239,9 +1239,9 @@ int main2(int argc, char *argv) {
     std::mt19937 mt(42);
     std::uniform_real_distribution<double> dist(-4.0, 4.0);
 #ifdef _DEBUG
-    int m = 1025;
-    int n = 512;
-    int k = 1025;
+    int m = 2048;
+    int n = 2048;
+    int k = 2048;
 
     std::vector<float> a_mat;
     a_mat.resize(m * k);
@@ -1264,8 +1264,8 @@ int main2(int argc, char *argv) {
     // sgemm_tn_func(m, n, k, a_mat, b_mat, c_mat);
     // sgemm_tn_double_buffer(m, n, k,a_mat, b_mat, c_mat);
 
-    sgemm_tt_func(m, n, k, a_mat, b_mat, c_mat);
-    sgemm_tt_double_buffer(m, n, k,a_mat, b_mat, c_mat);
+    sgemm_tn_func(m, n, k, a_mat, b_mat, c_mat);
+    sgemm_tn_double_buffer(m, n, k,a_mat, b_mat, c_mat);
     //
     //sgemm_wmma(m,n,k, m, n,m,a_mat,b_mat,c_mat);
     //sgemm_wmma_sm(m,n,k, m, n,m,a_mat,b_mat,c_mat);
