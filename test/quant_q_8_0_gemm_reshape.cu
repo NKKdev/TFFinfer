@@ -18,126 +18,204 @@ constexpr int VEC_DIM_K = 8;
 constexpr int BLOCK_M_DIM = 32;
 constexpr int BLOCK_N_DIM = 32;
 constexpr int BLOCK_K_DIM = BLOCK_N_DIM / VEC_DIM_N * 8;
+constexpr int QUANT_BLOCK_PER_THREAD_BLOCK = BLOCK_K_DIM / VEC_DIM_K;
 constexpr int PAD_SIZE = 1;
 constexpr int BLOCK_PAD_SIZE = BLOCK_K_DIM + PAD_SIZE;
+constexpr int BLOCK_SCALE_PAD_SIZE = BLOCK_K_DIM / VEC_DIM_K + PAD_SIZE;
 constexpr int VEC_DOT_PRODUCT = QUANT_BLOCK_SIZE / sizeof(int);
 
-
 template<const int QUANT_BLOCK_SIZE>
-__device__ void load_tile_a_quant(const int ld, const int dim,
-                            const int thread_x, const int thread_y,
-                            const int start_block,
-                            const int k,
-                            const int *__restrict__ global_mem,
-                            int *sm) {
+static __device__ void load_tile_a_quant_vec(const int ld, const int dim,
+                                  const int thread_x, const int thread_y,
+                                  const int start_block,
+                                  const int k,
+                                  const int *__restrict__ global_mem,
+                                  int *sm) {
+    constexpr int INTS_PER_INT4 = 4;
+    constexpr int INT4S_PER_VEC_K = VEC_DIM_K / INTS_PER_INT4;
+    const int4* __restrict__ global_int4 = reinterpret_cast<const int4*>(global_mem);
+    const int vec_ld = ld * 8 / INTS_PER_INT4;
+
+    for (int j = 0; j < VEC_DIM_M; ++j) {
+        int dim0 = start_block + thread_y + j * BLOCK_M_DIM / VEC_DIM_M;
+        for (int i = 0; i < INT4S_PER_VEC_K; ++i) {
+            int dim1 = (k * INT4S_PER_VEC_K + thread_x + i * BLOCK_K_DIM / VEC_DIM_K);
+            int4 val = make_int4(0, 0, 0, 0);
+            if (dim1 < vec_ld  && dim0 < dim) {
+                val = global_int4[dim0 * vec_ld + dim1];
+            }
+            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 0] =
+                    val.x;
+            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 1] =
+                   val.y;
+            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 2] =
+                   val.z;
+            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 3] =
+                   val.w;
+        }
+    }
+}
+template<const int QUANT_BLOCK_SIZE>
+static __device__ void load_tile_a_quant(const int ld, const int dim,
+                                  const int thread_x, const int thread_y,
+                                  const int start_block,
+                                  const int k,
+                                  const int *__restrict__ global_mem,
+                                  int *sm) {
     for (int j = 0; j < VEC_DIM_M; ++j) {
         int dim0 = start_block + thread_y + j * BLOCK_M_DIM / VEC_DIM_M;
         for (int i = 0; i < VEC_DIM_K; ++i) {
-            int dim1 = k + thread_x + i * BLOCK_K_DIM / VEC_DIM_K;
+            int dim1 = k * 8 + thread_x + i * BLOCK_K_DIM / VEC_DIM_K;
             int val = 0;
-            if (dim1 < ld && dim0 < dim) {
-                val = global_mem[dim0 * ld + dim1];
+            if (dim1 < ld * 8  && dim0 < dim) {
+                val = global_mem[dim0 * ld * 8 + dim1];
             }
-            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + thread_x + i * BLOCK_K_DIM / VEC_DIM_K] = val;
+            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + thread_x + i * BLOCK_K_DIM / VEC_DIM_K] =
+                    val;
         }
     }
 }
-
 template<const int QUANT_BLOCK_SIZE>
-__device__ void load_tile_b_quant(const int ld, const int dim,
-                            const int thread_x, const int thread_y,
-                            const int start_block,
-                            const int k,
-                            const int *__restrict__ global_mem,
-                            int *sm) {
+static __device__ void load_tile_b_quant_vec(const int ld, const int dim,
+                                  const int thread_x, const int thread_y,
+                                  const int start_block,
+                                  const int k,
+                                  const int *__restrict__ global_mem,
+                                  int *sm) {
+    constexpr int INTS_PER_INT4 = 4;
+    constexpr int INT4S_PER_VEC_K = VEC_DIM_K / INTS_PER_INT4;
+    const int4* __restrict__ global_int4 = reinterpret_cast<const int4*>(global_mem);
+    const int vec_ld = ld * 8 / INTS_PER_INT4;
+
+    for (int j = 0; j < VEC_DIM_N; ++j) {
+        int dim0 = start_block + thread_y + j * BLOCK_N_DIM / VEC_DIM_N;
+        for (int i = 0; i < INT4S_PER_VEC_K; ++i) {
+            int dim1 = (k * INT4S_PER_VEC_K + thread_x + i * BLOCK_K_DIM / VEC_DIM_K);
+            int4 val = make_int4(0, 0, 0, 0);
+            if (dim1 < vec_ld  && dim0 < dim) {
+                val = global_int4[dim0 * vec_ld + dim1];
+            }
+            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 0] =
+                    val.x;
+            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 1] =
+                    val.y;
+            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 2] =
+                    val.z;
+            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + thread_x * INTS_PER_INT4 + i * BLOCK_K_DIM / VEC_DIM_K * INTS_PER_INT4 + 3] =
+                    val.w;
+        }
+    }
+}
+template<const int QUANT_BLOCK_SIZE>
+static __device__ void load_tile_b_quant(const int ld, const int dim,
+                                  const int thread_x, const int thread_y,
+                                  const int start_block,
+                                  const int k,
+                                  const int *__restrict__ global_mem,
+                                  int *sm) {
     for (int j = 0; j < VEC_DIM_N; ++j) {
         int dim0 = start_block + thread_y + j * BLOCK_N_DIM / VEC_DIM_N;
         for (int i = 0; i < VEC_DIM_K; ++i) {
-            int dim1 = k + thread_x + i * BLOCK_K_DIM / VEC_DIM_K;
+            int dim1 = k * 8 + thread_x + i * BLOCK_K_DIM / VEC_DIM_K;
             int val = 0;
-            if (dim1 < ld && dim0 < dim) {
-                val = global_mem[dim0 * ld + dim1];
+            if (dim1 < ld * 8  && dim0 < dim) {
+                val = global_mem[dim0 * ld * 8  + dim1];
             }
-            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + thread_x + i * BLOCK_K_DIM / VEC_DIM_K] = val;
+            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + thread_x + i * BLOCK_K_DIM / VEC_DIM_K] =
+                    val;
         }
     }
 }
+
 template<const int QUANT_BLOCK_SIZE>
-__device__ void load_tile_a_scale(const int ld, const int dim,
-                            const int thread_x, const int thread_y,
-                            const int start_block,
-                            const int k,
-                            const half *__restrict__ global_mem,
-                            half *sm) {
+static __device__ void load_tile_a_scale(const int ld, const int dim,
+                                  const int thread_x, const int thread_y,
+                                  const int start_block,
+                                  const int k,
+                                  const half *__restrict__ global_mem,
+                                  half *sm) {
     for (int j = 0; j < VEC_DIM_M; ++j) {
         int dim0 = start_block + thread_y + j * BLOCK_M_DIM / VEC_DIM_M;
         for (int i = 0; i < (VEC_DIM_K * sizeof(int)) / QUANT_BLOCK_SIZE; ++i) {
-            int dim1 = k + thread_x + i * BLOCK_N_DIM / VEC_DIM_N;
-            int val = 0;
-            if (dim1 < ld && dim0 < dim) {
-                val = global_mem[dim0 * ld + dim1];
-            }
-            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + thread_x + i * BLOCK_N_DIM / VEC_DIM_N] = val;
-        }
-
-    }
-}
-
-template<const int QUANT_BLOCK_SIZE>
-__device__ void load_tile_b_scale(const int ld, const int dim,
-                            const int thread_x, const int thread_y,
-                            const int start_block,
-                            const int k,
-                            const half *__restrict__ global_mem,
-                            half *sm) {
-    for (int j = 0; j < VEC_DIM_N; ++j) {
-        int dim0 = start_block + thread_y + j * BLOCK_N_DIM / VEC_DIM_N;
-        for (int i = 0; i < (VEC_DIM_K * sizeof(int)) / QUANT_BLOCK_SIZE; ++i) {
-            int dim1 = k + thread_x + i * BLOCK_N_DIM / VEC_DIM_N;
+            int dim1 = k + thread_x + i * BLOCK_K_DIM / VEC_DIM_K;
             half val = 0;
             if (dim1 < ld && dim0 < dim) {
                 val = global_mem[dim0 * ld + dim1];
             }
-            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + thread_x + i * BLOCK_N_DIM / VEC_DIM_N] = val;
+            sm[(thread_y + j * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_SCALE_PAD_SIZE + thread_x + i * BLOCK_K_DIM / VEC_DIM_K]
+                    =
+                    val;
         }
     }
 }
-__device__ int vec_dot_product(int a, int b, int c_sum) {
+
+template<const int QUANT_BLOCK_SIZE>
+static __device__ void load_tile_b_scale(const int ld, const int dim,
+                                  const int thread_x, const int thread_y,
+                                  const int start_block,
+                                  const int k,
+                                  const half *__restrict__ global_mem,
+                                  half *sm) {
+    for (int j = 0; j < VEC_DIM_N; ++j) {
+        int dim0 = start_block + thread_y + j * BLOCK_N_DIM / VEC_DIM_N;
+        for (int i = 0; i < (VEC_DIM_K * sizeof(int)) / QUANT_BLOCK_SIZE; ++i) {
+            int dim1 = k + thread_x + i * BLOCK_K_DIM / VEC_DIM_K;
+            half val = 0;
+            if (dim1 < ld && dim0 < dim) {
+                val = global_mem[dim0 * ld + dim1];
+            }
+            sm[(thread_y + j * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_SCALE_PAD_SIZE + thread_x + i * BLOCK_K_DIM / VEC_DIM_K]
+                    =
+                    val;
+        }
+    }
+}
+
+static __device__ int vec_dot_product(int a, int b, int c_sum) {
     return __dp4a(a, b, c_sum);
 }
 
 template<const int QUANT_BLOCK_SIZE>
-__device__ void compute_tile(const int thread_x, const int thread_y,
-                             int *a_sm,
-                             int *b_sm,
+static __device__ void compute_tile(const int thread_x, const int thread_y,
+                             half *a_scale_sm,
+                             half *b_scale_sm,
+                             int *a_quant_sm,
+                             int *b_quant_sm,
                              float *c_reg) {
-    float sum = 0;
+
+
+
+//#pragma unroll
+    for (int mm = 0; mm < VEC_DIM_M; mm++) {
+//#pragma unroll
+        for (int nn = 0; nn < VEC_DIM_N; nn++) {
+            float sum = 0;
 #pragma unroll
-    for (int kk = 0; kk < BLOCK_K_DIM; kk++) {
-        int a_reg = a_sm[thread_y * BLOCK_PAD_SIZE + kk];
-        int b_reg = b_sm[thread_x * BLOCK_PAD_SIZE + kk];
-        half d_a = a_sm[thread_y * BLOCK_PAD_SIZE + kk];
-        half d_b = b_sm[thread_x * BLOCK_PAD_SIZE + kk];
-        int block_sum = 0;
+            for (int kk = 0; kk < BLOCK_K_DIM / VEC_DIM_K; kk++) {
+
+                float a_scale[VEC_DIM_M];
+                float b_scale[VEC_DIM_N];
+                a_scale[mm] = __half2float(
+                        a_scale_sm[(thread_y + mm * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_SCALE_PAD_SIZE + kk]);
+                b_scale[nn] = __half2float(
+                        b_scale_sm[(thread_x + nn * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_SCALE_PAD_SIZE + kk]);
+                int block_sum = 0;
 #pragma unroll
-        for (int kk_q = 0; kk_q < VEC_DOT_PRODUCT; kk_q++) {
-            block_sum = vec_dot_product(a_reg, b_reg, block_sum);
+                for (int kk_q = 0; kk_q < VEC_DOT_PRODUCT; kk_q++) {
+                    const int kk_index = kk * VEC_DOT_PRODUCT + kk_q;
+                    int a_reg[VEC_DIM_M] = {0};
+                    int b_reg[VEC_DIM_N] = {0};
+                    a_reg[mm] = a_quant_sm[(thread_y + mm * BLOCK_M_DIM / VEC_DIM_M) * BLOCK_PAD_SIZE + kk_index];
+                    b_reg[nn] = b_quant_sm[(thread_x + nn * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + kk_index];
+
+                    block_sum = vec_dot_product(a_reg[mm], b_reg[nn], block_sum);
+                }
+                sum += static_cast<float>(block_sum) * (a_scale[mm]) * (b_scale[nn]);
+            }
+
+            c_reg[mm * VEC_DIM_N + nn] += sum;
         }
-        // if (kk == 0 && thread_y == 0 && thread_x == 1 && blockIdx.y == 0 && blockIdx.x == 0) {
-        //     printf("sum: %f \n", block_sum);
-        //     for (int kk_q = 0; kk_q < QUANT_BLOCK_SIZE; kk_q++) {
-        //         printf("a_reg.qs[%d]:%d, b_reg.qs[%d]:%d, d_a: %f, d_b: %f \n", kk_q,a_reg.qs[kk_q], kk_q,b_reg.qs[kk_q],
-        //             d_a, d_b);
-        //     }
-        // }
-
-        sum += static_cast<float>(block_sum) * d_a * d_b;
-        // if (thread_y == 0 && thread_x == 1 && blockIdx.y == 0 && blockIdx.x == 0) {
-        //     printf("c_sum: %f \n", sum);
-        // }
     }
-
-    c_reg[][] += sum;
 }
 
 template<const int QUANT_BLOCK_SIZE>
@@ -151,33 +229,45 @@ __global__ void gemm_quant_q_8_0_nt_reshape(
     float *__restrict__ c) {
     const int g_thread_id = threadIdx.x + threadIdx.y * blockDim.x;
 
-    const int thread_y = g_thread_id / (BLOCK_N_DIM);
-    const int thread_x = g_thread_id % (BLOCK_N_DIM);
+    const int thread_y = g_thread_id / (BLOCK_N_DIM / VEC_DIM_N);
+    const int thread_x = g_thread_id % (BLOCK_N_DIM / VEC_DIM_N);
 
     const int start_m = blockIdx.y * BLOCK_M_DIM;
     const int start_n = blockIdx.x * BLOCK_N_DIM;
-    const int dst_m_index = start_m + thread_y;
-    const int dst_n_index = start_n + thread_x;
 
-    __shared__ int a_quant_data_sm[BLOCK_M_DIM][BLOCK_K_DIM + PAD_SIZE];
-    __shared__ int b_quant_data_sm[BLOCK_N_DIM][BLOCK_K_DIM + PAD_SIZE];
-    __shared__ half a_scale_data_sm[BLOCK_M_DIM][VEC_DIM_K  + PAD_SIZE];
-    __shared__ half b_scale_data_sm[BLOCK_N_DIM][VEC_DIM_K + PAD_SIZE];
+
+    __shared__ int a_quant_data_sm[BLOCK_M_DIM][BLOCK_PAD_SIZE];
+    __shared__ int b_quant_data_sm[BLOCK_N_DIM][BLOCK_PAD_SIZE];
+    __shared__ half a_scale_data_sm[BLOCK_M_DIM][BLOCK_SCALE_PAD_SIZE];
+    __shared__ half b_scale_data_sm[BLOCK_N_DIM][BLOCK_SCALE_PAD_SIZE];
     float c_reg[VEC_DIM_M][VEC_DIM_N] = {0};
 
-    for (size_t k = 0; k < K; k += BLOCK_K_DIM) {
-        load_tile_a_quant<QUANT_BLOCK_SIZE>(a_ld, M, thread_x, thread_y, start_m, k, a_quant_data, &a_quant_data_sm[0][0]);
-        load_tile_b_quant<QUANT_BLOCK_SIZE>(b_ld, N, thread_x, thread_y, start_n, k, b_quant_data, &b_quant_data_sm[0][0]);
-        load_tile_a_scale<QUANT_BLOCK_SIZE>(a_ld, M, thread_x, thread_y, start_m, k, a_scale, &a_quant_data_sm[0][0]);
-        load_tile_b_scale<QUANT_BLOCK_SIZE>(b_ld, N, thread_x, thread_y, start_n, k, b_scale, &b_quant_data_sm[0][0]);
+    for (size_t k = 0; k < K; k += BLOCK_K_DIM / VEC_DIM_K) {
+        load_tile_a_quant_vec<QUANT_BLOCK_SIZE>(a_ld, M, thread_x, thread_y, start_m, k, a_quant_data,
+                                            &a_quant_data_sm[0][0]);
+        load_tile_b_quant_vec<QUANT_BLOCK_SIZE>(b_ld, N, thread_x, thread_y, start_n, k, b_quant_data,
+                                            &b_quant_data_sm[0][0]);
+        load_tile_a_scale<QUANT_BLOCK_SIZE>(a_ld, M, thread_x, thread_y, start_m, k, a_scale, &a_scale_data_sm[0][0]);
+        load_tile_b_scale<QUANT_BLOCK_SIZE>(b_ld, N, thread_x, thread_y, start_n, k, b_scale, &b_scale_data_sm[0][0]);
         __syncthreads();
 
-        compute_tile<QUANT_BLOCK_SIZE>(thread_x, thread_y, &a_quant_data_sm[0][0], &b_quant_data_sm[0][0], c_reg);
+        compute_tile<QUANT_BLOCK_SIZE>(thread_x, thread_y, &a_scale_data_sm[0][0], &b_scale_data_sm[0][0],
+                                       &a_quant_data_sm[0][0], &b_quant_data_sm[0][0], &c_reg[0][0]);
         __syncthreads();
     }
 
-    if (dst_m_index < M && dst_n_index < N) {
-        c[dst_m_index * c_ld + dst_n_index] += c_reg;
+    for (int mm = 0; mm < VEC_DIM_M; mm++) {
+        const int dst_m_index = start_m + thread_y + mm * BLOCK_M_DIM / VEC_DIM_M;
+        if (dst_m_index >= M) {
+            continue;
+        }
+        for (int nn = 0; nn < VEC_DIM_N; nn++) {
+            const int dst_n_index = start_n + thread_x + nn * BLOCK_N_DIM / VEC_DIM_N;
+            if (dst_n_index >= N) {
+                continue;
+            }
+            c[dst_m_index * c_ld + dst_n_index] += c_reg[mm][nn];
+        }
     }
 }
 
@@ -189,29 +279,28 @@ static int ggml_cuda_dp4a(const int a, const int b, int c) {
 
 static void quant_q_8_0_gemm_cpu(int M, int N, int K,
                                  int a_ld, int b_ld, int c_ld,
-                                 const tff::core::quant::Q_8_0 *a,
-                                 const tff::core::quant::Q_8_0 *b,
+                                 const void *a,
+                                 const void *b,
                                  float *c) {
+    half *a_scale = (half*)a;
+    half *b_scale = (half*)b;
+    int *a_quant = (int *) (a + M * K * sizeof(half));
+    int *b_quant = (int *) (b + N * K * sizeof(half));
+
     for (int m = 0; m < M; ++m) {
         for (int n = 0; n < N; ++n) {
             float sum = 0.0f;
             for (int k = 0; k < K; ++k) {
-                const auto &a_block = a[m * a_ld + k];
-                const auto &b_block = b[n * b_ld + k];
+                const auto a_block = &a_quant[m * a_ld * 8 + k * 8];
+                const auto b_block = &b_quant[n * b_ld * 8 + k * 8];
 
-                const float d_a = __half2float(a_block.d);
-                const float d_b = __half2float(b_block.d);
-                if (m == 0 && n == 0 && k == 0) {
-                    printf("d_a: %lf, d_b: %lf\n", d_a, d_b);
-                }
-                const int *a_k_data = reinterpret_cast<const int32_t *>(&a_block.qs[0]);
-
-                const int *b_k_data = reinterpret_cast<const int32_t *>(&b_block.qs[0]);
+                const float d_a = __half2float(a_scale[m * a_ld + k]);
+                const float d_b = __half2float(b_scale[n * b_ld + k]);
 
                 float dot_q = 0;
                 for (int i = 0; i < tff::core::quant::Q_8_0::BLOCK_SIZE / 4; ++i) {
-                    auto a_value = a_k_data[i];
-                    auto b_value = b_k_data[i];
+                    auto a_value = a_block[i];
+                    auto b_value = b_block[i];
                     dot_q = ggml_cuda_dp4a(a_value, b_value, dot_q);
                 }
                 sum += d_a * d_b * static_cast<float>(dot_q);
@@ -333,7 +422,7 @@ __global__ void quant_q_8_0_2d_reshape(const float *__restrict__ src,
 
 #include <cstdint>
 
-inline uint32_t div_u32_cpu(uint32_t n, uint32_t magic, int shift) {
+static inline uint32_t div_u32_cpu(uint32_t n, uint32_t magic, int shift) {
     // 计算 (n * magic) 的高32位：等价于 (uint64_t)n * magic >> 32
     uint64_t product = (uint64_t) n * magic;
     uint32_t high_part = (uint32_t) (product >> 32);
@@ -381,13 +470,13 @@ static void quantize_func(const float *src, Q_8_0 *blocks, const int64_t elem_co
 }
 
 template<typename T>
-void PopulateVector(std::vector<T> &vector, std::mt19937 &mt, std::uniform_real_distribution<double> &dist) {
+static void PopulateVector(std::vector<T> &vector, std::mt19937 &mt, std::uniform_real_distribution<double> &dist) {
     for (auto &element: vector) {
         element = static_cast<T>(dist(mt));
     }
 }
 
-void quant_q_8_0_1d(const int64_t m, const int64_t n, std::vector<float> &src,
+static void quant_q_8_0_1d(const int64_t m, const int64_t n, std::vector<float> &src,
                     std::vector<tff::core::quant::Q_8_0> &dst) {
     dst.resize(m * n / tff::core::quant::Q_8_0::BLOCK_SIZE);
 
@@ -447,7 +536,7 @@ void quant_q_8_0_1d(const int64_t m, const int64_t n, std::vector<float> &src,
     printf("1d success!!\n");
 }
 
-void quant_q_8_0_2d(const int m, const int n, std::vector<float> &src, std::vector<tff::core::quant::Q_8_0> &dst) {
+static void quant_q_8_0_2d(const int m, const int n, std::vector<float> &src, std::vector<tff::core::quant::Q_8_0> &dst) {
     dst.resize(m * n / tff::core::quant::Q_8_0::BLOCK_SIZE);
 
     std::vector<tff::core::quant::Q_8_0> c_mat_quant_result_cpu;
@@ -507,7 +596,7 @@ void quant_q_8_0_2d(const int m, const int n, std::vector<float> &src, std::vect
     printf("2d success!!\n");
 }
 
-void quant_q_8_0_2d_reshape(const int m, const int n, std::vector<float> &src,
+static void quant_q_8_0_2d_reshape(const int m, const int n, std::vector<float> &src,
                             std::vector<tff::core::quant::Q_8_0> &dst) {
     dst.resize(m * n / tff::core::quant::Q_8_0::BLOCK_SIZE);
 
@@ -572,14 +661,16 @@ void quant_q_8_0_2d_reshape(const int m, const int n, std::vector<float> &src,
 #endif
     printf("2d success!!\n");
 }
-
+extern "C" static int quant_q_8_0_gemm_main(int argc, char *argv[]);
 int main(int argc, char *argv[]) {
+    //quant_q_8_0_gemm_main(argc, argv);
+
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     std::mt19937 mt(42);
     std::uniform_real_distribution<double> dist(-127, 127);
-    int m = 2048;
-    int n = 2048;
+    int m = 1025;
+    int n = 1025;
     int k = 2048;
     int quant_k = k / tff::core::quant::Q_8_0::BLOCK_SIZE;
 
@@ -588,20 +679,24 @@ int main(int argc, char *argv[]) {
     PopulateVector<float>(a_mat, mt, dist);
     std::vector<tff::core::quant::Q_8_0> a_quant;
     quant_q_8_0_2d_reshape(m, k, a_mat, a_quant);
-    tff::core::quant::Q_8_0 *a_mat_gpu = nullptr;
+    void *a_mat_gpu = nullptr;
     cudaMalloc(&a_mat_gpu, sizeof(tff::core::quant::Q_8_0) * m * quant_k);
     cudaMemcpy(a_mat_gpu, a_quant.data(), sizeof(tff::core::quant::Q_8_0) * m * quant_k,
                cudaMemcpyHostToDevice);
+    auto a_scaled_gpu = reinterpret_cast<half *>(a_mat_gpu);
+    auto a_quant_gpu = reinterpret_cast<int8_t *>(a_mat_gpu + m * quant_k * sizeof(half));
 
     std::vector<float> b_mat;
     b_mat.resize(n * k);
     PopulateVector<float>(b_mat, mt, dist);
     std::vector<tff::core::quant::Q_8_0> b_quant;
     quant_q_8_0_2d_reshape(n, k, b_mat, b_quant);
-    tff::core::quant::Q_8_0 *b_mat_gpu = nullptr;
+    void *b_mat_gpu = nullptr;
     cudaMalloc(&b_mat_gpu, sizeof(tff::core::quant::Q_8_0) * n * quant_k);
     cudaMemcpy(b_mat_gpu, b_quant.data(), sizeof(tff::core::quant::Q_8_0) * n * quant_k,
                cudaMemcpyHostToDevice);
+    auto b_scaled_gpu = reinterpret_cast<half *>(b_mat_gpu);
+    auto b_quant_gpu = reinterpret_cast<int8_t *>(b_mat_gpu + n * quant_k * sizeof(half));
 
     //c
     float *c_mat_gpu = nullptr;
@@ -617,10 +712,12 @@ int main(int argc, char *argv[]) {
 
     dim3 grid((n + BLOCK_N_DIM - 1) / BLOCK_N_DIM, (m + BLOCK_M_DIM - 1) / BLOCK_M_DIM, 1);
     //dim3 block(BLOCK_N_DIM / VEC_DIM_N, BLOCK_M_DIM / VEC_DIM_M, 1);
-    dim3 block(BLOCK_N_DIM, BLOCK_M_DIM, 1);
+    dim3 block(BLOCK_N_DIM / VEC_DIM_N, BLOCK_M_DIM / VEC_DIM_M, 1);
     printf("grid:%d, %d\n", grid.x, grid.y);
     printf("block:%d, %d\n", block.x, block.y);
-    gemm_quant_q_8_0_nt<32, 32><<<grid, block>>>(m, n, quant_k, quant_k, quant_k, n, a_mat_gpu, b_mat_gpu, c_mat_gpu);
+    gemm_quant_q_8_0_nt_reshape<32><<<grid, block>>>(m, n, quant_k, quant_k, quant_k, n, a_scaled_gpu, b_scaled_gpu,
+                                                     reinterpret_cast<int *>(a_quant_gpu),
+                                                     reinterpret_cast<int *>(b_quant_gpu), c_mat_gpu);
 
     cudaEventRecord(stop);
     cudaDeviceSynchronize();

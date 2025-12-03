@@ -1229,7 +1229,7 @@ void sgemm_nt_double_buffer(int m, int n, int k,
     printf("sgemm sucess !!: \n");
 #endif
 }
-int main3(int argc, char *argv) {
+int main8(int argc, char *argv) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     printf("device prop sharedMemPerBlock:%d \n", device_prop.sharedMemPerBlock);
@@ -1272,29 +1272,56 @@ int main3(int argc, char *argv) {
     //
     //cutlass_sgemm_tf32(m, n, k, m, n, m, a_mat, b_mat, c_mat);
 #else
-    int n = 128;
-    int m = 128;
-    int k = 128;
-    for (int j = 1; j < 18; j++) {
-        n = m = k += 2 * 128;
-        printf("*******************************\n");
-        printf("m: %d,n: %d, k: %d \n",m, n, k);
-        std::vector<float> a_mat;
-        a_mat.resize(m * k);
-        std::vector<float> b_mat;
-        b_mat.resize(n * k);
-        std::vector<float> c_mat;
-        c_mat.resize(m * n);
-        std::vector<float> c_mat_gpu_result;
-        c_mat_gpu_result.resize(m * n);
+    int m = 8192;
+    int n = 8192;
+    int k = 8192;
 
-        PopulateVector<float>(a_mat, mt, dist);
-        PopulateVector<float>(b_mat, mt, dist);
+    std::vector<float> a_mat;
+    a_mat.resize(m * k);
+    std::vector<float> b_mat;
+    b_mat.resize(n * k);
+    std::vector<float> c_mat;
+    c_mat.resize(m * n);
+    std::vector<float> c_mat_gpu_result;
+    c_mat_gpu_result.resize(m * n);
 
-        //sgemm_nn(m, n, k, m, n, m, a_mat, b_mat, c_mat);
-        //sgemm_nn_func(m, n, k, m, n, m, a_mat, b_mat, c_mat);
-        //sgemm_nn_double_buffer(m, n, k, m, n, m, a_mat, b_mat, c_mat);
-    }
+    PopulateVector<float>(a_mat, mt, dist);
+    PopulateVector<float>(b_mat, mt, dist);
+
+    // sgemm_nn_func(m, n, k, a_mat, b_mat, c_mat);
+    // sgemm_nn_double_buffer(m, n, k, a_mat, b_mat, c_mat);
+    //
+    // sgemm_nt_func(m, n, k, a_mat, b_mat, c_mat);
+    // sgemm_nt_double_buffer(m, n, k, a_mat, b_mat, c_mat);
+    //
+    // sgemm_tn_func(m, n, k, a_mat, b_mat, c_mat);
+    // sgemm_tn_double_buffer(m, n, k,a_mat, b_mat, c_mat);
+
+    sgemm_tn_func(m, n, k, a_mat, b_mat, c_mat);
+    sgemm_tn_double_buffer(m, n, k,a_mat, b_mat, c_mat);
+    // int n = 8192;
+    // int m = 8192;
+    // int k = 8192;
+    // for (int j = 1; j < 18; j++) {
+    //     n = m = k += 2 * 128;
+    //     printf("*******************************\n");
+    //     printf("m: %d,n: %d, k: %d \n",m, n, k);
+    //     std::vector<float> a_mat;
+    //     a_mat.resize(m * k);
+    //     std::vector<float> b_mat;
+    //     b_mat.resize(n * k);
+    //     std::vector<float> c_mat;
+    //     c_mat.resize(m * n);
+    //     std::vector<float> c_mat_gpu_result;
+    //     c_mat_gpu_result.resize(m * n);
+    //
+    //     PopulateVector<float>(a_mat, mt, dist);
+    //     PopulateVector<float>(b_mat, mt, dist);
+    //
+    //     //sgemm_nn(m, n, k, m, n, m, a_mat, b_mat, c_mat);
+    //     //sgemm_nn_func(m, n, k, m, n, m, a_mat, b_mat, c_mat);
+    //     //sgemm_nn_double_buffer(m, n, k, m, n, m, a_mat, b_mat, c_mat);
+    // }
 
     //
     //sgemm_wmma(m,n,k, m, n,m,a_mat,b_mat,c_mat);
