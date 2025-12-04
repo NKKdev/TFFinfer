@@ -662,7 +662,7 @@ static void quant_q_8_0_2d_reshape(const int m, const int n, std::vector<float> 
     printf("2d success!!\n");
 }
 extern "C" static int quant_q_8_0_gemm_main(int argc, char *argv[]);
-int main(int argc, char *argv[]) {
+int main8(int argc, char *argv[]) {
     //quant_q_8_0_gemm_main(argc, argv);
 
     cudaDeviceProp device_prop{};
