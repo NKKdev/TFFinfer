@@ -295,9 +295,7 @@
     <option name="consecutiveDays" value="1" />
     <option name="largestSingleDelete" value="73" />
     <option name="maxFileLines" value="1763" />
-    <option name="saveCount" value="269" />
+    <option name="saveCount" value="100" />
     <option name="lastActiveDate" value="2025-11-18" />
-    <option name="firstCodeTimeToday" value="2025-12-04T11:52:53.371958021" />
-    <option name="lastCodeTimeToday" value="2025-12-04T11:52:55.672548082" />
   </component>
 </project>

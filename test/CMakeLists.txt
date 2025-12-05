@@ -65,7 +65,8 @@ add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         quant_q_8_0_gemm.cu
         quant_q_8_0.cuh
         gemm_half_scalar.cu
-        gemm_vec.cu)
+        gemm_vec.cu
+        gemm_vec_vec.cu)
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE
 #        $<$<COMPILE_LANGUAGE:CUDA>:-O3>
