@@ -1,5 +1,5 @@
 //
-// Created by nkk on 2025/12/5.
+// Created by nkk on 2025/12/6.
 //
 
 #include <vector>
@@ -9,8 +9,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include "../cmake-build-debug/_deps/fmt-src/include/fmt/base.h"
-
 // #include "cutlass/gemm/device/gemm.h"
 // #include "cutlass/gemm/device/gemm_universal_adapter.h"
 // #include "cutlass/numeric_types.h"
@@ -18,7 +16,7 @@
 // #include <cuda_runtime.h>
 // #include <iostream>
 
-using T = float;
+using T = half;
 #if 0
 constexpr int BYTES_PER_LOAD = 16; // 128-bit
 constexpr int ELEMENTS_PER_LOAD = BYTES_PER_LOAD / sizeof(T);
@@ -35,15 +33,16 @@ constexpr int PAD_SIZE = 16; //BLOCK_DIM_K;
 #else
 constexpr int BYTES_PER_LOAD = 16; // 128-bit
 constexpr int ELEMENTS_PER_LOAD = BYTES_PER_LOAD / sizeof(T);
-constexpr int VEC_DIM_LOAD = ELEMENTS_PER_LOAD;
+constexpr int ACTUAL_ELEMENTS_PER_LOAD = ELEMENTS_PER_LOAD / 4;
+constexpr int VEC_DIM_LOAD = ACTUAL_ELEMENTS_PER_LOAD;
 constexpr int WARP_SIZE = 32;
 constexpr int THREAD_BLOCK_SIZE = 256;
-constexpr int BLOCK_DIM_K = 16;
+constexpr int BLOCK_DIM_K = 64;
 constexpr int VEC_DIM_N = 8;
 constexpr int VEC_DIM_K = 2;
 constexpr int VEC_DIM_M = 8;
-constexpr int BLOCK_DIM_M = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_LOAD;
-constexpr int BLOCK_DIM_N = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_LOAD;
+constexpr int BLOCK_DIM_M = 128; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_M;
+constexpr int BLOCK_DIM_N = 128; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_N;
 constexpr int PAD_SIZE = 16; //BLOCK_DIM_K;
 #endif
 
@@ -66,7 +65,7 @@ __device__ __forceinline__ void load_vec<float>(const float *addr, float *out, i
 
 template<>
 __device__ __forceinline__ void load_vec<half>(const half *addr, half *out, int count) {
-    if (count >= 8 && reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
+    if (count >= 1 && reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
         uint4 v = *reinterpret_cast<const uint4 *>(addr);
         const half *h = reinterpret_cast<const half *>(&v);
 #pragma unroll
@@ -357,7 +356,6 @@ __global__ void sgemm_nn_pipeline_double_buffer(
 
 
     for (int k = 0; k <= K; k += BLOCK_DIM_K) {
-
         const int k_size = min(BLOCK_DIM_K, K - k);
         compute_tile<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
             k_size, cm_thread_x, cm_thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
@@ -459,7 +457,6 @@ __global__ void sgemm_tt_pipeline_double_buffer(
 
 
     for (int k = 0; k <= K; k += BLOCK_DIM_K) {
-
         const int k_size = min(BLOCK_DIM_K, K - k);
         compute_tile<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
             k_size, cm_thread_x, cm_thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
@@ -559,7 +556,6 @@ __global__ void sgemm_tn_pipeline_double_buffer(
 
 
     for (int k = 0; k < K; k += BLOCK_DIM_K) {
-
         const int k_size = min(BLOCK_DIM_K, K - k);
         compute_tile<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
             k_size, cm_thread_x, cm_thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
@@ -703,7 +699,7 @@ __global__ void sgemm_nt_func(int M, int N, int K, int a_ld, int b_ld, int c_ld,
     __shared__ T a_sm[BLOCK_DIM_K][BLOCK_DIM_M + PAD_SIZE];
     __shared__ T b_sm[BLOCK_DIM_K][BLOCK_DIM_N + PAD_SIZE];
     float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
-//#pragma unroll
+    //#pragma unroll
     for (int k = 0; k < K; k += BLOCK_DIM_K) {
         load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
             a_ld, K, ld_thread_x, ld_thread_y,
@@ -1569,6 +1565,189 @@ void sgemm_nt_double_buffer(int m, int n, int k,
     printf("sgemm sucess !!: \n");
     printf("******************************************\n");
 #endif
+}
+
+template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K,
+    const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int PAD_SIZE>
+__device__ void load_tile_vec_row_major_n(const int ld, const int dim,
+                                          const int thread_x, const int thread_y,
+                                          const int start_m,
+                                          const int k,
+                                          const T *__restrict__ global_mem,
+                                          T *sm) {
+#pragma unroll
+    for (int j = 0; j < VEC_DIM_LD; ++j) {
+        const int dim0_base = start_m + thread_y + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+        for (int kk = 0; kk < VEC_DIM_K / ACTUAL_ELEMENTS_PER_LOAD; ++kk) {
+            const int dim1 = k + thread_x * ACTUAL_ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
+                             ACTUAL_ELEMENTS_PER_LOAD;
+            T val[ACTUAL_ELEMENTS_PER_LOAD] = {0};
+            if (dim0_base < dim) {
+                const int actual_load = min(ACTUAL_ELEMENTS_PER_LOAD, ld - dim1);
+                if (actual_load > 0) {
+                    load_vec<T>(&global_mem[dim0_base * ld + dim1], val, actual_load);
+                }
+            }
+            int sm_row = thread_y + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+            int sm_col_base = thread_x * ACTUAL_ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
+                              ACTUAL_ELEMENTS_PER_LOAD;
+#pragma unroll
+            for (int i = 0; i < ACTUAL_ELEMENTS_PER_LOAD; ++i) {
+                sm[sm_row + (sm_col_base + i) * (BLOCK_DIM_LD + PAD_SIZE)] = val[i];
+            }
+        }
+    }
+}
+
+template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
+    const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int PAD_SIZE>
+__device__ void compute_tile_attention_gemm(const int k_size, const int thread_x, const int thread_y,
+                                            T *a_sm, T *b_sm,
+                                            float *c_reg) {
+#pragma unroll
+    for (int kk = 0; kk < k_size; kk++) {
+#pragma unroll
+        for (int mm = 0; mm < VEC_DIM_M; mm++) {
+            float a_reg = 0.0f;
+            if constexpr (std::is_same_v<T, half>) {
+                a_reg = __half2float(
+                    a_sm[(kk) * (BLOCK_DIM_M + PAD_SIZE) + thread_x + mm *
+                         BLOCK_DIM_M /
+                         VEC_DIM_M]);
+            } else if constexpr (std::is_same_v<T, float>) {
+                a_reg = (a_sm[(kk) * (BLOCK_DIM_M + PAD_SIZE) + thread_x + mm *
+                              BLOCK_DIM_M /
+                              VEC_DIM_M]);
+            }
+#pragma unroll
+            for (int nn = 0; nn < VEC_DIM_N; nn++) {
+                float b_reg = 0.0f;
+                if constexpr (std::is_same_v<T, half>) {
+                    b_reg = __half2float(
+                        b_sm[(kk) * (BLOCK_DIM_N + PAD_SIZE) + thread_y + nn *
+                             BLOCK_DIM_N /
+                             VEC_DIM_N]);
+                } else if constexpr (std::is_same_v<T, float>) {
+                    b_reg = (b_sm[(kk) * (BLOCK_DIM_N + PAD_SIZE) + thread_y + nn *
+                                  BLOCK_DIM_N / VEC_DIM_N]);
+                }
+
+                c_reg[mm * VEC_DIM_N + nn] += a_reg * b_reg;
+            }
+        }
+    }
+}
+
+template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
+    const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int PAD_SIZE>
+__device__ void compute_tile_attention_softmax(const int n_size, const int thread_x, const int thread_y,
+                                               const float scale,
+                                               float2 *const softmax_value,
+                                               T *a_sm, T *b_sm,
+                                               float *c_reg) {
+    float max_value[VEC_DIM_M] = {0.0f};
+#pragma unroll
+    for (int mm = 0; mm < VEC_DIM_M; mm++) {
+#pragma unroll
+        for (int nn = 0; nn < VEC_DIM_N; nn++) {
+            c_reg[mm * VEC_DIM_N + nn] *= scale;
+            max_value[mm] = c_reg[mm * VEC_DIM_N + nn] > max_value[mm] ? c_reg[mm * VEC_DIM_N + nn] : max_value[mm];
+        }
+    }
+}
+
+template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
+    const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
+__global__ void flash_attention(const int m, const int n, const int d,
+                                const int q_ld, const int k_ld, const int v_ld,
+                                const float scale,
+                                float2 *const softmax_value,
+                                const T *__restrict__ q,
+                                const T *__restrict__ k,
+                                const T *__restrict__ v, T *out_put) {
+    const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
+    const int ld_thread_block_n = BLOCK_DIM_N / VEC_DIM_LOAD;
+    const int ld_thread_x = thread_id % ld_thread_block_n;
+    const int ld_thread_y = thread_id / ld_thread_block_n;
+
+    const int cm_thread_block_n = BLOCK_DIM_N / VEC_DIM_N;
+    const int cm_thread_x = thread_id % cm_thread_block_n;
+    const int cm_thread_y = thread_id / cm_thread_block_n;
+
+    const int block_x = blockIdx.x;
+    const int block_y = blockIdx.y;
+    const int start_m = block_x * BLOCK_DIM_M; // 128 * blockIdx.x
+    const int start_n = block_y * BLOCK_DIM_N;
+
+    __shared__ T q_sm[BLOCK_DIM_K][BLOCK_DIM_M + PAD_SIZE];
+    __shared__ T k_sm[BLOCK_DIM_K][BLOCK_DIM_N + PAD_SIZE];
+    //__shared__ T v_sm[BLOCK_DIM_K][BLOCK_DIM_N + PAD_SIZE];
+    float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
+
+    for (int k = 0; k < d; k += BLOCK_DIM_K) {
+        load_tile_vec_row_major_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
+            q_ld, m, ld_thread_x, ld_thread_y, start_m, k,
+            q, q_sm);
+        load_tile_vec_row_major_n<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
+            k_ld, n, ld_thread_x, ld_thread_y, start_n, k,
+            q, q_sm);
+        load_tile_vec_row_major_n<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
+            v_ld, n, ld_thread_x, ld_thread_y, start_n, k,
+            q, q_sm);
+
+        __syncthreads();
+        const int k_size = min(BLOCK_DIM_K, d - k);
+        compute_tile_attention_gemm<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
+            k_size, cm_thread_x, cm_thread_x, cm_thread_y, &q_sm[0][0], &k_sm[0][0], c_reg);
+        __syncthreads();
+    }
+    //softmax;
+}
+
+template<typename T>
+std::vector<T> flash_attention(int m, int n, int k,
+                               const std::vector<T> &q_mat,
+                               const std::vector<T> &k_mat,
+                               const std::vector<T> &v_mat) {
+    if (q_mat.size() != static_cast<size_t>(m * k) ||
+        k_mat.size() != static_cast<size_t>(n * k) ||
+        v_mat.size() != static_cast<size_t>(n * k)) {
+        return std::vector<T>();
+    }
+
+
+    const T scaling = static_cast<T>(1.0) / std::sqrt(static_cast<T>(k));
+    std::vector<T> output(m * k, static_cast<T>(0));
+
+
+    for (int i = 0; i < m; ++i) {
+        std::vector<T> logits(n, static_cast<T>(0));
+        for (int j = 0; j < n; ++j) {
+            T dot = 0;
+            for (int l = 0; l < k; ++l) {
+                dot += q_mat[i * k + l] * k_mat[j * k + l];
+            }
+
+            logits[j] = dot * scaling;
+        }
+
+        T max_logit = *std::max(logits.begin(), logits.end());
+        std::vector<T> exps(n);
+        T exp_sum = 0;
+        for (int j = 0; j < n; ++j) {
+            exps[j] = std::exp(logits[j] - max_logit);
+            exp_sum += exps[j];
+        }
+
+        for (int l = 0; l < k; ++l) {
+            T acc = 0;
+            for (int j = 0; j < n; ++j) {
+                acc += (exps[j] / exp_sum) * v_mat[j * k + l];
+            }
+            output[i * k + l] = acc;
+        }
+    }
+    return output;
 }
 
 int main(int argc, char *argv) {
