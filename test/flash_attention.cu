@@ -146,7 +146,7 @@ __device__ void compute_tile_attention_gemm(const float scale, const int k_size,
 
 template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
     const int BLOCK_DIM_M>
-__device__ void compute_tile_attention_softmax(const int N,const int thread_x,
+__device__ void compute_tile_attention_softmax(const int N, const int thread_x,
                                                const int warp_id,
                                                const float scale,
                                                const int start_m,
@@ -168,7 +168,7 @@ __device__ void compute_tile_attention_softmax(const int N,const int thread_x,
 
 #pragma unroll
         for (int nn = 0; nn < VEC_DIM_N; nn++) {
-            if ((nn * 32 +  base_n) < N) {
+            if ((nn * 32 + base_n) < N) {
                 c_reg[mm * VEC_DIM_N + nn] *= scale;
                 max_value[mm] = c_reg[mm * VEC_DIM_N + nn] > max_value[mm] ? c_reg[mm * VEC_DIM_N + nn] : max_value[mm];
             }
@@ -180,7 +180,7 @@ __device__ void compute_tile_attention_softmax(const int N,const int thread_x,
 
 #pragma unroll
         for (int nn = 0; nn < VEC_DIM_N; nn++) {
-            if ((nn * 32 +  base_n) < N) {
+            if ((nn * 32 + base_n) < N) {
                 c_reg[mm * VEC_DIM_N + nn] = expf(c_reg[mm * VEC_DIM_N + nn] - max_value[mm]);
                 sum_value[mm] += c_reg[mm * VEC_DIM_N + nn];
             }
@@ -212,13 +212,15 @@ __device__ void compute_tile_attention_pv(const int N, const int v_ld,
                                           float *new_sum_value,
                                           float *output) {
     const int base_n = start_n + thread_x;
-    const int valid_n = min(VEC_DIM_N, N - base_n);
+    //const int valid_n = min(VEC_DIM_N, N - base_n);
     for (int kk = 0; kk < BLOCK_DIM_K; kk++) {
 #pragma unroll
         for (int mm = 0; mm < VEC_DIM_M; mm++) {
+            float old_max = old_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
+            float old_sum = old_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
             float acc = 0.0f;
 #pragma unroll
-            for (int nn = 0; nn < valid_n; nn++) {
+            for (int nn = 0; nn < VEC_DIM_N; nn++) {
                 float v_reg = 0.0f;
                 if constexpr (std::is_same_v<T, half>) {
                     v_reg = __half2float(
@@ -226,7 +228,9 @@ __device__ void compute_tile_attention_pv(const int N, const int v_ld,
                 } else if constexpr (std::is_same_v<T, float>) {
                     v_reg = v_sm[kk * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N];
                 }
-                acc += v_reg * c_reg[mm * VEC_DIM_N + nn];
+                if ((nn * 32 + base_n) < N) {
+                    acc += v_reg * c_reg[mm * VEC_DIM_N + nn];
+                }
                 // if (kk == 0 && thread_x == 0 && warp_id == 0 && blockIdx.x == 0) {
                 //     printf("mm: %d, nn: %d, v_reg: %lf, c_reg[%d]: %lf, acc: %lf \n", mm, nn, v_reg,
                 //            mm * VEC_DIM_N + nn, c_reg[mm * VEC_DIM_N + nn], acc);
@@ -236,24 +240,27 @@ __device__ void compute_tile_attention_pv(const int N, const int v_ld,
             for (int offset = 16; offset > 0; offset /= 2) {
                 acc += __shfl_xor_sync(0xffffffff, acc, offset, 32);
             }
-            // if (kk == 0 && thread_x == 0 && blockIdx.x == 0) {
-            //     printf("warp_id: %d, mm: %d,acc: %lf new_sum: %lf \n", warp_id, mm, acc, new_sum_value[mm]);
-            // }
-            float old_max = old_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
-            //if ((start_m + BLOCK_DIM_M) >= N) {
-                output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] =
-                (output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * expf(
-                     old_max - new_max_value[mm]) +
-                 acc * expf(current_max_value[mm] - new_max_value[mm])) / new_sum_value[mm];
-            // } else {
-            //     output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] =
-            //             output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * expf(
-            //                 old_max - new_max_value[mm]) +
-            //             acc * expf(current_max_value[mm] - new_max_value[mm]);
-            // }
 
-            old_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_max_value[mm];
-            old_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_sum_value[mm];
+
+            // if ((start_n + BLOCK_DIM_N) >= N) {
+            //     output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] =
+            //     (output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * old_sum * expf(
+            //          old_max - new_max_value[mm]) +
+            //      acc * expf(current_max_value[mm] - new_max_value[mm])) / new_sum_value[mm];
+            // } else {
+            output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] =
+                    output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * expf(
+                        old_max - new_max_value[mm]) +
+                    acc * expf(current_max_value[mm] - new_max_value[mm]);
+            //}
+            // if (thread_x == 0) {
+            //     printf(
+            //         "k: %d,start_m: %d, start_n: %d, warp_id: %d, mm: %d,acc: %lf,old_max: %10lf, old_sum: %lf, new_max: %lf, new_sum: %lf, scale_old: %lf, scale_new: %lf,out_put: %lf \n",
+            //         kk, start_m, start_n,
+            //         warp_id, mm, acc, old_max, old_sum, new_max_value[mm], new_sum_value[mm],
+            //         expf(old_max - new_max_value[mm]), expf(current_max_value[mm] - new_max_value[mm]),
+            //         output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk]);
+            // }
         }
     }
 }
@@ -329,18 +336,25 @@ __global__ void flash_attention_cuda(const int M, const int N, const int D,
 
         //softmax;
         float max_value[VEC_DIM_M] = {-1e20f};
+#pragma unroll
+        for (int mm = 0; mm < VEC_DIM_M; ++mm) {
+            max_value[mm] = -1e20f;
+        }
         float sum_value[VEC_DIM_M] = {0.0f};
         float new_max_value[VEC_DIM_M] = {-1e20f};
+#pragma unroll
+        for (int mm = 0; mm < VEC_DIM_M; ++mm) {
+            new_max_value[mm] = -1e20f;
+        }
         float new_sum_value[VEC_DIM_M] = {0.0f};
         compute_tile_attention_softmax<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M>(
-            N, thread_x, warp_id, scale, start_m,start_n,
+            N, thread_x, warp_id, scale, start_m, start_n,
             &c_reg[0], max_value_global, sum_value_global, &max_value[0], &sum_value[0], &new_max_value[0],
             &new_sum_value[0]);
         __syncthreads();
         // if (start_m == 0 && start_n == 0 && warp_id == 0) {
         //     for (int mm = 0; mm < VEC_DIM_M; ++mm) {
         //         //printf("warp_id: %d, max: %f, sum: %lf \n", warp_id, max_value[mm], sum_value[mm]);
-        //
         //         for (int nn = 0; nn < VEC_DIM_N; ++nn) {
         //             if (mm == 0) {
         //                 printf(
@@ -366,10 +380,27 @@ __global__ void flash_attention_cuda(const int M, const int N, const int D,
         // }
         //pv;
         compute_tile_attention_pv<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
-            N, v_ld, thread_x, warp_id, start_m,start_n,
+            N, v_ld, thread_x, warp_id, start_m, start_n,
             &sm[1][0][0], &c_reg[0], max_value_global, sum_value_global,
             &max_value[0], &sum_value[0], &new_max_value[0],
             &new_sum_value[0], out_put);
+        __syncthreads();
+        for (int mm = 0; mm < VEC_DIM_M; ++mm) {
+            max_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_max_value[mm];
+            sum_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_sum_value[mm];
+        }
+        if ((start_n + BLOCK_DIM_N) >= N) {
+            for (int mm = 0; mm < VEC_DIM_M; mm++) {
+#pragma unroll
+                for (int kk = 0; kk < VEC_DIM_K; kk++) {
+                    if (new_sum_value[mm] != 0) {
+                        out_put[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + thread_x + (kk) *
+                                BLOCK_DIM_K /
+                                VEC_DIM_K] /= new_sum_value[mm];
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -517,7 +548,7 @@ std::vector<float> flash_attention_cpu(
 
     const float scaling = 1.0f / std::sqrt(static_cast<float>(k));
     std::vector<float> output(m * k, 0.0f);
-
+    //std::vector<float> global_sum(m, 0.0f);
     for (int m_start = 0; m_start < m; m_start += block_size_m) {
         int m_end = std::min(m_start + block_size_m, m);
         int current_m = m_end - m_start;
@@ -579,12 +610,29 @@ std::vector<float> flash_attention_cpu(
                         acc += local_exps[im][j_idx] * to_float(v_mat[j * k + l]);
                     }
 
-                    float corrected_acc = (running_sum[im] * exp_old * output[i * k + l] + acc * exp_local) / new_sum;
+                    float corrected_acc = (exp_old * output[i * k + l] + acc * exp_local);
                     output[i * k + l] = corrected_acc;
                 }
 
                 running_max[im] = new_max;
                 running_sum[im] = new_sum;
+                //global_sum[m_start + im] = new_sum;
+            }
+            printf("max_values cpu: \n");
+            for (int m = 0; m < 128; ++m) {
+                printf("m_start: %d, n_start: %d, m: %d: %f\n", m_start, n_start, m, running_max[m]);
+            }
+            printf("sum_values cpu: \n");
+            for (int m = 0; m < 128; ++m) {
+                printf("m_start: %d, n_start: %d,m: %d: %f\n", m_start, n_start, m, running_sum[m]);
+            }
+        }
+
+        for (int mm = 0; mm < block_size_m; ++mm) {
+            for (int l = 0; l < k; ++l) {
+                if (running_sum[mm] != 0) {
+                    output[(mm + m_start) * k + l] /= running_sum[mm];
+                }
             }
         }
     }
@@ -607,7 +655,7 @@ void flash_attention(int M, int N, int D,
     cudaMemcpy(v_gpu, v_mat.data(), sizeof(T) * N * D, cudaMemcpyHostToDevice);
     float *max_value = nullptr;
     cudaMalloc((void **) &max_value, sizeof(float) * M);
-    cudaMemset(max_value, 0, sizeof(float) * M);
+    cudaMemset(max_value, -MAXFLOAT, sizeof(float) * M);
     float *sum_value = nullptr;
     cudaMalloc((void **) &sum_value, sizeof(float) * M);
     cudaMemset(sum_value, 0, sizeof(float) * M);
@@ -615,7 +663,7 @@ void flash_attention(int M, int N, int D,
     float *output = nullptr;
     cudaMalloc((void **) &output, sizeof(float) * M * D);
     cudaMemset(output, 0, sizeof(float) * M * D);
-    const int block_num = max(N / BLOCK_DIM_N, 1);
+    const int block_num = max((N + BLOCK_DIM_N - 1) / BLOCK_DIM_N, 1);
     for (int j = 0; j < block_num; ++j) {
         int j_start = j * BLOCK_DIM_N;
         const int actual_Bc = (j_start + BLOCK_DIM_N > N) ? (N - j_start) : BLOCK_DIM_N;
@@ -631,6 +679,20 @@ void flash_attention(int M, int N, int D,
                     actual_Bc,
                     q_gpu, k_gpu, v_gpu,
                     max_value, sum_value, output);
+        // std::vector<float> max_values;
+        // max_values.resize(M);
+        // std::vector<float> sum_values;
+        // sum_values.resize(M);
+        // cudaMemcpy(max_values.data(), max_value, sizeof(float) * M, cudaMemcpyDeviceToHost);
+        // cudaMemcpy(sum_values.data(), sum_value, sizeof(float) * M, cudaMemcpyDeviceToHost);
+        // printf("max_values:\n");
+        // for (int j = 0; j < M; ++j) {
+        //     printf("m: %d, %f\n", j, max_values[j]);
+        // }
+        // printf("sum_values:\n");
+        // for (int j = 0; j < M; ++j) {
+        //     printf("m: %d, %f\n", j, sum_values[j]);
+        // }
         cudaDeviceSynchronize();
     }
     std::vector<float> output_cpu;
