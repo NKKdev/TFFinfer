@@ -9,8 +9,8 @@
 #include "TFFOPCreatorBase.h"
 #include "global/ParamBaseObject.h"
 #include "log/Logger.h"
-
 namespace tff::kernel {
+
     template<typename T>
     static T get_param_value(const int &index, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         auto opt = para_ptr->get_param<T>(index);
@@ -27,20 +27,7 @@ namespace tff::kernel {
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
         //
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MUL_MAT);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     template<typename T>
@@ -48,20 +35,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MAP2CPU);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     //
@@ -70,20 +44,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     //
@@ -92,20 +53,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_EMBEDDING);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     //
@@ -114,20 +62,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MUL);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     template<typename T>
@@ -135,20 +70,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     template<typename T>
@@ -156,20 +78,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_ROPE);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     template<typename T>
@@ -177,20 +86,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     //
@@ -199,20 +95,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_ADD);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 
     //
@@ -221,20 +104,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
     //
     template<typename T>
@@ -242,20 +112,7 @@ namespace tff::kernel {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        static std::string get_op_name() {
-            auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MEM_REF);
-            if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-                tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-                return "";
-            }
-            std::string name = std::string(it->second);
-            name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
-            // if (std::is_same_v<T, float>) name += "_f32";
-            // else if (std::is_same_v<T, double>) name += "_f64";
-            // else if (std::is_same_v<T, int8_t>) name += "_i8";
-            // else if (std::is_same_v<T, int16_t>) name += "_i16";
-            return name;
-        }
+        static std::string get_op_name();
     };
 }
 #endif //TFFINFER_XGEMM_H

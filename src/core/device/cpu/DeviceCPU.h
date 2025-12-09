@@ -35,7 +35,7 @@ namespace tff::core::device::cpu {
 
         //
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
-            const tff::core::graph::TffOpType &op_type) override;
+            const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) override;
     };
 
 

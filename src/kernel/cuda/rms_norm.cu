@@ -118,7 +118,21 @@ namespace tff::kernel {
         float eps = 1e10 - 7;
         rms_norm_kernel_cuda<T>(eps, input_tensors, output_tensors, mem_buffer_manager_ptr);
     }
-
+    template<typename T>
+    std::string tff::kernel::RMSNorm<T>::get_op_name() {
+        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
+        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
+            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
+            return "";
+        }
+        std::string name = std::string(it->second);
+        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+        // if (std::is_same_v<T, float>) name += "_f32";
+        // else if (std::is_same_v<T, double>) name += "_f64";
+        // else if (std::is_same_v<T, int8_t>) name += "_i8";
+        // else if (std::is_same_v<T, int16_t>) name += "_i16";
+        return name;
+    }
     template class tff::kernel::RMSNorm<float>;
     template class tff::kernel::RMSNorm<double>;
     template class tff::kernel::RMSNorm<int32_t>;

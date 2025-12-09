@@ -18,6 +18,23 @@
 // // #include <cuda_runtime.h>
 // // #include <iostream>
 //
+//
+// //#define USING_HALF
+// #ifdef USING_HALF
+// using T = half;
+// constexpr int BYTES_PER_LOAD = 16; // 128-bit
+// constexpr int ELEMENTS_PER_LOAD = 4;//BYTES_PER_LOAD / sizeof(T);
+// constexpr int VEC_DIM_LOAD = ELEMENTS_PER_LOAD;
+// constexpr int WARP_SIZE = 32;
+// constexpr int THREAD_BLOCK_SIZE = 256;
+// constexpr int BLOCK_DIM_K = 16;
+// constexpr int VEC_DIM_N = 8;
+// constexpr int VEC_DIM_K = 2;
+// constexpr int VEC_DIM_M = 8;
+// constexpr int BLOCK_DIM_M = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_LOAD;
+// constexpr int BLOCK_DIM_N = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_LOAD;
+// constexpr int PAD_SIZE = 16; //BLOCK_DIM_K;
+// #else
 // using T = float;
 // #if 0
 // constexpr int BYTES_PER_LOAD = 16; // 128-bit
@@ -45,6 +62,7 @@
 // constexpr int BLOCK_DIM_M = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_LOAD;
 // constexpr int BLOCK_DIM_N = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_LOAD;
 // constexpr int PAD_SIZE = 16; //BLOCK_DIM_K;
+// #endif
 // #endif
 //
 // template<typename T>
@@ -351,7 +369,7 @@
 //     int flip_flag = 0;
 //     load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, K, ld_thread_x, ld_thread_y,
 //         start_m, 0, a, &a_sm[flip_flag][0][0]);
-//     load_tile_t<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+//     load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
 //                                                                              start_n, 0, b, &b_sm[flip_flag][0][0]);
 //     __syncthreads();
 //
@@ -368,7 +386,7 @@
 //             load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
 //                 a_ld, K, ld_thread_x, ld_thread_y,
 //                 start_m, next_k, a, &a_sm[!flip_flag][0][0]);
-//             load_tile_t<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+//             load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
 //                 start_n, next_k, b, &b_sm[!flip_flag][0][0]);
 //         }
 //         __syncthreads();
@@ -451,7 +469,7 @@
 //     float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
 //
 //     int flip_flag = 0;
-//     load_tile_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+//     load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
 //                                                                              start_m, 0, a, &a_sm[flip_flag][0][0]);
 //     load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, K, ld_thread_x, ld_thread_y,
 //         start_n, 0, b, &b_sm[flip_flag][0][0]);
@@ -467,7 +485,7 @@
 //         const int next_k = k + BLOCK_DIM_K;
 //         if (next_k < K) {
 //             //load 下一块数据到sm;
-//             load_tile_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+//             load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
 //                 start_m, next_k, a, &a_sm[!flip_flag][0][0]);
 //             load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
 //                 b_ld, K, ld_thread_x, ld_thread_y,
@@ -505,9 +523,9 @@
 //
 // #pragma unroll
 //     for (int k = 0; k < K; k += BLOCK_DIM_K) {
-//         load_tile_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+//         load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
 //             start_m, k, a, &a_sm[0][0]);
-//         load_tile_n_vec<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, K, ld_thread_x, ld_thread_y,
+//         load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, K, ld_thread_x, ld_thread_y,
 //             start_n, k, b, &b_sm[0][0]);
 //         __syncthreads();
 //         const int k_size = min(BLOCK_DIM_K, K - k);
@@ -551,9 +569,9 @@
 //     float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
 //
 //     int flip_flag = 0;
-//     load_tile_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+//     load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
 //                                                                              start_m, 0, a, &a_sm[flip_flag][0][0]);
-//     load_tile_t<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+//     load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
 //                                                                              start_n, 0, b, &b_sm[flip_flag][0][0]);
 //     __syncthreads();
 //
@@ -567,9 +585,9 @@
 //         const int next_k = k + BLOCK_DIM_K;
 //         if (next_k < K) {
 //             //load 下一块数据到sm;
-//             load_tile_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+//             load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
 //                 start_m, next_k, a, &a_sm[!flip_flag][0][0]);
-//             load_tile_t<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+//             load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
 //                 start_n, next_k, b, &b_sm[!flip_flag][0][0]);
 //         }
 //         __syncthreads();
@@ -604,9 +622,9 @@
 //
 // #pragma unroll
 //     for (int k = 0; k < K; k += BLOCK_DIM_K) {
-//         load_tile_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+//         load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
 //             start_m, k, a, &a_sm[0][0]);
-//         load_tile_t<T, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+//         load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
 //             start_n, k, b, &b_sm[0][0]);
 //         __syncthreads();
 //         const int k_size = min(BLOCK_DIM_K, K - k);
@@ -1581,7 +1599,7 @@
 //     std::mt19937 mt(42);
 //     std::uniform_real_distribution<double> dist(-4.0, 4.0);
 // #ifdef _DEBUG
-//     int dim = 1025;
+//     int dim = 512;
 //     int m = dim;
 //     int n = dim;
 //     int k = dim;
@@ -1598,17 +1616,17 @@
 //     PopulateVector<T>(a_mat, mt, dist);
 //     PopulateVector<T>(b_mat, mt, dist);
 //
-//     // sgemm_nn_func<T>(m, n, k, a_mat, b_mat, c_mat);
-//     // sgemm_nn_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
+//     sgemm_nn_func<T>(m, n, k, a_mat, b_mat, c_mat);
+//     sgemm_nn_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
 //     // // //
 //     sgemm_nt_func<T>(m, n, k, a_mat, b_mat, c_mat);
-//     // sgemm_nt_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
+//     sgemm_nt_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
 //     // // // // //
-//     // sgemm_tn_func<T>(m, n, k, a_mat, b_mat, c_mat);
-//     // sgemm_tn_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
+//     sgemm_tn_func<T>(m, n, k, a_mat, b_mat, c_mat);
+//     sgemm_tn_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
 //     // // // //
-//     // sgemm_tt_func<T>(m, n, k, a_mat, b_mat, c_mat);
-//     // sgemm_tt_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
+//     sgemm_tt_func<T>(m, n, k, a_mat, b_mat, c_mat);
+//     sgemm_tt_double_buffer<T>(m, n, k, a_mat, b_mat, c_mat);
 //     //
 //     //sgemm_wmma(m,n,k, m, n,m,a_mat,b_mat,c_mat);
 //     //sgemm_wmma_sm(m,n,k, m, n,m,a_mat,b_mat,c_mat);

@@ -80,7 +80,7 @@ namespace tff::core::graph {
                 tff::log::Logger::error("Node %s : no valid input", this->_node_metadata._name.c_str());
                 return nullptr;
             }
-            auto callback = device()->get_op_func(this->_op_type);
+            auto callback = device()->get_op_func(this->_op_type, this->data_type());
             return callback;
         };
     public:

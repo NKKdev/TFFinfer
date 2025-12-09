@@ -38,14 +38,35 @@ namespace tff::core::device::cpu {
 
     //
     std::function<tff::kernel::base::OP_CALLBACK_TYPE> DeviceCPU::get_op_func(
-        const tff::core::graph::TffOpType &op_type) {
+        const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) {
         auto it = core::global::TFF_OP_TYPE_MAP.find(op_type);
         if (it == core::global::TFF_OP_TYPE_MAP.end()) {
             tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
             return nullptr;
         }
         std::string op_name = std::string(it->second) + std::string("_") +  DEVICE_BACKEND_TYPE_CPU;
-
+        switch (data_type) {
+            case tff::core::memory::DataType::TFF_DATA_TYPE_F32:
+                op_name = op_name + +tff::utils::get_type_suffix<float>();
+                break;
+            case tff::core::memory::DataType::TFF_DATA_TYPE_F64:
+                op_name = op_name + +tff::utils::get_type_suffix<double>();
+                break;
+            case tff::core::memory::DataType::TFF_DATA_TYPE_I32:
+                op_name = op_name + +tff::utils::get_type_suffix<int32_t>();
+                break;
+            case tff::core::memory::DataType::TFF_DATA_TYPE_I64:
+                op_name = op_name + +tff::utils::get_type_suffix<int64_t>();
+                break;
+            case tff::core::memory::DataType::TFF_DATA_TYPE_I8:
+                op_name = op_name + +tff::utils::get_type_suffix<uint8_t>();
+                break;
+            case tff::core::memory::DataType::TFF_DATA_TYPE_F16:
+                op_name = op_name + +tff::utils::get_type_suffix<half>();
+                break;
+            default:
+                break;
+        }
         return tff::factory::FunctionFactory::instance()->get_callback<tff::kernel::base::OP_CALLBACK_TYPE>(OP_NODE_FLAG,
                                                                           op_name);
     }

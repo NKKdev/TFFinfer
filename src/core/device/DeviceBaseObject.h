@@ -10,6 +10,7 @@
 #include "mem/MemBufferAllocatorBaseObject.h"
 #include "graph/BaseDefine.h"
 #include "kernel/include/TFFOPCreatorBase.h"
+
 namespace tff::core::device {
     class DEEP_TFF_API DeviceBaseObject : public tff::module::ModuleObject {
     public:
@@ -36,7 +37,7 @@ namespace tff::core::device {
 
         //
         virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
-            const tff::core::graph::TffOpType &op_type) = 0;
+            const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) = 0;
 
     public:
         uint32_t _sched_priority = TFF_DEVICE_PRIORITY_DEFAULT;

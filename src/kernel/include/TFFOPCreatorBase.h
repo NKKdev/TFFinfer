@@ -8,8 +8,10 @@
 #include "FunctionFactory.h"
 #include "core/global/GlobalDefine.h"
 #include "global/ParamBaseObject.h"
+
 namespace tff::kernel::base {
-    using OP_CALLBACK_TYPE = void(std::shared_ptr<tff::core::global::ParamBaseObject>&);
+    using OP_CALLBACK_TYPE = void(std::shared_ptr<tff::core::global::ParamBaseObject> &);
+
     template<typename Derived, typename T>
     class OPCreatorBase {
     public:
@@ -34,6 +36,7 @@ namespace tff::kernel::base {
         }
     };
 }
+
 #define REGISTER_OP_OBJECT(T, type) \
 namespace { \
     struct reg_##T##_##type##_##__LINE__ { \
