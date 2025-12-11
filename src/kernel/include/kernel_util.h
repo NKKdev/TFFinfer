@@ -42,12 +42,18 @@ namespace tff::kernel {
 
     template<>
     __device__ __forceinline__ void load_vec<half>(const half *addr, half *out, int count) {
-        if (count >= 1 && reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
+        if (count == 8 && reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
             uint4 v = *reinterpret_cast<const uint4 *>(addr);
             const half *h = reinterpret_cast<const half *>(&v);
 #pragma unroll
             for (int i = 0; i < count; ++i) out[i] = h[i];
-        } else {
+        }
+        else if (count == 2 && reinterpret_cast<uintptr_t>(addr) % 4 == 0) {
+            const half2 *h = reinterpret_cast<const half2 *>(addr);
+            out[0] = h[0].x;
+            out[1] = h[0].y;
+        }
+        else {
 #pragma unroll
             for (int i = 0; i < count; ++i) out[i] = __ldg(&addr[i]);
         }

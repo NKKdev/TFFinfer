@@ -4,31 +4,34 @@
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
 #include "kernel/include/kernel_util.h"
+
 namespace tff::kernel {
     template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K,
-        const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int ELEMENTS_PER_LOAD, const int PAD_SIZE>
-    __device__ void load_tile_vec_row_major_n(const int ld, const int dim,
-                                              const int thread_x, const int warp_id,
-                                              const int start_m,
-                                              const int k,
-                                              const T *__restrict__ global_mem,
-                                              T *sm) {
+        const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int PAD_SIZE, const int ACTUAL_ELEMENTS_PER_LOAD>
+    __device__ void load_tile_vec(const int ld, const int dim,
+                                  const int thread_x, const int warp_id,
+                                  const int start_m,
+                                  const int k,
+                                  const T *__restrict__ global_mem,
+                                  T *sm) {
 #pragma unroll
         for (int j = 0; j < VEC_DIM_LD; ++j) {
             const int dim0_base = start_m + warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-            for (int kk = 0; kk < VEC_DIM_K / ELEMENTS_PER_LOAD; ++kk) {
-                const int dim1 = k + thread_x * ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD;
-                T val[ELEMENTS_PER_LOAD] = {0};
+            for (int kk = 0; kk < VEC_DIM_K / ACTUAL_ELEMENTS_PER_LOAD; ++kk) {
+                const int dim1 = k + thread_x * ACTUAL_ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
+                                 ACTUAL_ELEMENTS_PER_LOAD;
+                T val[ACTUAL_ELEMENTS_PER_LOAD] = {0};
                 if (dim0_base < dim) {
-                    const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
+                    const int actual_load = min(ACTUAL_ELEMENTS_PER_LOAD, ld - dim1);
                     if (actual_load > 0) {
                         load_vec<T>(&global_mem[dim0_base * ld + dim1], val, actual_load);
                     }
                 }
                 int sm_col = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-                int sm_row_base = thread_x * ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD;
+                int sm_row_base = thread_x * ACTUAL_ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
+                                  ACTUAL_ELEMENTS_PER_LOAD;
 #pragma unroll
-                for (int i = 0; i < ELEMENTS_PER_LOAD; ++i) {
+                for (int i = 0; i < ACTUAL_ELEMENTS_PER_LOAD; ++i) {
                     sm[sm_col + (sm_row_base + i) * (BLOCK_DIM_LD + PAD_SIZE)] = val[i];
                 }
             }
@@ -37,7 +40,7 @@ namespace tff::kernel {
 
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int PAD_SIZE>
-    __device__ void compute_tile_attention_gemm(const float scale, const int k_size, const int thread_x,
+    __device__ void compute_tile_attention_gemm(const int k_size, const int thread_x,
                                                 const int warp_id,
                                                 T *a_sm, T *b_sm,
                                                 float *c_reg) {
@@ -71,94 +74,55 @@ namespace tff::kernel {
         }
     }
 
-    template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
-        const int BLOCK_DIM_M>
-    __device__ void compute_tile_attention_softmax(const int N, const int thread_x,
-                                                   const int warp_id,
-                                                   const float scale,
-                                                   const int start_m,
-                                                   const int start_n,
-                                                   float *c_reg,
-                                                   float *max_value_global,
-                                                   float *sum_value_global,
-                                                   float *max_value,
-                                                   float *sum_value,
-                                                   float *new_max,
-                                                   float *new_sum) {
+
+    template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const
+        int
+        BLOCK_DIM_K, const int PAD_SIZE>
+    __device__ void compute_softmax_pv(const int N, const int v_ld, const int start_m, const int start_n,
+                                       const int start_d,
+                                       const int thread_x, const int warp_id,
+                                       const float scale, float *g_max_value, float *g_sum_value, T *sm, float *c_reg,
+                                       float *output) {
         const int base_n = start_n + thread_x;
-        //#pragma unroll
+        const int valid_n = min(VEC_DIM_N, (N - base_n + 31) / 32);
+
         for (int mm = 0; mm < VEC_DIM_M; mm++) {
-            float old_max = max_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
-            float old_sum = sum_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
+            const float old_max = g_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
+            const float old_sum = g_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
+            float max_value = {-1e20f};
+            float sum_value = {0.0f};
+            float new_max_value = {-1e20f};
+            float new_sum_value = {0.0f};
 
-            //#pragma unroll
-            for (int nn = 0; nn < VEC_DIM_N; nn++) {
-                if ((nn * 32 + base_n) < N) {
-                    c_reg[mm * VEC_DIM_N + nn] *= scale;
-                    max_value[mm] = fmaxf(max_value[mm], c_reg[mm * VEC_DIM_N + nn]);
-                }
+            for (int nn = 0; nn < valid_n; nn++) {
+                c_reg[mm * VEC_DIM_N + nn] *= scale;
+                max_value = fmaxf(max_value, c_reg[mm * VEC_DIM_N + nn]);
             }
 #pragma unroll
             for (int offset = 16; offset > 0; offset /= 2) {
-                max_value[mm] = fmaxf(max_value[mm], __shfl_xor_sync(0xffffffff, max_value[mm], offset, 32));
+                max_value = fmaxf(max_value, __shfl_xor_sync(0xffffffff, max_value, offset, 32));
             }
-
-            //#pragma unroll
-            for (int nn = 0; nn < VEC_DIM_N; nn++) {
-                if ((nn * 32 + base_n) < N) {
-                    c_reg[mm * VEC_DIM_N + nn] = expf(c_reg[mm * VEC_DIM_N + nn] - max_value[mm]);
-                    sum_value[mm] += c_reg[mm * VEC_DIM_N + nn];
-                }
+            //
+            for (int nn = 0; nn < valid_n; nn++) {
+                c_reg[mm * VEC_DIM_N + nn] = expf(c_reg[mm * VEC_DIM_N + nn] - max_value);
+                sum_value += c_reg[mm * VEC_DIM_N + nn];
             }
 
 #pragma unroll
             for (int offset = 16; offset > 0; offset /= 2) {
-                sum_value[mm] += __shfl_xor_sync(0xffffffff, sum_value[mm], offset, 32);
+                sum_value += __shfl_xor_sync(0xffffffff, sum_value, offset, 32);
             }
-            new_max[mm] = fmaxf(max_value[mm], old_max);
-            new_sum[mm] = sum_value[mm] * expf(max_value[mm] - new_max[mm]) + old_sum * expf(old_max - new_max[mm]);
-        }
-    }
 
-    template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
-        const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
-    __device__ void compute_tile_attention_pv(const int N, const int v_ld,
-                                              const int thread_x,
-                                              const int warp_id,
-                                              const int start_m,
-                                              const int start_n,
-                                              const T *v_sm,
-                                              float *c_reg,
-                                              float *old_max_value,
-                                              float *old_sum_value,
-                                              float *current_max_value,
-                                              float *current_sum_value,
-                                              float *new_max_value,
-                                              float *new_sum_value,
-                                              float *output) {
-        const int base_n = start_n + thread_x;
-        for (int kk = 0; kk < BLOCK_DIM_K; kk++) {
-            //#pragma unroll
-            for (int mm = 0; mm < VEC_DIM_M; mm++) {
-                float old_max = old_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
-                float old_sum = old_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
+            new_max_value = fmaxf(max_value, old_max);
+            new_sum_value = sum_value * expf(max_value - new_max_value) + old_sum * expf(
+                                old_max - new_max_value);
+
+            for (int kk = start_d; kk < BLOCK_DIM_K; kk++) {
                 float acc = 0.0f;
-                //#pragma unroll
-                for (int nn = 0; nn < VEC_DIM_N; nn++) {
-                    float v_reg = 0.0f;
-                    if constexpr (std::is_same_v<T, half>) {
-                        v_reg = __half2float(
-                            v_sm[kk * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
-                    } else if constexpr (std::is_same_v<T, float>) {
-                        v_reg = v_sm[kk * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N];
-                    }
-                    if ((nn * 32 + base_n) < N) {
-                        acc += v_reg * c_reg[mm * VEC_DIM_N + nn];
-                    }
-                    // if (kk == 0 && thread_x == 0 && warp_id == 0 && blockIdx.x == 0) {
-                    //     printf("mm: %d, nn: %d, v_reg: %lf, c_reg[%d]: %lf, acc: %lf \n", mm, nn, v_reg,
-                    //            mm * VEC_DIM_N + nn, c_reg[mm * VEC_DIM_N + nn], acc);
-                    // }
+                for (int nn = 0; nn < valid_n; nn++) {
+                    float v_reg = __half2float(
+                        sm[kk * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
+                    acc += v_reg * c_reg[mm * VEC_DIM_N + nn];
                 }
 #pragma unroll
                 for (int offset = 16; offset > 0; offset /= 2) {
@@ -166,137 +130,177 @@ namespace tff::kernel {
                 }
 
                 output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] =
-                        output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * expf(
-                            old_max - new_max_value[mm]) +
-                        acc * expf(current_max_value[mm] - new_max_value[mm]);
+                (output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * old_sum * expf(
+                     old_max - new_max_value) +
+                 acc * expf(max_value - new_max_value)) / new_sum_value;
             }
+            g_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_max_value;
+            g_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_sum_value;
         }
     }
 
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
-        const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
-    __global__ void flash_attention_cuda(const int M, const int N, const int D,
-                                         const int q_ld, const int k_ld, const int v_ld,
-                                         const float scale,
-                                         const int start_n,
-                                         const int n_block_size,
-                                         const T *__restrict__ q_global,
-                                         const T *__restrict__ k_global,
-                                         const T *__restrict__ v_global,
-                                         float *__restrict__ max_value_global,
-                                         float *__restrict__ sum_value_global,
-                                         float *out_put) {
+        const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE,
+        const int ELEMENTS_PER_LOAD>
+    __global__ void flash_attention(const int M, const int N, const int D,
+                                    const int q_ld, const int k_ld, const int v_ld,
+                                    const float scale,
+                                    const int num_q_heads, const int num_kv_heads,
+                                    const T *__restrict__ q_global,
+                                    const T *__restrict__ k_global,
+                                    const T *__restrict__ v_global,
+                                    float *__restrict__ max_value_global,
+                                    float *__restrict__ sum_value_global,
+                                    float *out_put) {
         const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
         const int ld_thread_block_n = BLOCK_DIM_K / VEC_DIM_K;
         const int thread_x = thread_id % ld_thread_block_n;
         const int warp_id = thread_id / ld_thread_block_n;
-        //const int warp_group_id = thread_id / 128;
+
 
         const int block_x = blockIdx.x;
         const int start_m = block_x * BLOCK_DIM_M;
 
-        __shared__ T sm[2][BLOCK_DIM_K][BLOCK_DIM_M + PAD_SIZE];
-        float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
+        const T *q = q_global + (blockIdx.z * num_q_heads + blockIdx.y) * M * D;
+        const int kv_group_per_q = num_q_heads / num_kv_heads;
+        const int kv_group_start_index = blockIdx.y / kv_group_per_q;
+        const T *k = k_global + (blockIdx.z * num_kv_heads + kv_group_start_index) * N * D;
+        const T *v = v_global + (blockIdx.z * num_kv_heads + kv_group_start_index) * N * D;
+        float *output = out_put + (blockIdx.z * num_q_heads + blockIdx.y) * M * D;
+        float *g_max_value = max_value_global + (blockIdx.z * num_q_heads + blockIdx.y) * M;
+        float *g_sum_value = sum_value_global + (blockIdx.z * num_q_heads + blockIdx.y) * M;
 
-        for (int d = 0; d < D; d += BLOCK_DIM_K) {
-            //加载当前q块;
-            load_tile_vec_row_major_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
-                q_ld, M, thread_x, warp_id, start_m, d,
-                q_global, &sm[0][0][0]);
-            load_tile_vec_row_major_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
-                k_ld, N, thread_x, warp_id, start_n, d,
-                k_global, &sm[1][0][0]);
-
-            __syncthreads();
+        __shared__ T sm[2][2][BLOCK_DIM_K][BLOCK_DIM_M + PAD_SIZE];
 
 
+        int flip_flag = 0;
+        load_tile_vec<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+            q_ld, M, thread_x, warp_id, start_m, 0,
+            q, &sm[0][0][0][0]);
+        load_tile_vec<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+            k_ld, N, thread_x, warp_id, 0, 0,
+            k, &sm[flip_flag][1][0][0]);
+        __syncthreads();
+
+        const int n_stage = (N + BLOCK_DIM_N - 1) / BLOCK_DIM_N;
+
+        for (int n = 0; n < n_stage; n++) {
+            int n_start = n * BLOCK_DIM_N;
+            float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
+
+            int d = 0;
             const int k_size = min(BLOCK_DIM_K, D - d);
             compute_tile_attention_gemm<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
-                scale, k_size, thread_x, warp_id, &sm[0][0][0], &sm[1][0][0], c_reg);
+                k_size, thread_x, warp_id, &sm[0][0][0][0], &sm[flip_flag][1][0][0], c_reg);
 
-            __syncthreads();
-
-            load_tile_vec_row_major_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
-                v_ld, N, thread_x, warp_id, start_n, d,
-                v_global, &sm[1][0][0]);
-            __syncthreads();
-
-            const int base_n = start_n + thread_x;
-            const int valid_n = min(VEC_DIM_N, (N - base_n + 31) / 32);
-
-            for (int mm = 0; mm < VEC_DIM_M; mm++) {
-                float old_max = max_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
-                float old_sum = sum_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
-                float max_value = {-1e20f};
-                float sum_value = {0.0f};
-                float new_max_value = {-1e20f};
-                float new_sum_value = {0.0f};
-
-                for (int nn = 0; nn < valid_n; nn++) {
-                    c_reg[mm * VEC_DIM_N + nn] *= scale;
-                    max_value = fmaxf(max_value, c_reg[mm * VEC_DIM_N + nn]);
-                }
-#pragma unroll
-                for (int offset = 16; offset > 0; offset /= 2) {
-                    max_value = fmaxf(max_value, __shfl_xor_sync(0xffffffff, max_value, offset, 32));
-                }
-                //
-                for (int nn = 0; nn < valid_n; nn++) {
-                    c_reg[mm * VEC_DIM_N + nn] = expf(c_reg[mm * VEC_DIM_N + nn] - max_value);
-                    sum_value += c_reg[mm * VEC_DIM_N + nn];
-                }
-
-#pragma unroll
-                for (int offset = 16; offset > 0; offset /= 2) {
-                    sum_value += __shfl_xor_sync(0xffffffff, sum_value, offset, 32);
-                }
-
-                new_max_value = fmaxf(max_value, old_max);
-                new_sum_value = sum_value * expf(max_value - new_max_value) + old_sum * expf(
-                                    old_max - new_max_value);
-
-                for (int kk = d; kk < BLOCK_DIM_K; kk++) {
-                    float acc = 0.0f;
-                    for (int nn = 0; nn < valid_n; nn++) {
-                        float v_reg = __half2float(
-                            sm[1][kk][thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
-                        acc += v_reg * c_reg[mm * VEC_DIM_N + nn];
-                    }
-#pragma unroll
-                    for (int offset = 16; offset > 0; offset /= 2) {
-                        acc += __shfl_xor_sync(0xffffffff, acc, offset, 32);
-                    }
-
-                    out_put[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] =
-                    (out_put[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * old_sum * expf(
-                         old_max - new_max_value) +
-                     acc * expf(max_value - new_max_value)) / new_sum_value;
-                }
-                max_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_max_value;
-                sum_value_global[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_sum_value;
+            const int next_n = (n + 1) * BLOCK_DIM_N;
+            if (next_n < N) {
+                load_tile_vec<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+                    k_ld, N, thread_x, warp_id, next_n, 0,
+                    k, &sm[!flip_flag][1][0][0]);
             }
+            __syncthreads();
+
+            load_tile_vec<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+                v_ld, N, thread_x, warp_id, n_start, d,
+                v, &sm[flip_flag][1][0][0]);
+            __syncthreads();
+
+            compute_softmax_pv<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
+                N, v_ld, start_m, n_start, d, thread_x, warp_id, scale, g_max_value,
+                g_sum_value, &sm[flip_flag][1][0][0], &c_reg[0], output);
+            __syncthreads();
+            flip_flag ^= 1;
+        }
+    }
+
+    template<typename T>
+    void flash_attention_64(const int batch, const int M, const int N, const int D,
+                            const int q_ld, const int k_ld, const int v_ld,
+                            const float scale,
+                            const int num_q_heads, const int num_kv_heads,
+                            const T *q_gpu,
+                            const T *k_gpu,
+                            const T *v_gpu,
+                            float *out_put) {
+        if (std::is_same_v<T, half>) {
+            constexpr int ELEMENTS_PER_LOAD = 2;
+            constexpr int THREAD_BLOCK_SIZE = 256;
+            constexpr int BLOCK_DIM_K = 64;
+            constexpr int VEC_DIM_N = 2;
+            constexpr int VEC_DIM_K = 2;
+            constexpr int VEC_DIM_M = 8;
+            constexpr int BLOCK_DIM_M = 64;
+            constexpr int BLOCK_DIM_N = 64;
+            constexpr int PAD_SIZE = 1;
+            dim3 grid((M + BLOCK_DIM_M - 1) / BLOCK_DIM_M, num_q_heads, batch);
+            dim3 block(THREAD_BLOCK_SIZE);
+            float *max_value_global;
+            float *sum_value_global;
+            flash_attention<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE,
+                        ELEMENTS_PER_LOAD><<<grid
+                    , block>>>(
+                        M, N, D,
+                        D, D, D,
+                        (1.0f / std::sqrt(static_cast<float>(D))),
+                        num_q_heads,
+                        num_kv_heads,
+                        q_gpu, k_gpu, v_gpu,
+                        max_value_global, sum_value_global, out_put);
+        } else if (std::is_same_v<T, float>) {
+            //todo
         }
     }
 
     //
     template<typename T>
     void tff::kernel::FlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        //auto name = para_ptr->get_param<std::string>(0);
-        tff::log::Logger::info("layer node, op:%s compute!", tff::kernel::FlashAttn<T>::get_op_name().c_str());
+        const auto &name = get_param_value<std::string>(0, para_ptr);
+        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), FlashAttn<T>::get_op_name().c_str());
+        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            1, para_ptr);
+        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            2, para_ptr);
+        std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
+            std::shared_ptr<
+                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
 
-        constexpr int ELEMENTS_PER_LOAD = 2;
-        constexpr int WARP_SIZE = 32;
-        constexpr int THREAD_BLOCK_SIZE = 256;
-        constexpr int BLOCK_DIM_K = 64;
-        constexpr int VEC_DIM_N = 2;
-        constexpr int VEC_DIM_K = 2;
-        constexpr int VEC_DIM_M = 8;
-        constexpr int BLOCK_DIM_M = 64; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_M;
-        constexpr int BLOCK_DIM_N = 64; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_N;
-        constexpr int PAD_SIZE = 1; //BLOCK_DIM_K;
-
-
+        if (input_tensors.size() != 3) {
+            tff::log::Logger::error("memcpy kernel param is invalid!");
+            return;
+        }
+        if (output_tensors.size() != 1) {
+            tff::log::Logger::error("memcpy kernel param is invalid!");
+            return;
+        }
+        auto q_tensor = input_tensors.at(0);
+        auto k_tensor = input_tensors.at(1);
+        auto v_tensor = input_tensors.at(2);
+        auto output = output_tensors.at(0);
+        const int num_q_heads = q_tensor->get_shape()[2];
+        const int num_kv_heads = k_tensor->get_shape()[2];
+        const int M = q_tensor->get_shape()[1];
+        const int N = k_tensor->get_shape()[1];
+        const int D = q_tensor->get_shape()[0];
+        const int B = q_tensor->get_shape()[3];
+        const float scale = 1.0f / std::sqrt(static_cast<float>(D));
+        switch (D) {
+            case 64:
+                flash_attention_64<T>(B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
+                                      static_cast<T*>(q_tensor->get_buffer()->ptr()),
+                                      static_cast<T*>(k_tensor->get_buffer()->ptr()),
+                                      static_cast<T*>(v_tensor->get_buffer()->ptr()),
+                                      static_cast<float*>(output->get_buffer()->ptr()));
+                break;
+            case 128:
+                break;
+            case 256:
+                break;
+            default:
+                break;
+        }
     }
+
     template<typename T>
     std::string tff::kernel::FlashAttn<T>::get_op_name() {
         auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
@@ -309,15 +313,11 @@ namespace tff::kernel {
 
         return name;
     }
-    template class tff::kernel::FlashAttn<float>;
-    template class tff::kernel::FlashAttn<double>;
-    template class tff::kernel::FlashAttn<int32_t>;
-    template class tff::kernel::FlashAttn<int64_t>;
-    REGISTER_OP_OBJECT(FlashAttn, float);
 
-    REGISTER_OP_OBJECT(FlashAttn, double);
+    //template class tff::kernel::FlashAttn<float>;//todo
+    template class tff::kernel::FlashAttn<half>;
+    //REGISTER_OP_OBJECT(FlashAttn, float);
 
-    REGISTER_OP_OBJECT(FlashAttn, int32_t);
+    REGISTER_OP_OBJECT(FlashAttn, half);
 
-    REGISTER_OP_OBJECT(FlashAttn, int64_t);
 }
