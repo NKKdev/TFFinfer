@@ -37,7 +37,7 @@ constexpr int VEC_DIM_K = 2;
 constexpr int VEC_DIM_M = 8;
 constexpr int BLOCK_DIM_M = 64; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_M;
 constexpr int BLOCK_DIM_N = 64; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_N;
-constexpr int PAD_SIZE = 0; //BLOCK_DIM_K;
+constexpr int PAD_SIZE = 2; //BLOCK_DIM_K;
 #endif
 
 template<typename T>
@@ -167,7 +167,7 @@ __device__ void compute_tile_attention_gemm(const int k_size, const int thread_x
 }
 template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
     const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
-__device__ void compute_tile_attention_gemm_with_rope(const int k_size, const int thread_x, const int warp_id,
+__device__ void compute_tile_attention_gemm_with_rope_opt(const int k_size, const int thread_x, const int warp_id,
     const int start_m, const int start_n,
                                             T *a_sm, T *b_sm, float *cos_sin_sm,
                                             float *c_reg) {
@@ -175,10 +175,9 @@ __device__ void compute_tile_attention_gemm_with_rope(const int k_size, const in
     auto *k_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_n * BLOCK_DIM_K);
 #pragma unroll
     for (int kk = 0; kk < k_size; kk += 2) {
-
 #pragma unroll
         for (int mm = 0; mm < VEC_DIM_M; mm++) {
-            float2 a_cos_sin_coef = q_cos_sin_table_ptr[kk / 2 + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K + PAD_SIZE) / 2];
+            float2 a_cos_sin_coef = q_cos_sin_table_ptr[kk / 2 + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K) / 2];
 
             float a_reg[2] = {0.0f};
             a_reg[0] = __half2float(
@@ -192,7 +191,7 @@ __device__ void compute_tile_attention_gemm_with_rope(const int k_size, const in
 
 #pragma unroll
             for (int nn = 0; nn < VEC_DIM_N; nn++) {
-                float2 b_cos_sin_coef = k_cos_sin_table_ptr[kk / 2 + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K + PAD_SIZE) / 2];
+                float2 b_cos_sin_coef = k_cos_sin_table_ptr[kk / 2 + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K) / 2];
 
                 float b_reg[2] = {0.0f};
                 b_reg[0] = __half2float(
@@ -208,6 +207,47 @@ __device__ void compute_tile_attention_gemm_with_rope(const int k_size, const in
         }
     }
 }
+template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
+    const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
+__device__ void compute_tile_attention_gemm_with_rope(const int k_size, const int thread_x, const int warp_id,
+    const int start_m, const int start_n,
+                                            T *a_sm, T *b_sm, float *cos_sin_sm,
+                                            float *c_reg) {
+    auto *q_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_m * BLOCK_DIM_K);
+    auto *k_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_n * BLOCK_DIM_K);
+    auto *q_sm_ptr = reinterpret_cast<half2 *>(a_sm);
+#pragma unroll
+    for (int kk = 0; kk < k_size; kk += 2) {
+#pragma unroll
+        for (int mm = 0; mm < VEC_DIM_M; mm++) {
+            float2 a_cos_sin_coef = q_cos_sin_table_ptr[kk / 2 + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K) / 2];
+
+            float2 a_reg = __half22float2(
+                    q_sm_ptr[(kk / 2)+ (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K + PAD_SIZE) / 2]);
+
+
+            float tmp = a_reg.x * a_cos_sin_coef.x - a_reg.y * a_cos_sin_coef.y;
+            a_reg.y = a_reg.x * a_cos_sin_coef.y + a_reg.y * a_cos_sin_coef.x;
+            a_reg.x = tmp;
+
+#pragma unroll
+            for (int nn = 0; nn < VEC_DIM_N; nn++) {
+                float2 b_cos_sin_coef = k_cos_sin_table_ptr[kk / 2 + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K) / 2];
+
+                float b_reg[2] = {0.0f};
+                b_reg[0] = __half2float(
+                        b_sm[(kk) * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
+                b_reg[1] = __half2float(
+                        b_sm[(kk + 1) * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
+
+                float tmp = b_reg[0] * b_cos_sin_coef.x - b_reg[1] * b_cos_sin_coef.y;
+                b_reg[1] = b_reg[0] * b_cos_sin_coef.y + b_reg[1] * b_cos_sin_coef.x;
+                b_reg[0] = tmp;
+                c_reg[mm * VEC_DIM_N + nn] += a_reg.x * b_reg[0] + a_reg.y * b_reg[1];
+            }
+        }
+    }
+}
 template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int
     BLOCK_DIM_K, const int PAD_SIZE>
 __device__ void compute_softmax_pv(const int N, const int v_ld, const int start_m, const int start_n, const int start_d,
@@ -216,7 +256,7 @@ __device__ void compute_softmax_pv(const int N, const int v_ld, const int start_
                                    float *output) {
     const int base_n = start_n + thread_x;
     const int valid_n = min(VEC_DIM_N, (N - base_n + 31) / 32);
-
+#pragma unroll
     for (int mm = 0; mm < VEC_DIM_M; mm++) {
         const float old_max = g_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
         const float old_sum = g_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
@@ -254,11 +294,6 @@ __device__ void compute_softmax_pv(const int N, const int v_ld, const int start_
                 float v_reg = __half2float(
                     sm[kk * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
                 acc += v_reg * c_reg[mm * VEC_DIM_N + nn];
-
-                // if (kk == 0 && thread_x == 0 && warp_id == 0 && blockIdx.x == 0) {
-                //     printf("mm: %d, nn: %d, v_reg: %lf, c_reg[%d]: %lf, acc: %lf \n", mm, nn, v_reg,
-                //            mm * VEC_DIM_N + nn, c_reg[mm * VEC_DIM_N + nn], acc);
-                // }
             }
 #pragma unroll
             for (int offset = 16; offset > 0; offset /= 2) {
@@ -311,7 +346,7 @@ __global__ void flash_attention(const int M, const int N, const int D,
     __shared__ T sm[shared_mem_block_size * 3];//2 * kv + 1 * q;(k, v共享一块shared mem)
 
     int flip_flag = 0;
-    load_tile_vec_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
+    load_tile_vec_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
         q_ld, M, thread_x, warp_id, start_m, 0,
         q, &sm[shared_mem_block_size * 2]);
     load_tile_vec_t<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
@@ -759,7 +794,7 @@ int main(int argc, char *argv) {
     std::mt19937 mt(42);
     std::uniform_real_distribution<double> dist(-4.0, 4.0);
 #ifdef _DEBUG
-    int dim = 1024;
+    int dim = 512;
     int m = dim;
     int n = dim;
     int k = 64;
@@ -807,7 +842,14 @@ int main(int argc, char *argv) {
     PopulateVector<T>(a_mat, mt, dist);
     PopulateVector<T>(b_mat, mt, dist);
     PopulateVector<T>(c_mat, mt, dist);
-    flash_attention<T>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat);
+    auto angles = precompute_rope_tables(std::max(m, n), k);
+    std::vector<float> cos_table(angles.size()), sin_table(angles.size());
+    for (size_t i = 0; i < angles.size(); ++i) {
+        cos_table[i] = std::cos(angles[i]);
+        sin_table[i] = std::sin(angles[i]);
+    }
+
+    flash_attention<T, 1>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table);
 #endif
 
 
