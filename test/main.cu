@@ -14,7 +14,7 @@ static void rtrim(std::string& s) {
     );
 }
 
-int main1(int argc,char *argv[]) {
+int main(int argc,char *argv[]) {
     std::string model_config_file_path(argv[1]);
     std::string model_file(argv[2]);
     tff::core::runtime::LLMInferRuntime llm_runtime;
@@ -26,7 +26,11 @@ int main1(int argc,char *argv[]) {
     std::vector<std::string> model_files;
     model_files.push_back(model_file);
     llm_runtime.load_model(model_files, cfg);
-    llm_runtime.init_runtime_context();
+    bool bRet = llm_runtime.init_runtime_context();
+    if (!bRet) {
+        printf("llm_runtime.init_runtime_context() failed\n");
+        return -1;
+    }
 
     std::string prompt0 = "Hello my name is";
     std::string prompt1 = "What is your name";

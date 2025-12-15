@@ -10,7 +10,7 @@
 #include "global/OPDefine.h"
 #include "global/GlobalDefine.h"
 namespace tff::core::memory {
-#define INVALID_PAGE_ID (-1)
+#define INVALID_PAGE_ID uint64_t(-1)
 #define PAGE_SIZE 32
 #define MAX_TOKENS
     using PageID = uint64_t;
@@ -35,7 +35,7 @@ namespace tff::core::memory {
             _pages.resize(total_pages);
             for (int i = 0; i < total_pages; ++i) {
                 _pages[i] = std::make_unique<KVPage>();
-                std::vector<int64_t> shapes = {static_cast<int64_t>(_d_h), static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size)};
+                std::array<int64_t, MAX_TENSOR_DIM> shapes = {static_cast<int64_t>(_d_h), static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size)};
                 _pages[i]->_k = std::make_unique<tff::core::memory::Tensor>(data_type, shapes, false, allocator);
                 _pages[i]->_v = std::make_unique<tff::core::memory::Tensor>(data_type, shapes, false, allocator);
                 _pages[i]->_n_tokens = 0;

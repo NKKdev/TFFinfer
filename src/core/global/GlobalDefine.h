@@ -38,6 +38,7 @@
 #define OP_NODE_FLAG "OP_NODE"
 //
 #define MAX_PREFETCH_BUFFER_SIZE 32
+#define MAX_TENSOR_DIM 4
 namespace tff::core::global {
 
     //

@@ -58,5 +58,12 @@ namespace tff::kernel {
             for (int i = 0; i < count; ++i) out[i] = __ldg(&addr[i]);
         }
     }
+
+    __device__ __forceinline__ half2 complex_mul_half2(const half2& a, const half2& b) {
+        half2 res;
+        res.x = __hsub(__hmul(a.x, b.x), __hmul(a.y, b.y));
+        res.y = __hadd(__hmul(a.x, b.y), __hmul(a.y, b.x));
+        return res;
+    }
 }
 #endif //TFFINFER_KERNEL_UTIL_H

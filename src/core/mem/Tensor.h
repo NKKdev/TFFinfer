@@ -10,7 +10,7 @@
 #include <mutex>
 #include "Memory.h"
 #include "BaseDefine.h"
-
+#include "global/GlobalDefine.h"
 namespace tff::core::memory {
     class Tensor :public std::enable_shared_from_this<Tensor>{
     public:
@@ -22,7 +22,7 @@ namespace tff::core::memory {
 
     public:
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
-               std::vector<int64_t> shapes = std::vector<int64_t>(), bool use_external = false,
+               std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(), bool use_external = false,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
@@ -31,7 +31,6 @@ namespace tff::core::memory {
                 tff::log::Logger::error("tensor shape is invalid!!");
                 return;
             }
-            this->_strides.resize(this->_shape.size());
             this->set_dims(_shape.size());
             for (size_t i = 0; i < this->_shape.size(); ++i) {
                 this->set_shape(this->_shape[i], i);
@@ -101,7 +100,6 @@ namespace tff::core::memory {
             other._is_allocated = false;
             other._use_external = false;
             other._n_dims = 0;
-            other._shape.clear();
             return *this;
         }
 
@@ -174,12 +172,12 @@ namespace tff::core::memory {
         }
 
         //
-        inline std::vector<int64_t> &get_shape() {
+        inline std::array<int64_t, MAX_TENSOR_DIM> &get_shape() {
             return _shape;
         }
 
         //
-        inline std::vector<int64_t> &get_strides() {
+        inline std::array<int64_t, MAX_TENSOR_DIM> &get_strides() {
             return this->_strides;
         }
 
@@ -189,7 +187,7 @@ namespace tff::core::memory {
         }
 
         //
-        inline void set_shape(const std::vector<int64_t> &shape) {
+        inline void set_shape(const std::array<int64_t, MAX_TENSOR_DIM> &shape) {
             this->_shape = shape;
             this->set_dims(this->_shape.size());
         }
@@ -246,7 +244,6 @@ namespace tff::core::memory {
 
         //
         inline void release() {
-            _shape.clear();
             if (_buffer) {
                 _allocator->release(_buffer->ptr());
             }
@@ -348,8 +345,8 @@ namespace tff::core::memory {
         tff::core::memory::ModelTensorType _tensor_type;
         size_t _type_size{};
         uint32_t _blk_size{};
-        std::vector<int64_t> _shape;
-        std::vector<int64_t> _strides;
+        std::array<int64_t, MAX_TENSOR_DIM> _shape;
+        std::array<int64_t, MAX_TENSOR_DIM> _strides;
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
 

@@ -227,7 +227,7 @@ namespace tff::core::runtime {
         auto &tokens_data = batch->_tokens;
         auto &input_pos = batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-                                                                        std::vector<int64_t>{
+                                                                        std::array<int64_t, MAX_TENSOR_DIM>{
                                                                             static_cast<int64_t>(tokens_data.size())
                                                                         }, true);
         token_tensor->set_buffer_data(tokens_data.data(),
@@ -237,7 +237,7 @@ namespace tff::core::runtime {
 
         auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(
             tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-            std::vector<int64_t>{static_cast<int64_t>(input_pos.size())}, true);
+            std::array<int64_t, MAX_TENSOR_DIM>{static_cast<int64_t>(input_pos.size())}, true);
         input_pos_tensor->set_buffer_data(input_pos.data(),
                                           input_pos.size() * memory::type_traits_auto[
                                               tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);

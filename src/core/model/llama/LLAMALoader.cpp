@@ -160,12 +160,11 @@ namespace tff::core::model {
                 throw std::runtime_error("Invalid tensor shape dimension count");
                 continue;
             }
-            std::vector<int64_t> shapes(n_dims);
+            std::array<int64_t, MAX_TENSOR_DIM> shapes;
             for (size_t j = 0; j < n_dims; j++) {
                 int64_t shape_dim = 0;
                 file_loader->read(shape_dim);
                 shapes[j] = shape_dim;
-                //tensor_info._tensor_ptr->set_shape(shape_dim, j);
             }
             //
             int32_t data_type = 0;
