@@ -234,7 +234,10 @@ namespace tff::core::global {
         {tff::core::memory::LLM_TENSOR_OUTPUT, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
         {tff::core::memory::LLM_TENSOR_CLS, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
         {tff::core::memory::LLM_TENSOR_CLS_OUT, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}},
-        {tff::core::memory::LLM_TENSOR_OUTPUT_NORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}},
+        {
+            tff::core::memory::LLM_TENSOR_OUTPUT_NORM,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
+        },
         {
             tff::core::memory::LLM_TENSOR_DEC_OUTPUT_NORM,
             {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
@@ -516,8 +519,14 @@ namespace tff::core::global {
             tff::core::memory::LLM_TENSOR_SSM_C_NORM,
             {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
         },
-        {tff::core::memory::LLM_TENSOR_SSM_D, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}},
-        {tff::core::memory::LLM_TENSOR_SSM_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}},
+        {
+            tff::core::memory::LLM_TENSOR_SSM_D,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
+        },
+        {
+            tff::core::memory::LLM_TENSOR_SSM_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
+        },
         {
             tff::core::memory::LLM_TENSOR_TIME_MIX_LERP_X,
             {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
@@ -606,7 +615,10 @@ namespace tff::core::global {
             tff::core::memory::LLM_TENSOR_ATTN_POST_NORM,
             {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
         },
-        {tff::core::memory::LLM_TENSOR_FFN_NORM, {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}},
+        {
+            tff::core::memory::LLM_TENSOR_FFN_NORM,
+            {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
+        },
         {
             tff::core::memory::LLM_TENSOR_FFN_POST_NORM,
             {LLM_TENSOR_LAYER_REPEATING, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
@@ -844,7 +856,10 @@ namespace tff::core::global {
             tff::core::memory::LLM_TENSOR_NEXTN_ENORM,
             {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_GET_ROWS}
         },
-        {tff::core::memory::LLM_TENSOR_NEXTN_HNORM, {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}},
+        {
+            tff::core::memory::LLM_TENSOR_NEXTN_HNORM,
+            {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
+        },
         {
             tff::core::memory::LLM_TENSOR_NEXTN_SHARED_HEAD_HEAD,
             {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MUL_MAT}
@@ -1068,6 +1083,11 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_MEM_CPY, "memcpy"},
         {tff::core::graph::TffOpType::TFF_OP_MEM_REF, "mem_ref"},
         {tff::core::graph::TffOpType::TFF_OP_EMBEDDING, "embedding"},
+        //quant
+        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8, "quantize_q8"},
+        {tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8, "dequantize_q8"},
+        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_RESHAPE, "quantize_q8_reshape"},
+        {tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8_RESHAPE, "dequantize_q8_reshape"},
     };
 
     template<typename T>
@@ -1186,6 +1206,20 @@ namespace tff::core::global {
             result.push_back(0);
         }
         return result;
+    }
+    //
+    template<typename T>
+    constexpr const char *get_type_suffix() {
+        if constexpr (std::is_same_v<T, float>) return "f32";
+        else if constexpr (std::is_same_v<T, double>) return "f64";
+        else if constexpr (std::is_same_v<T, int8_t>) return "i8";
+        else if constexpr (std::is_same_v<T, uint8_t>) return "u8";
+        else if constexpr (std::is_same_v<T, int16_t>) return "i16";
+        else if constexpr (std::is_same_v<T, int32_t>) return "i32";
+        else if constexpr (std::is_same_v<T, int64_t>) return "i64";
+        else if constexpr (std::is_same_v<T, half>) return "fp16";
+        else if constexpr (std::is_same_v<T, Q8_0>) return "q8_0";
+        else return "unknown";
     }
 }
 #endif //TFFINFER_MODELGLOBALVAR_H

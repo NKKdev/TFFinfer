@@ -24,7 +24,7 @@ namespace tff::core::runtime {
         std::unordered_map<std::shared_ptr<tff::core::graph::GraphNode>, tf::Task> node_to_task;
         node_to_task.reserve(topo.size());
         for (const auto& node : topo) {
-            //tff::log::Logger::info("layer node: %s build op callback\n", node->name().c_str());
+            tff::log::Logger::info("layer node: %s build op callback\n", node->name().c_str());
             if (!node || !node->device()) {
                 continue;
             }

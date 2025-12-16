@@ -57,11 +57,12 @@ namespace tff::core::runtime {
     bool LLMInferRuntime::init_runtime_context() {
         //
         tff::core::memory::LLMKVCache::KVConfig kv_cfg;
-        kv_cfg._n_embd_head = this->_model_config._n_embd;
-        kv_cfg._n_head = this->_model_config._n_head_arr.size();
-        kv_cfg._n_head_kv = this->_model_config._n_embd_head_k;
+        kv_cfg._n_embd_head = this->_model_config._n_embd_head_k;
+        kv_cfg._n_head = this->_model_config._n_head_arr[0];
+        kv_cfg._n_head_kv = this->_model_config._n_head_kv_arr[0];
         kv_cfg._n_layer = this->_model_config._n_layer;
         kv_cfg._use_sliding_window = this->_model_config._n_swa != 0;
+        kv_cfg._max_seq_len = this->_model_config._n_ctx;
 
         const auto device = *this->_devices.begin();
         if (!device) {
@@ -69,8 +70,8 @@ namespace tff::core::runtime {
             return false;
         }
         //
-        const float one_page_size = 2 * kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE *
-                                    tff::core::memory::type_traits_auto[this->_model_config._kv_data_type]._type_size;
+        const float one_page_size = kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE *
+                                    memory::type_traits_auto[memory::DataType::TFF_DATA_TYPE_F32]._type_size;
         tff::log::Logger::info("KV Cache: Size per page: {%lf} bytes", one_page_size);
 
         //
@@ -105,7 +106,7 @@ namespace tff::core::runtime {
         }
 
         //计算总页数并创建KV Cache
-        kv_cfg._total_pages = static_cast<int>(free_mem_sum / one_page_size);
+        kv_cfg._total_pages = min(static_cast<int>(free_mem_sum / one_page_size), kv_cfg._max_seq_len / PAGE_SIZE);
         tff::log::Logger::info("KV Cache: Total available free memory for KV: {%lld} bytes",
                                static_cast<size_t>(free_mem_sum));
         tff::log::Logger::info("KV Cache: Total pages calculated: {%d} ({%lld} bytes per page)",
@@ -119,7 +120,7 @@ namespace tff::core::runtime {
         }
 
         try {
-            this->_kv_cache_ptr = std::make_unique<tff::core::memory::LLMKVCache>(
+            this->_kv_cache_ptr = std::make_shared<tff::core::memory::LLMKVCache>(
                 this->_model_config._kv_data_type,
                 kv_cfg,
                 device->get_device_buffer_allocator()
@@ -211,7 +212,7 @@ namespace tff::core::runtime {
         }
         //batch manager init;
         if (!this->_llm_batch_manager_ptr->init(seq_prompts, this->_vocabulary_ptr, false,
-                                                LLMBatchManager::BatchSplitType::TTF_BATCH_SPLIT_EQUAL)) {
+                                                LLMBatchManager::BatchSplitType::TTF_BATCH_SPLIT_SEQ)) {
             tff::log::Logger::error("LLMInferRuntime batch init failed.");
             return -1;
         }
@@ -226,18 +227,18 @@ namespace tff::core::runtime {
         //set embedding layer input
         auto &tokens_data = batch->_tokens;
         auto &input_pos = batch->_pos;
-        auto token_tensor = std::make_shared<tff::core::memory::Tensor>(tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+        auto token_tensor = std::make_shared<tff::core::memory::Tensor>(MAX_TENSOR_DIM,tff::core::memory::DataType::TFF_DATA_TYPE_I32,
                                                                         std::array<int64_t, MAX_TENSOR_DIM>{
                                                                             static_cast<int64_t>(tokens_data.size())
-                                                                        }, true);
+                                                                        ,1,1,1}, true);
         token_tensor->set_buffer_data(tokens_data.data(),
                                       tokens_data.size() * memory::type_traits_auto[
                                           tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
         token_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
 
-        auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(
+        auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(MAX_TENSOR_DIM,
             tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-            std::array<int64_t, MAX_TENSOR_DIM>{static_cast<int64_t>(input_pos.size())}, true);
+            std::array<int64_t, MAX_TENSOR_DIM>{static_cast<int64_t>(input_pos.size()),1,1,1}, true);
         input_pos_tensor->set_buffer_data(input_pos.data(),
                                           input_pos.size() * memory::type_traits_auto[
                                               tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);

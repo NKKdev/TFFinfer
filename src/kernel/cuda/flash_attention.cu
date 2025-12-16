@@ -486,7 +486,7 @@ namespace tff::kernel {
             return "";
         }
         std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
+        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();;
 
         return name;
     }

@@ -110,6 +110,11 @@ namespace tff::core::graph {
         TFF_OP_MEM_CPY,
         TFF_OP_MEM_REF,
         TFF_OP_EMBEDDING,
+        //quant
+        TFF_OP_QUANTIZE_Q8,
+        TFF_OP_QUANTIZE_Q8_RESHAPE,
+        TFF_OP_DEQUANTIZE_Q8,
+        TFF_OP_DEQUANTIZE_Q8_RESHAPE,
         TFF_OP_COUNT,
     };
     enum MatMulTransType {

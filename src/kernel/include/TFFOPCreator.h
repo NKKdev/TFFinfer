@@ -9,8 +9,8 @@
 #include "TFFOPCreatorBase.h"
 #include "global/ParamBaseObject.h"
 #include "log/Logger.h"
-namespace tff::kernel {
 
+namespace tff::kernel {
     template<typename T>
     static T get_param_value(const int &index, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         auto opt = para_ptr->get_param<T>(index);
@@ -106,9 +106,26 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
     //
     template<typename T>
     class MemRef : public base::OPCreatorBase<MemRef<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
+
+    //
+    template<typename T>
+    class QuantQ8 : public base::OPCreatorBase<QuantQ8<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
+    template<typename T>
+    class QuantQ8Reshape : public base::OPCreatorBase<QuantQ8Reshape<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 

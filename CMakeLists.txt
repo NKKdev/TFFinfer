@@ -143,7 +143,10 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/kernel/cpu/mem_ref.cpp
         src/3rdparty/libdivideInc.h
         src/kernel/include/kernel_util.h
-        src/kernel/cuda/mat_mul.cu)
+        src/kernel/cuda/mat_mul.cu
+        src/kernel/cuda/quant/quant_q_8_0.cu
+        src/kernel/cuda/quant/quant_q_8_0_reshape.cu
+)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)

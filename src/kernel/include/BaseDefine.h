@@ -9,7 +9,6 @@
 #include "mem/BaseDefine.h"
 #include "mem/Memory.h"
 namespace tff::kernel::base {
-
     enum class Layout { kRowMajor = 101, kColMajor = 102 };
 
     enum class Transpose { kNo = 111, kYes = 112, kConjugate = 113 };

@@ -115,8 +115,6 @@ namespace tff::core::model {
         //
         if (input_layer_iter != layer_map.end() && !input_layer_iter->second.empty() &&
             repeating_layer_iter != layer_map.end() && !repeating_layer_iter->second.empty()) {
-            //auto &input_layers = input_layer_iter->second;
-            //auto &input_node = input_layers.begin()->second.find(tff::core::memory::ModelTensorType::LLM_TENSOR_TOKEN_EMBD)->second;
             //
             if (repeating_layer_iter != layer_map.end() && repeating_layer_iter->second.size() > 1) {
                 const auto &repeating_layer_map = repeating_layer_iter->second; // Assume it's a std::set or similar
@@ -392,15 +390,15 @@ namespace tff::core::model {
 
 
 
-        auto q_reshape_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
+        auto reshape_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);
         tff::core::graph::NodeMetadata meta_qkv_reshape{node_name + "_qkv_reshape"};
-        q_reshape_node->set_node_meta(meta_qkv_reshape);
-        q_reshape_node->bind_devices(layer->device());
-        graph_ptr->add_node(q_reshape_node);
+        reshape_node->set_node_meta(meta_qkv_reshape);
+        reshape_node->bind_devices(qkv_node->device());
+        graph_ptr->add_node(reshape_node);
         graph_ptr->add_edge(qkv_node,
-                            q_reshape_node);
+                            reshape_node);
 
-        attn_qkv_node.insert({TFF_GRAPH_NODE_COMPUTE, q_reshape_node});
+        attn_qkv_node.insert({TFF_GRAPH_NODE_COMPUTE, reshape_node});
     }
 
     //
@@ -421,10 +419,10 @@ namespace tff::core::model {
         auto flash_attn_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
         tff::core::graph::NodeMetadata meta_flash_attn_node{node_name + "_flash_attn_node"};
         flash_attn_node->set_node_meta(meta_flash_attn_node);
-        flash_attn_node->bind_devices(wo_layer->device());
+        flash_attn_node->bind_devices(out_put_node.find(TFF_GRAPH_NODE_CPU2GPU)->second->device());
 
         graph_ptr->add_node(flash_attn_node);
-        graph_ptr->add_edge(input_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
+        //graph_ptr->add_edge(input_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
         graph_ptr->add_edge(q_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
         graph_ptr->add_edge(k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);
         graph_ptr->add_edge(v_node.find(TFF_GRAPH_NODE_COMPUTE)->second, flash_attn_node);

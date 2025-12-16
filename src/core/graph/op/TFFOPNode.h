@@ -44,8 +44,8 @@ namespace tff::core::graph::op {
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
-            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_1->get_shape()[0], input_tensor_0->get_shape()[1]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_1->get_shape()[0], input_tensor_0->get_shape()[1], 1, 1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(), input_tensor_0->get_data_type(),
                                                                              output_shape, true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
@@ -114,8 +114,8 @@ namespace tff::core::graph::op {
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
-            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1], 1, 1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(), input_tensor_0->get_data_type(),
                                                                              output_shape, true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
@@ -166,8 +166,8 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("input tensor shape is not equal to 2");
                 return nullptr;
             }
-            std::array<int64_t, MAX_TENSOR_DIM> dst_shape{input_tensor_weight->get_shape()[0], input_tensor_x->get_shape()[1]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_x->get_data_type(),
+            std::array<int64_t, MAX_TENSOR_DIM> dst_shape{input_tensor_weight->get_shape()[0], input_tensor_x->get_shape()[1], 1, 1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(dst_shape.size(),input_tensor_x->get_data_type(),
                 dst_shape,true, input_tensor_x->get_allocator());
             this->set_outputs(std::vector<std::shared_ptr<tff::core::memory::Tensor>>{output_tensor});
             auto callback = GraphNode::forward();
@@ -315,8 +315,8 @@ namespace tff::core::graph::op {
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
-            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1], 1, 1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(), input_tensor_0->get_data_type(),
                                                                              output_shape, true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
@@ -371,8 +371,8 @@ namespace tff::core::graph::op {
             }
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
-            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1], 1, 1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(), input_tensor_0->get_data_type(),
                                                                              output_shape, true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
@@ -451,8 +451,8 @@ namespace tff::core::graph::op {
             }
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
-            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1], 1, 1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(), input_tensor_0->get_data_type(),
                                                                              output_shape, true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
@@ -524,7 +524,7 @@ namespace tff::core::graph::op {
                 return nullptr;
             }
             auto &input_tensors = *this->_src_tensors_ptr.begin();
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensors->get_data_type(),
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensors->get_shape().size(), input_tensors->get_data_type(),
                                                                              input_tensors->get_shape(), true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
@@ -557,8 +557,8 @@ namespace tff::core::graph::op {
             }
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
-            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_1->get_shape()[0]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(memory::DataType::TFF_DATA_TYPE_F32,
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_1->get_shape()[0],1,1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(), memory::DataType::TFF_DATA_TYPE_F32,
                                                                              output_shape, true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());
@@ -606,7 +606,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("FlashAttnNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            if (this->_prev_nodes.size() != 4) {
+            if (this->_prev_nodes.size() != 3) {
                 tff::log::Logger::error("FlashAttnNode prev_nodes size() is wrong!!");
                 return nullptr;
             }
@@ -616,8 +616,8 @@ namespace tff::core::graph::op {
             }
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
-            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1]};
-            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(input_tensor_0->get_data_type(),
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_0->get_shape()[0], input_tensor_0->get_shape()[1],1,1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(),input_tensor_0->get_data_type(),
                                                                              output_shape, true,
                                                                              this->device()->
                                                                              get_device_buffer_allocator());

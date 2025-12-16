@@ -4,9 +4,8 @@
 
 #ifndef TFFINFER_KERNEL_UTIL_H
 #define TFFINFER_KERNEL_UTIL_H
-
+#include "device/cuda/cudaInc.h"
 namespace tff::kernel {
-
     __device__ __forceinline__ uint32_t div_u32(uint32_t n, uint32_t magic, int shift) {
         return (__umulhi(n, magic) + n) >> shift;
     }
@@ -47,19 +46,17 @@ namespace tff::kernel {
             const half *h = reinterpret_cast<const half *>(&v);
 #pragma unroll
             for (int i = 0; i < count; ++i) out[i] = h[i];
-        }
-        else if (count == 2 && reinterpret_cast<uintptr_t>(addr) % 4 == 0) {
+        } else if (count == 2 && reinterpret_cast<uintptr_t>(addr) % 4 == 0) {
             const half2 *h = reinterpret_cast<const half2 *>(addr);
             out[0] = h[0].x;
             out[1] = h[0].y;
-        }
-        else {
+        } else {
 #pragma unroll
             for (int i = 0; i < count; ++i) out[i] = __ldg(&addr[i]);
         }
     }
 
-    __device__ __forceinline__ half2 complex_mul_half2(const half2& a, const half2& b) {
+    __device__ __forceinline__ half2 complex_mul_half2(const half2 &a, const half2 &b) {
         half2 res;
         res.x = __hsub(__hmul(a.x, b.x), __hmul(a.y, b.y));
         res.y = __hadd(__hmul(a.x, b.y), __hmul(a.y, b.x));

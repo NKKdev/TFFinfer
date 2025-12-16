@@ -3,6 +3,7 @@
 //
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
+
 namespace tff::kernel {
     //
     template<typename T>
@@ -18,19 +19,17 @@ namespace tff::kernel {
             return "";
         }
         std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-        // if (std::is_same_v<T, float>) name += "_f32";
-        // else if (std::is_same_v<T, double>) name += "_f64";
-        // else if (std::is_same_v<T, int8_t>) name += "_i8";
-        // else if (std::is_same_v<T, int16_t>) name += "_i16";
+        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();;
         return name;
     }
     template class tff::kernel::Reshape<float>;
     template class tff::kernel::Reshape<double>;
     template class tff::kernel::Reshape<int32_t>;
     template class tff::kernel::Reshape<int64_t>;
+    template class tff::kernel::Reshape<Q8_0>;
     REGISTER_OP_OBJECT(Reshape, float);
     REGISTER_OP_OBJECT(Reshape, double);
     REGISTER_OP_OBJECT(Reshape, int32_t);
     REGISTER_OP_OBJECT(Reshape, int64_t);
+    REGISTER_OP_OBJECT(Reshape, Q8_0);
 }

@@ -19,19 +19,17 @@ namespace tff::kernel {
             return "";
         }
         std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-        // if (std::is_same_v<T, float>) name += "_f32";
-        // else if (std::is_same_v<T, double>) name += "_f64";
-        // else if (std::is_same_v<T, int8_t>) name += "_i8";
-        // else if (std::is_same_v<T, int16_t>) name += "_i16";
+        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();;
         return name;
     }
     template class tff::kernel::Add<float>;
     template class tff::kernel::Add<double>;
     template class tff::kernel::Add<int32_t>;
     template class tff::kernel::Add<int64_t>;
+    template class tff::kernel::Add<Q8_0>;
     REGISTER_OP_OBJECT(Add, float);
     REGISTER_OP_OBJECT(Add, double);
     REGISTER_OP_OBJECT(Add, int32_t);
     REGISTER_OP_OBJECT(Add, int64_t);
+    REGISTER_OP_OBJECT(Add, Q8_0);
 }

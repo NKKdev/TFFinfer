@@ -35,9 +35,9 @@ namespace tff::core::memory {
             _pages.resize(total_pages);
             for (int i = 0; i < total_pages; ++i) {
                 _pages[i] = std::make_unique<KVPage>();
-                std::array<int64_t, MAX_TENSOR_DIM> shapes = {static_cast<int64_t>(_d_h), static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size)};
-                _pages[i]->_k = std::make_unique<tff::core::memory::Tensor>(data_type, shapes, false, allocator);
-                _pages[i]->_v = std::make_unique<tff::core::memory::Tensor>(data_type, shapes, false, allocator);
+                std::array<int64_t, MAX_TENSOR_DIM> shapes = {static_cast<int64_t>(_d_h), static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size), 1};
+                _pages[i]->_k = std::make_unique<tff::core::memory::Tensor>(3, data_type, shapes, false, allocator);
+                _pages[i]->_v = std::make_unique<tff::core::memory::Tensor>(3, data_type, shapes, false, allocator);
                 _pages[i]->_n_tokens = 0;
                 _pages[i]->_is_used = false;
                 _free_list.push_back(i);
@@ -171,6 +171,7 @@ namespace tff::core::memory {
             bool _thread_safe = false; // 是否线程安全
             int _total_pages; // 全局 page 总数（显存限制）
             int _page_size = 32; // 每个 page 存多少个 token
+            int _max_seq_len = MAX_SEQ_LENGTH;
         };
 
     public:

@@ -123,7 +123,7 @@ namespace tff::core::runtime {
     public:
         //std::shared_ptr<tff::schedule::HybridScheduler> _scheduler;
         //
-        std::unique_ptr<tff::core::memory::LLMKVCache> _kv_cache_ptr;
+        std::shared_ptr<tff::core::memory::LLMKVCache> _kv_cache_ptr;
 
     public:
         //

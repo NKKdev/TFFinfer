@@ -6,7 +6,7 @@
 #include "model/base/ModelLoaderBase.h"
 #include "model/FileLoader.h"
 #include "runtime/LLMWeightMemManager.h"
-
+#include "kernel/include/BaseDefine.h"
 namespace tff::kernel {
     template<typename T>
     static void embedding_kernel_cpu(
@@ -57,7 +57,9 @@ namespace tff::kernel {
                 tff::log::Logger::info("embedding token id=%d", token_id);
                 auto quant_data_ptr = (const void *)((char *)token_embed_buffer->ptr() + token_id * token_embed->get_strides()[1]);
                 auto float_data_ptr = (float *)((char *)output_tensor_buffer+ i * shape_dim + j);
-                dequantize_callback(quant_data_ptr, float_data_ptr, token_embed->get_shape()[0]);
+                if (float_data_ptr && quant_data_ptr) {
+                    dequantize_callback(quant_data_ptr, float_data_ptr, token_embed->get_shape()[0]);
+                }
             }
         }
     }
@@ -94,19 +96,17 @@ namespace tff::kernel {
             return "";
         }
         std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
-        // if (std::is_same_v<T, float>) name += "_f32";
-        // else if (std::is_same_v<T, double>) name += "_f64";
-        // else if (std::is_same_v<T, int8_t>) name += "_i8";
-        // else if (std::is_same_v<T, int16_t>) name += "_i16";
+        name += std::string("_") + DEVICE_BACKEND_TYPE_CPU + tff::core::global::get_type_suffix<T>();;
         return name;
     }
     template class tff::kernel::Embedding<float>;
     template class tff::kernel::Embedding<double>;
     template class tff::kernel::Embedding<int32_t>;
+    template class tff::kernel::Embedding<Q8_0>;
     REGISTER_OP_OBJECT(Embedding, float);
 
     REGISTER_OP_OBJECT(Embedding, double);
 
     REGISTER_OP_OBJECT(Embedding, int32_t);
+    REGISTER_OP_OBJECT(Embedding, Q8_0);
 }

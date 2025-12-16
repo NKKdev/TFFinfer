@@ -21,8 +21,9 @@ namespace tff::core::memory {
         };
 
     public:
-        Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
-               std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(), bool use_external = false,
+        Tensor(const int n_dim = 4, const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
+               std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
+               bool use_external = false,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
@@ -31,7 +32,7 @@ namespace tff::core::memory {
                 tff::log::Logger::error("tensor shape is invalid!!");
                 return;
             }
-            this->set_dims(_shape.size());
+            this->set_dims(n_dim);
             for (size_t i = 0; i < this->_shape.size(); ++i) {
                 this->set_shape(this->_shape[i], i);
             }
@@ -318,7 +319,7 @@ namespace tff::core::memory {
         template<typename... Args>
         size_t compute_offset(Args... indices) const {
             constexpr size_t num_indices = sizeof...(indices);
-            if (num_indices != _shape.size()) {
+            if (num_indices > _shape.size()) {
                 throw std::invalid_argument(
                     "Number of indices (" + std::to_string(num_indices) +
                     ") does not match tensor dimensions (" + std::to_string(_shape.size()) + ")"
@@ -345,8 +346,8 @@ namespace tff::core::memory {
         tff::core::memory::ModelTensorType _tensor_type;
         size_t _type_size{};
         uint32_t _blk_size{};
-        std::array<int64_t, MAX_TENSOR_DIM> _shape;
-        std::array<int64_t, MAX_TENSOR_DIM> _strides;
+        std::array<int64_t, MAX_TENSOR_DIM> _shape{1,1,1,1};
+        std::array<int64_t, MAX_TENSOR_DIM> _strides{0,0,0,0};
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
 

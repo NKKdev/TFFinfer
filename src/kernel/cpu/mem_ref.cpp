@@ -5,7 +5,6 @@
 #include "model/base/ModelLoaderBase.h"
 #include "model/FileLoader.h"
 #include "runtime/LLMWeightMemManager.h"
-
 namespace tff::kernel {
     template<typename T>
     void tff::kernel::MemRef<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
@@ -22,11 +21,7 @@ namespace tff::kernel {
             return "";
         }
         std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CPU;
-        // if (std::is_same_v<T, float>) name += "_f32";
-        // else if (std::is_same_v<T, double>) name += "_f64";
-        // else if (std::is_same_v<T, int8_t>) name += "_i8";
-        // else if (std::is_same_v<T, int16_t>) name += "_i16";
+        name += std::string("_") + DEVICE_BACKEND_TYPE_CPU + tff::core::global::get_type_suffix<T>();
         return name;
     }
 

@@ -4,7 +4,7 @@
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
 #include "kernel/include/kernel_util.h"
-#include "utils/util.h"
+
 namespace tff::kernel {
     template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int
         PAD_SIZE, const int ELEMENTS_PER_LOAD>
@@ -667,11 +667,13 @@ namespace tff::kernel {
             return "";
         }
         std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::utils::get_type_suffix<T>();
+        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();
         return name;
     }
     template class tff::kernel::XGemm<float>;
     template class tff::kernel::XGemm<half>;
+    template class tff::kernel::XGemm<Q8_0>;
     REGISTER_OP_OBJECT(XGemm, float);
     REGISTER_OP_OBJECT(XGemm, half);
+    REGISTER_OP_OBJECT(XGemm, Q8_0);
 }

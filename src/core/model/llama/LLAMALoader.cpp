@@ -160,7 +160,8 @@ namespace tff::core::model {
                 throw std::runtime_error("Invalid tensor shape dimension count");
                 continue;
             }
-            std::array<int64_t, MAX_TENSOR_DIM> shapes;
+            std::array<int64_t, MAX_TENSOR_DIM> shapes{};
+            shapes.fill(1);
             for (size_t j = 0; j < n_dims; j++) {
                 int64_t shape_dim = 0;
                 file_loader->read(shape_dim);
@@ -170,7 +171,7 @@ namespace tff::core::model {
             int32_t data_type = 0;
             file_loader->read(data_type);
             auto type = static_cast<tff::core::memory::DataType>(data_type);
-            tensor_info._tensor_ptr = std::make_shared<tff::core::memory::Tensor>(type, shapes, true);
+            tensor_info._tensor_ptr = std::make_shared<tff::core::memory::Tensor>(n_dims, type, shapes, true);
             tensor_info._tensor_ptr->set_tensor_type(this->get_model_tensor_type(tensor_info._name));
 
             //

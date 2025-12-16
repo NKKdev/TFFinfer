@@ -224,4 +224,5 @@ namespace tff::core::quant {
         }
     }
 }
+using Q8_0 = tff::core::quant::Q_8_0;
 #endif //TFFINFER_BASEDEFINE_H

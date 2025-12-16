@@ -8,6 +8,8 @@
 #include <math.h>
 #include "libdivideInc.h"
 #include "device/cuda/cudaInc.h"
+
+
 namespace tff::utils {
 #define TFF_PAD(x, n) (((x) + (n) - 1) & ~((n) - 1))
 
@@ -106,18 +108,7 @@ namespace tff::utils {
         auto [magic, more] = libdivide::libdivide_u64_gen(divisor);
         return std::tuple<int16_t, uint8_t>{magic, more};
     }
-    template<typename T>
-     constexpr const char *get_type_suffix() {
-        if constexpr (std::is_same_v<T, float>) return "f32";
-        else if constexpr (std::is_same_v<T, double>) return "f64";
-        else if constexpr (std::is_same_v<T, int8_t>) return "i8";
-        else if constexpr (std::is_same_v<T, uint8_t>) return "u8";
-        else if constexpr (std::is_same_v<T, int16_t>) return "i16";
-        else if constexpr (std::is_same_v<T, int32_t>) return "i32";
-        else if constexpr (std::is_same_v<T, int64_t>) return "i64";
-        else if constexpr (std::is_same_v<T, half>) return "fp16";
-        else return "unknown";
-    }
+
 
 
 }
