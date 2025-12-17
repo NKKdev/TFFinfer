@@ -68,7 +68,9 @@ namespace tff::core::quant {
 
         static constexpr bool is_quantized() { return true; };
     };
+
     static_assert(sizeof(tff::core::quant::Q_8_0) == 34);
+
     //
     struct Q_8_1 {
         static constexpr int BLOCK_SIZE = 32;
@@ -122,7 +124,6 @@ namespace tff::core::quant {
 
         static constexpr bool is_quantized() { return true; };
     };
-
 
 
     //非量化类型;
@@ -223,6 +224,17 @@ namespace tff::core::quant {
             };
         }
     }
+
+#define TFF_DATA_TYPE_LIST \
+TFF_TRAITS(F32,      "f32",      1,              sizeof(float));\
+TFF_TRAITS(I8,       "i8",       1,              sizeof(int8_t))\
+TFF_TRAITS(I16,       "i16",       1,              sizeof(int8_t))\
+TFF_TRAITS(I32,      "i32",      1,              sizeof(float))\
+TFF_TRAITS(I64,       "i64",       1,              sizeof(int8_t))\
+TFF_TRAITS(F64,       "f64",       1,              sizeof(int8_t))\
+TFF_TRAITS(Q8_0,      "q8_0",      tff::core::quant::Q_8_0::BLOCK_SIZE, sizeof(tff::core::quant::Q_8_0));
+
 }
+
 using Q8_0 = tff::core::quant::Q_8_0;
 #endif //TFFINFER_BASEDEFINE_H

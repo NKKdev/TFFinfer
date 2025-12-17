@@ -167,7 +167,7 @@ namespace tff::core::model {
                         graph_ptr->add_edge(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, k_rope_node);
                         attn_k_node[TFF_GRAPH_NODE_COMPUTE] = k_rope_node;
 
-                        //
+
                         NodeType attn_node;
                         build_attn(layer_map, graph_ptr, input_node, attn_q_node, attn_k_node, attn_v_node,
                                    attn_node);

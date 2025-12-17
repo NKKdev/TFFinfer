@@ -62,7 +62,7 @@ namespace tff::core::runtime {
         kv_cfg._n_head_kv = this->_model_config._n_head_kv_arr[0];
         kv_cfg._n_layer = this->_model_config._n_layer;
         kv_cfg._use_sliding_window = this->_model_config._n_swa != 0;
-        kv_cfg._max_seq_len = this->_model_config._n_ctx;
+        kv_cfg._max_tokens = this->_model_config._n_ctx;
 
         const auto device = *this->_devices.begin();
         if (!device) {
@@ -106,7 +106,7 @@ namespace tff::core::runtime {
         }
 
         //计算总页数并创建KV Cache
-        kv_cfg._total_pages = min(static_cast<int>(free_mem_sum / one_page_size), kv_cfg._max_seq_len / PAGE_SIZE);
+        kv_cfg._total_pages = min(static_cast<int>(free_mem_sum / one_page_size), kv_cfg._max_tokens / PAGE_SIZE);
         tff::log::Logger::info("KV Cache: Total available free memory for KV: {%lld} bytes",
                                static_cast<size_t>(free_mem_sum));
         tff::log::Logger::info("KV Cache: Total pages calculated: {%d} ({%lld} bytes per page)",

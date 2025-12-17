@@ -21,7 +21,7 @@ int main(int argc,char *argv[]) {
     llm_runtime.init_device();
     tff::core::model::ModelConfig cfg;
     cfg._use_mmap = true;
-    const int max_batches = 3;
+    const int max_batches = 1;
     llm_runtime.load_model_config(model_config_file_path, cfg);
     std::vector<std::string> model_files;
     model_files.push_back(model_file);

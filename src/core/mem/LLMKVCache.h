@@ -112,7 +112,8 @@ namespace tff::core::memory {
     public:
         LayerKVContext();
 
-        LayerKVContext(const int sid, const int lid) : _seq_id(sid), _layer_id(lid) {
+        LayerKVContext(const int sid, const int lid, const std::shared_ptr<PageManager> &page_manager) : _seq_id(sid), _layer_id(lid),
+        _page_manager(page_manager){
         }
 
         ~LayerKVContext()= default;
@@ -171,7 +172,6 @@ namespace tff::core::memory {
             bool _thread_safe = false; // 是否线程安全
             int _total_pages; // 全局 page 总数（显存限制）
             int _page_size = 32; // 每个 page 存多少个 token
-            int _max_seq_len = MAX_SEQ_LENGTH;
         };
 
     public:
@@ -216,7 +216,6 @@ namespace tff::core::memory {
         }
 
 
-        // 获取或创建某个 sequence 在某层的 context
         LayerKVContext *get_context(int seq_id, int layer_id) {
             const int key = make_key(seq_id, layer_id);
             std::lock_guard<std::mutex> lock(global_mutex);
@@ -226,13 +225,12 @@ namespace tff::core::memory {
                 return it->second.get();
             }
 
-            auto ctx = std::make_unique<LayerKVContext>(seq_id, layer_id);
+            auto ctx = std::make_unique<LayerKVContext>(seq_id, layer_id, this->_page_manager);
             LayerKVContext *ptr = ctx.get();
             this->_seq_contexts[key] = std::move(ctx);
             return ptr;
         }
 
-        // 写入当前 token 的 K/V（追加到指定 sequence 的 cache）
         bool set(int seq_id, int layer_id, const DeviceTensor *cur_k, const DeviceTensor *cur_v) {
             LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (!ctx->append_token()) {
@@ -256,8 +254,6 @@ namespace tff::core::memory {
             return true;
         }
 
-        // 获取历史 K/V 的 view（用于 attention 计算）
-        // 返回：{k_view, v_view, block_table_ptr, num_blocks}
         std::tuple<std::shared_ptr<tff::core::memory::Tensor>, std::shared_ptr<tff::core::memory::Tensor>, const PageID
             *, int>
         get(int seq_id, int layer_id, int from_token = 0) {
@@ -266,19 +262,12 @@ namespace tff::core::memory {
                 return {nullptr, nullptr, nullptr, 0};
             }
 
-            // 在真实系统中，这里不会返回 view，而是返回：
-            // - block_table 指针（传给 CUDA kernel）
-            // - valid token count
-            // - 可能的 slice 信息
-
             const PageID *block_table = ctx->_page_table.data();
             int num_blocks = ctx->get_num_pages();
 
-            // 注意：真正的 K/V 数据不在此返回，而是通过 block_table + kernel 间接访问
             return {nullptr, nullptr, block_table, num_blocks};
         }
 
-        // 清除某个 sequence 的所有 cache
         void clear(int seq_id) {
             std::lock_guard<std::mutex> lock(global_mutex);
             for (int lid = 0; lid < _config._n_layer; ++lid) {
@@ -297,12 +286,11 @@ namespace tff::core::memory {
         size_t _seq_length;
         size_t _current_batch_size;
         bool _is_prefilling;
-        std::vector<KVPage> _layers;
         KVConfig _config;
         //
         std::shared_ptr<PageManager> _page_manager;
         std::unordered_map<int, std::unique_ptr<LayerKVContext> > _seq_contexts;
-        mutable std::mutex global_mutex; // 仅当 thread_safe == true 时使用
+        mutable std::mutex global_mutex;
     };
 }
 #endif //TFFINFER_LLMKVCACHE_H

@@ -7,6 +7,7 @@
 #include <array>
 #include <functional>
 #include "quant/BaseDefine.h"
+
 namespace tff::core::memory {
     enum MemCpyKind {
         TFF_MEM_CPY_TYPE_UNKNOWN = 0,
@@ -52,6 +53,7 @@ namespace tff::core::memory {
         TFF_DATA_TYPE_MXFP4 = 39,
         TFF_DATA_TYPE_COUNT = 40,
     };
+
     //
     enum ModelTensorType {
         LLM_TENSOR_TYPE_UNKNOWN = -1,
@@ -239,22 +241,19 @@ namespace tff::core::memory {
 #define MAP_DATA_TYPE(gguf_enum, cpp_type) \
 template<> struct tff_data_type_to_cpp<gguf_enum> { using type = cpp_type; };
     MAP_DATA_TYPE(TFF_DATA_TYPE_I8, int8_t)
+
     MAP_DATA_TYPE(TFF_DATA_TYPE_I16, int16_t)
+
     MAP_DATA_TYPE(TFF_DATA_TYPE_I32, int32_t)
+
     MAP_DATA_TYPE(TFF_DATA_TYPE_I64, int64_t)
+
     MAP_DATA_TYPE(TFF_DATA_TYPE_F32, float)
+
     MAP_DATA_TYPE(TFF_DATA_TYPE_F64, double)
+
     MAP_DATA_TYPE(TFF_DATA_TYPE_Q8_0, tff::core::quant::Q_8_0)
 
-
-#define TFF_DATA_TYPE_LIST \
-TFF_TRAITS(F32,      "f32",      1,              sizeof(float));\
-TFF_TRAITS(I8,       "i8",       1,              sizeof(int8_t))\
-TFF_TRAITS(I16,       "i16",       1,              sizeof(int8_t))\
-TFF_TRAITS(I32,      "i32",      1,              sizeof(float))\
-TFF_TRAITS(I64,       "i64",       1,              sizeof(int8_t))\
-TFF_TRAITS(F64,       "f64",       1,              sizeof(int8_t))\
-TFF_TRAITS(Q8_0,      "q8_0",      tff::core::quant::Q_8_0::BLOCK_SIZE, sizeof(tff::core::quant::Q_8_0));
 
     struct TFFTypeTraits {
         const char *_type_name;
@@ -266,23 +265,20 @@ TFF_TRAITS(Q8_0,      "q8_0",      tff::core::quant::Q_8_0::BLOCK_SIZE, sizeof(t
         tff::core::quant::quantize quantize_callback;
     };
 
-
-    static std::array<TFFTypeTraits, TFF_DATA_TYPE_COUNT> make_type_traits() {
-        std::array<TFFTypeTraits, TFF_DATA_TYPE_COUNT> traits{};
-
 #define TFF_TRAITS(enum_name, name_str, blk, sz) \
-traits[TFF_DATA_TYPE_##enum_name] = TFFTypeTraits{\
+    traits[TFF_DATA_TYPE_##enum_name] = TFFTypeTraits{\
         name_str, blk, sz,\
         tff::core::quant::QuantScheme<tff_data_type_to_cpp<TFF_DATA_TYPE_##enum_name>::type>::is_quantized(), \
         tff::core::quant::make_dequantize_wrapper<tff_data_type_to_cpp<TFF_DATA_TYPE_##enum_name>::type>(),\
         tff::core::quant::make_quantize_wrapper<tff_data_type_to_cpp<TFF_DATA_TYPE_##enum_name>::type>()\
-        };\
+    };
 
+    static std::array<TFFTypeTraits, TFF_DATA_TYPE_COUNT> make_type_traits() {
+        std::array<TFFTypeTraits, TFF_DATA_TYPE_COUNT> traits{};
         TFF_DATA_TYPE_LIST
         return traits;
     }
 
     static const auto type_traits_auto = make_type_traits();
-
 }
 #endif //TFFINFER_MEM_BASEDEFINE_H
