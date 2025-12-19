@@ -63,15 +63,17 @@ namespace tff::core::runtime {
         kv_cfg._n_layer = this->_model_config._n_layer;
         kv_cfg._use_sliding_window = this->_model_config._n_swa != 0;
         kv_cfg._max_tokens = this->_model_config._n_ctx;
-
+        kv_cfg._use_f16 = this->_model_config._use_f16;
         const auto device = *this->_devices.begin();
         if (!device) {
             tff::log::Logger::error("No valid device found in _devices.");
             return false;
         }
         //
-        const float one_page_size = kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE *
-                                    memory::type_traits_auto[memory::DataType::TFF_DATA_TYPE_F32]._type_size;
+        auto type_size = kv_cfg._use_f16 ? memory::type_traits_auto[memory::DataType::TFF_DATA_TYPE_F16]._type_size:
+        memory::type_traits_auto[memory::DataType::TFF_DATA_TYPE_F32]._type_size;//todo f32 unimplement
+
+        const float one_page_size = kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE * type_size;
         tff::log::Logger::info("KV Cache: Size per page: {%lf} bytes", one_page_size);
 
         //

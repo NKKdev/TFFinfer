@@ -172,6 +172,7 @@ namespace tff::core::memory {
             bool _thread_safe = false; // 是否线程安全
             int _total_pages; // 全局 page 总数（显存限制）
             int _page_size = 32; // 每个 page 存多少个 token
+            bool _use_f16 = true;
         };
 
     public:

@@ -41,9 +41,9 @@ namespace tff::kernel {
 
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int VEC_DIM_K,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
-    __device__ __forceinline__ void compute_tile_attention_gemm(const int k_size, const int thread_x, const int warp_id,
-                                                T *a_sm, T *b_sm,
-                                                float *c_reg) {
+    __device__ __forceinline__ void compute_tile_attention_gemm(const int N, const int k_size, const int thread_x, const int warp_id,
+                                                                const int start_m, const int start_n, T *a_sm, T *b_sm,const T *mask,
+                                                                float *c_reg) {
         auto *q_sm_ptr = reinterpret_cast<half2 *>(a_sm);
         auto *k_sm_ptr = reinterpret_cast<half2 *>(b_sm);
 #pragma unroll
@@ -52,13 +52,23 @@ namespace tff::kernel {
 #pragma unroll
             for (int mm = 0; mm < VEC_DIM_M; mm++) {
                 a_reg = q_sm_ptr[(kk / 2) + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K + PAD_SIZE) / 2];
-                half2 b_reg ;
+                half2 b_reg;
 #pragma unroll
                 for (int nn = 0; nn < VEC_DIM_N; nn++) {
-                    b_reg = k_sm_ptr[(kk / 2) + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K + PAD_SIZE) / 2];
+                    b_reg = k_sm_ptr[(kk / 2) + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K + PAD_SIZE) /
+                                     2];
 
-                    c_reg[mm * VEC_DIM_N + nn] += __half2float(__hadd(__hmul(a_reg.x, b_reg.x),__hmul(a_reg.y, b_reg.y)));
+                    c_reg[mm * VEC_DIM_N + nn] += __half2float(
+                        __hadd(__hmul(a_reg.x, b_reg.x), __hmul(a_reg.y, b_reg.y)));
                 }
+            }
+        }
+
+#pragma unroll
+        for (int mm = 0; mm < VEC_DIM_M; mm++) {
+            for (int nn = 0; nn < VEC_DIM_N; nn++) {
+                const float mask_value = __ldg(&mask[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * N + start_n + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
+                c_reg[mm * VEC_DIM_N + nn] += mask_value;
             }
         }
     }
@@ -67,10 +77,12 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
     __device__ __forceinline__ void compute_tile_attention_gemm_with_rope(
-        const int k_size, const int thread_x, const int warp_id,
+        const int N, const int k_size, const int thread_x,
+        const int warp_id,
         const int start_m, const int start_n,
-        T *a_sm, T *b_sm, float *cos_sin_sm,
+        T *a_sm, T *b_sm, float *cos_sin_sm, const T *mask,
         float *c_reg) {
+
         auto *q_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_m * BLOCK_DIM_K);
         auto *k_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_n * BLOCK_DIM_K);
         auto *q_sm_ptr = reinterpret_cast<half2 *>(a_sm);
@@ -105,6 +117,14 @@ namespace tff::kernel {
                     c_reg[mm * VEC_DIM_N + nn] += __half2float(
                         __hadd(__hmul(q_rot.x, k_rot.x), __hmul(q_rot.y, k_rot.y)));
                 }
+            }
+        }
+
+#pragma unroll
+        for (int mm = 0; mm < VEC_DIM_M; mm++) {
+            for (int nn = 0; nn < VEC_DIM_N; nn++) {
+                const float mask_value = __ldg(&mask[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * N + start_n + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
+                c_reg[mm * VEC_DIM_N + nn] += mask_value;
             }
         }
     }
@@ -183,6 +203,7 @@ namespace tff::kernel {
             g_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_sum_value;
         }
     }
+
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
         const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE,
         const int ELEMENTS_PER_LOAD>
@@ -193,6 +214,7 @@ namespace tff::kernel {
                                             const T *__restrict__ q_global,
                                             const T *__restrict__ k_global,
                                             const T *__restrict__ v_global,
+                                            const T *__restrict__ mask,
                                             float *__restrict__ max_value_global,
                                             float *__restrict__ sum_value_global,
                                             float *out_put) {
@@ -234,9 +256,10 @@ namespace tff::kernel {
 
             int d = 0;
             const int k_size = min(BLOCK_DIM_K, D - d);
-            compute_tile_attention_gemm<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
-                    k_size, thread_x, warp_id, &sm[shared_mem_block_size * 2], &sm[(flip_flag) * shared_mem_block_size],
-                    c_reg);
+            compute_tile_attention_gemm<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K,
+                PAD_SIZE>(
+                N, k_size, thread_x, warp_id, start_m, n_start, &sm[shared_mem_block_size * 2], &sm[(flip_flag) * shared_mem_block_size],
+                mask, c_reg);
 
             const int next_n = (n + 1) * BLOCK_DIM_N;
             if (next_n < N) {
@@ -258,20 +281,22 @@ namespace tff::kernel {
             flip_flag ^= 1;
         }
     }
+
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
         const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE,
         const int ELEMENTS_PER_LOAD>
     __global__ void flash_attention_fp16_64_rope(const int M, const int N, const int D,
-                                            const int q_ld, const int k_ld, const int v_ld,
-                                            const float scale,
-                                            const int num_q_heads, const int num_kv_heads,
-                                            const T *__restrict__ q_global,
-                                            const T *__restrict__ k_global,
-                                            const T *__restrict__ v_global,
-                                            float *__restrict__ cos_sin_table,
-                                            float *__restrict__ max_value_global,
-                                            float *__restrict__ sum_value_global,
-                                            float *out_put) {
+                                                 const int q_ld, const int k_ld, const int v_ld,
+                                                 const float scale,
+                                                 const int num_q_heads, const int num_kv_heads,
+                                                 const T *__restrict__ q_global,
+                                                 const T *__restrict__ k_global,
+                                                 const T *__restrict__ v_global,
+                                                 const T *__restrict__ mask,
+                                                 float *__restrict__ cos_sin_table,
+                                                 float *__restrict__ max_value_global,
+                                                 float *__restrict__ sum_value_global,
+                                                 float *out_put) {
         const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
         const int ld_thread_block_n = BLOCK_DIM_K / VEC_DIM_K;
         const int thread_x = thread_id % ld_thread_block_n;
@@ -306,15 +331,17 @@ namespace tff::kernel {
 
         for (int n = 0; n < n_stage; n++) {
             int n_start = n * BLOCK_DIM_N;
+            if (n_start > (start_m + BLOCK_DIM_M)) {
+                continue;
+            }
             float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
 
             int d = 0;
             const int k_size = min(BLOCK_DIM_K, D - d);
             compute_tile_attention_gemm_with_rope<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K,
-                    PAD_SIZE>(
-                    k_size, thread_x, warp_id, start_m, n_start, &sm[shared_mem_block_size * 2],
-                    &sm[(flip_flag) * shared_mem_block_size],
-                    cos_sin_table, c_reg);
+                PAD_SIZE>(
+                N, k_size, thread_x, warp_id, start_m, n_start, &sm[shared_mem_block_size * 2],
+                &sm[(flip_flag) * shared_mem_block_size], cos_sin_table, mask, c_reg);
 
 
             const int next_n = (n + 1) * BLOCK_DIM_N;
@@ -340,14 +367,15 @@ namespace tff::kernel {
 
     template<typename T>
     void flash_attention_64_rope(const int batch, const int M, const int N, const int D,
-                            const int q_ld, const int k_ld, const int v_ld,
-                            const float scale,
-                            const int num_q_heads, const int num_kv_heads,
-                            const T *q_gpu,
-                            const T *k_gpu,
-                            const T *v_gpu,
-                            float *cos_sin_table,
-                            float *out_put) {
+                                 const int q_ld, const int k_ld, const int v_ld,
+                                 const float scale,
+                                 const int num_q_heads, const int num_kv_heads,
+                                 const T *q_gpu,
+                                 const T *k_gpu,
+                                 const T *v_gpu,
+                                 const T *mask,
+                                 float *cos_sin_table,
+                                 float *out_put) {
         if (std::is_same_v<T, half>) {
             constexpr int ELEMENTS_PER_LOAD = 2;
             constexpr int THREAD_BLOCK_SIZE = 256;
@@ -363,17 +391,19 @@ namespace tff::kernel {
             float *max_value_global;
             float *sum_value_global;
 
-            flash_attention_fp16_64_rope<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE,
+            flash_attention_fp16_64_rope<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K,
+                PAD_SIZE,
                 ELEMENTS_PER_LOAD><<<grid, block>>>(
-                M, N, D, D, D,D,
+                M, N, D, D, D, D,
                 (1.0f / std::sqrt(static_cast<float>(D))),
                 num_q_heads,
                 num_kv_heads,
-                q_gpu, k_gpu, v_gpu, cos_sin_table, max_value_global, sum_value_global, out_put);
+                q_gpu, k_gpu, v_gpu, mask, cos_sin_table, max_value_global, sum_value_global, out_put);
         } else if (std::is_same_v<T, float>) {
             //todo
         }
     }
+
     template<typename T>
     void flash_attention_64(const int batch, const int M, const int N, const int D,
                             const int q_ld, const int k_ld, const int v_ld,
@@ -382,6 +412,7 @@ namespace tff::kernel {
                             const T *q_gpu,
                             const T *k_gpu,
                             const T *v_gpu,
+                            const T *mask,
                             float *out_put) {
         if (std::is_same_v<T, half>) {
             constexpr int ELEMENTS_PER_LOAD = 2;
@@ -400,15 +431,16 @@ namespace tff::kernel {
 
             flash_attention_fp16_64<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE,
                 ELEMENTS_PER_LOAD><<<grid, block>>>(
-                M, N, D, D, D,D,
+                M, N, D, D, D, D,
                 (1.0f / std::sqrt(static_cast<float>(D))),
                 num_q_heads,
                 num_kv_heads,
-                q_gpu, k_gpu, v_gpu, max_value_global, sum_value_global, out_put);
+                q_gpu, k_gpu, v_gpu, mask, max_value_global, sum_value_global, out_put);
         } else if (std::is_same_v<T, float>) {
             //todo
         }
     }
+
     //
     template<typename T>
     void tff::kernel::FlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
@@ -427,7 +459,7 @@ namespace tff::kernel {
                 tff::log::Logger::error("memcpy kernel param is invalid!");
                 return;
             }
-        }else {
+        } else {
             if (input_tensors.size() != 3) {
                 tff::log::Logger::error("memcpy kernel param is invalid!");
                 return;
@@ -441,6 +473,7 @@ namespace tff::kernel {
         auto q_tensor = input_tensors.at(0);
         auto k_tensor = input_tensors.at(1);
         auto v_tensor = input_tensors.at(2);
+        auto mask_tensor = input_tensors.at(3);
         auto output = output_tensors.at(0);
         const int num_q_heads = q_tensor->get_shape()[2];
         const int num_kv_heads = k_tensor->get_shape()[2];
@@ -453,19 +486,20 @@ namespace tff::kernel {
             case 64:
                 if (rope_flag == 1) {
                     auto *cos_sin_table = static_cast<float *>(input_tensors.at(3)->get_buffer()->ptr());
-                    flash_attention_64_rope<T>( B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
-                                      static_cast<T *>(q_tensor->get_buffer()->ptr()),
-                                      static_cast<T *>(k_tensor->get_buffer()->ptr()),
-                                      static_cast<T *>(v_tensor->get_buffer()->ptr()),
-                                      cos_sin_table,
-                                      static_cast<float *>(output->get_buffer()->ptr()));
-
-                }else {
-                    flash_attention_64<T>( B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
-                                      static_cast<T *>(q_tensor->get_buffer()->ptr()),
-                                      static_cast<T *>(k_tensor->get_buffer()->ptr()),
-                                      static_cast<T *>(v_tensor->get_buffer()->ptr()),
-                                      static_cast<float *>(output->get_buffer()->ptr()));
+                    flash_attention_64_rope<T>(B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
+                                               static_cast<T *>(q_tensor->get_buffer()->ptr()),
+                                               static_cast<T *>(k_tensor->get_buffer()->ptr()),
+                                               static_cast<T *>(v_tensor->get_buffer()->ptr()),
+                                               static_cast<T *>(mask_tensor->get_buffer()->ptr()),
+                                               cos_sin_table,
+                                               static_cast<float *>(output->get_buffer()->ptr()));
+                } else {
+                    flash_attention_64<T>(B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
+                                          static_cast<T *>(q_tensor->get_buffer()->ptr()),
+                                          static_cast<T *>(k_tensor->get_buffer()->ptr()),
+                                          static_cast<T *>(v_tensor->get_buffer()->ptr()),
+                                          static_cast<T *>(mask_tensor->get_buffer()->ptr()),
+                                          static_cast<float *>(output->get_buffer()->ptr()));
                 }
 
                 break;

@@ -51,6 +51,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         std::string _arch_name;
         std::vector<std::string> _architectures;
         //
+        bool _use_f16;
         bool _vocab_only{};
         bool _rope_fine_tuned{};
         bool _use_mmap; // use mmap if possible
