@@ -70,7 +70,8 @@ add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         flash_attention.cu
         flash_attention_opt.cu
         flash_attention_multi_head.cu
-        flash_attetntion_rope.cu)
+        flash_attetntion_rope.cu
+        quant_q_8_0_gemm_reshape_half.cu)
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE
 #        $<$<COMPILE_LANGUAGE:CUDA>:-O3>

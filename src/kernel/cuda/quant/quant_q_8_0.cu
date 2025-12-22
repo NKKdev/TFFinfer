@@ -73,9 +73,60 @@ namespace tff::kernel {
             dst_ptr[index].qs[lane_id] = max_value == 0 ? 0 : static_cast<int8_t>(static_cast<int32_t>(roundf(x / d)));
         }
     }
+    template<typename T>
+    void quant_q_8_0(const int M, const int N,
+        const T * src,
+        void *dst) {
 
+        if (std::is_same_v<T, float>) {
+            constexpr int BLOCK_SIZE = tff::core::quant::Q_8_0::BLOCK_SIZE;
+            constexpr int VEC_M_DIM = 8;
+            constexpr int WARP_NUM_PER_BLOCK = 8;
+            dim3 grid((N + BLOCK_SIZE - 1) / BLOCK_SIZE, (M + WARP_NUM_PER_BLOCK - 1) / WARP_NUM_PER_BLOCK, 1);
+            dim3 block(32, WARP_NUM_PER_BLOCK, 1);
+            quant_q_8_0_2d<32, BLOCK_SIZE><<<grid, block>>>(src, dst, M, N, N, N / BLOCK_SIZE);
+        }else if (std::is_same_v<T, half>) {
+            //todo half impl;
+        }
+    }
     template<typename T>
     void tff::kernel::QuantQ8<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        const auto &name = get_param_value<std::string>(0, para_ptr);
+        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), QuantQ8<T>::get_op_name().c_str());
+        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            1, para_ptr);
+        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            2, para_ptr);
+        const auto mem_buffer_manager_ptr = get_param_value<
+            std::shared_ptr<
+                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
+
+        if (input_tensors.size() != 1) {
+            tff::log::Logger::error("memcpy kernel param is invalid!");
+            return;
+        }
+        if (output_tensors.size() != 1) {
+            tff::log::Logger::error("memcpy kernel param is invalid!");
+            return;
+        }
+
+        const auto& input_tensor = input_tensors.at(0);
+        if (input_tensor->get_buffer() == nullptr) {
+            tff::log::Logger::error("input_tensor buffer is nullptr!");
+            return;
+        }
+        const auto& output_tensor = output_tensors.at(0);
+        if (output_tensor->get_buffer() == nullptr) {
+            auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
+            if (mem_buffer_pair.second == nullptr) {
+                tff::log::Logger::error("mem_buffer_pair buffer is nullptr!");
+                return;
+            }
+            output_tensor->set_buffer_data(mem_buffer_pair.second, output_tensor->get_bytes(), mem_buffer_pair.first);
+        }
+        const int M = input_tensor->get_shape()[1];
+        const int N = input_tensor->get_shape()[0];
+        quant_q_8_0<T>(M, N, static_cast<T *>(input_tensor->get_buffer()->ptr()), output_tensor->get_buffer()->ptr());
 
     }
 
@@ -93,8 +144,8 @@ namespace tff::kernel {
     }
 
     template class tff::kernel::QuantQ8<float>;
-    template class tff::kernel::QuantQ8<half>;
+    //template class tff::kernel::QuantQ8<half>;
     REGISTER_OP_OBJECT(QuantQ8, float);
 
-    REGISTER_OP_OBJECT(QuantQ8, half);
+    //REGISTER_OP_OBJECT(QuantQ8, half);
 }

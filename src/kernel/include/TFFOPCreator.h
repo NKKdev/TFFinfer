@@ -115,6 +115,7 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
     //
     template<typename T>
     class DeQuantQ8 : public base::OPCreatorBase<DeQuantQ8<T>, T> {
@@ -123,6 +124,7 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
     //
     template<typename T>
     class QuantQ8 : public base::OPCreatorBase<QuantQ8<T>, T> {
@@ -131,6 +133,7 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
     template<typename T>
     class QuantQ8Reshape : public base::OPCreatorBase<QuantQ8Reshape<T>, T> {
     public:
@@ -138,6 +141,15 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
+    template<typename T>
+    class QuantQ8MatMul : public base::OPCreatorBase<QuantQ8MatMul<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
+
     template<typename T>
     class SetRow : public base::OPCreatorBase<SetRow<T>, T> {
     public:
@@ -145,6 +157,7 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
     template<typename T>
     class GetRow : public base::OPCreatorBase<GetRow<T>, T> {
     public:

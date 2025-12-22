@@ -1,6 +1,7 @@
 //
-// Created by nkk on 2025/12/1.
+// Created by nkk on 2025/12/22.
 //
+
 #include <vector>
 #include <random>
 #include "cublas_v2.h"
@@ -11,7 +12,7 @@
 #include "device/cuda/cudaInc.h"
 #include "include/kernel_util.h"
 using namespace tff::core::quant;
-using T = float;
+using T = half;
 constexpr int QUANT_BLOCK_SIZE = 32;
 constexpr int VEC_DIM_M = 2;
 constexpr int VEC_DIM_N = 2;
@@ -210,8 +211,17 @@ static __device__ void compute_tile(const int thread_x, const int thread_y,
                     b_reg[nn] = b_quant_sm[(thread_x + nn * BLOCK_N_DIM / VEC_DIM_N) * BLOCK_PAD_SIZE + kk_index];
 
                     block_sum = vec_dot_product(a_reg[mm], b_reg[nn], block_sum);
+                    if (blockIdx.y == 1 && blockIdx.x == 0 && thread_y == 15 && mm == 0 && nn == 1 && thread_x == 0) {
+                        printf("thread_x: %d, thread_y: %d, a_reg[%d]: %d, b_reg[%d]: %d ,a_scale[%d]: %lf, b_scale[%d]: %lf \n",thread_x, thread_y, mm, a_reg[mm], nn, b_reg[nn],mm, a_scale[mm], nn,b_scale[nn]);
+                    }
                 }
-                sum += static_cast<float>(block_sum) * (a_scale[mm]) * (b_scale[nn]);
+                if (blockIdx.y == 1 && blockIdx.x == 0 && thread_y == 15 && mm == 0 && nn == 1 && thread_x == 0) {
+                    printf("kk: %d, thread_x: %d, thread_y: %d, block_sum: %d ,a_scale[%d]: %lf, b_scale[%d]: %lf \n",kk, thread_x, thread_y, block_sum,mm, a_scale[mm], nn,b_scale[nn]);
+                }
+                sum += (block_sum) * (a_scale[mm]) * (b_scale[nn]);
+                if (blockIdx.y == 1 && blockIdx.x == 0 && thread_y == 15 && mm == 0 && nn == 1 && thread_x == 0) {
+                    printf("kk: %d, thread_x: %d, thread_y: %d, block_sum: %d ,a_scale[%d]: %lf, b_scale[%d]: %lf ,sum:%lf \n",kk, thread_x, thread_y, block_sum,mm, a_scale[mm], nn,b_scale[nn], sum);
+                }
             }
 
             c_reg[mm * VEC_DIM_N + nn] += sum;
@@ -301,16 +311,16 @@ static void quant_q_8_0_gemm_cpu(int M, int N, int K,
                 const auto a_block = &a_quant[m * a_ld * 8 + k * 8];
                 const auto b_block = &b_quant[n * b_ld * 8 + k * 8];
 
-                const float d_a = __half2float(a_scale[m * a_ld + k]);
-                const float d_b = __half2float(b_scale[n * b_ld + k]);
+                const double d_a = __half2float(a_scale[m * a_ld + k]);
+                const double d_b = __half2float(b_scale[n * b_ld + k]);
 
-                float dot_q = 0;
+                double dot_q = 0;
                 for (int i = 0; i < tff::core::quant::Q_8_0::BLOCK_SIZE / 4; ++i) {
                     auto a_value = a_block[i];
                     auto b_value = b_block[i];
                     dot_q = ggml_cuda_dp4a(a_value, b_value, dot_q);
                 }
-                sum += d_a * d_b * static_cast<float>(dot_q);
+                sum += d_a * d_b * (dot_q);
             }
             if (std::is_same_v<T, half>) {
                 c[m * c_ld + n] = __float2half(sum);
@@ -674,14 +684,14 @@ static void quant_q_8_0_2d_reshape(const int m, const int n, std::vector<float> 
     printf("2d success!!\n");
 }
 extern "C" static int quant_q_8_0_gemm_main(int argc, char *argv[]);
-int main45(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
     //quant_q_8_0_gemm_main(argc, argv);
 
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     std::mt19937 mt(42);
     std::uniform_real_distribution<double> dist(-127, 127);
-    int dim = 1024;
+    int dim = 128;
     int m = dim;
     int n = dim;
     int k = dim;
@@ -757,9 +767,11 @@ int main45(int argc, char *argv[]) {
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             if (std::is_same_v<T, half>) {
-                float delta = __half2float(c_mat_cpu[i * n + j]) - __half2float(c_mat[i * n + j]);
-                if (delta > 1.0f) {
-                    printf("m: %d, n: %d, error: %f, c_mat_cpu[%d]: %f, c_mat[%d]: %f,\n", i, j, delta,
+
+                half tmp = (c_mat_cpu[i * n + j]) - (c_mat[i * n + j]);
+                //float delta = __half2float(tmp);
+                if (tmp > (half)1) {
+                    printf("m: %d, n: %d, error: %f, c_mat_cpu[%d]: %f, c_mat[%d]: %f,\n", i, j, tmp,
                            i * n + j, __half2float(c_mat_cpu[i * n + j]), i * n + j, __half2float(c_mat[i * n + j]));
                     return 0;
                 }

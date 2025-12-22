@@ -149,6 +149,7 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/kernel/cuda/set_row.cu
         src/kernel/cuda/get_row.cu
         src/kernel/cuda/quant/dequant_q_8_0.cu
+        src/kernel/cuda/quant/quant_q_8_0_gemm.cu
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
