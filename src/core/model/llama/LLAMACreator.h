@@ -25,7 +25,7 @@ namespace tff::core::model {
 
         ~LLAMACreator() override = default;
 
-    public:
+    protected:
         //
         std::shared_ptr<tff::core::graph::GraphNode> build_mul_node(
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,

@@ -27,6 +27,8 @@ namespace tff::core::device::cpu {
 
         tff::core::device::DeviceType get_device_type(size_t _device_id) override;
 
+        tff::core::device::DeviceType device_type();
+
         void get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) override;
 
         void device_init(size_t _device_id) override;

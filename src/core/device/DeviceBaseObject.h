@@ -28,6 +28,7 @@ namespace tff::core::device {
         virtual void get_device_mem(size_t _device_id, size_t *_free_mem, size_t *_total_mem) = 0;
 
         virtual tff::core::device::DeviceType get_device_type(size_t _device_id) = 0;
+        virtual tff::core::device::DeviceType device_type() = 0;
 
         virtual void get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) = 0;
 

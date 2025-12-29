@@ -150,6 +150,7 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/kernel/cuda/get_row.cu
         src/kernel/cuda/quant/dequant_q_8_0.cu
         src/kernel/cuda/quant/quant_q_8_0_gemm.cu
+        src/kernel/cuda/rope_table.cu
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

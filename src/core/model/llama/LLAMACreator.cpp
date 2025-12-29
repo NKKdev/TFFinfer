@@ -430,7 +430,7 @@ namespace tff::core::model {
 
         auto attn_norm_w = build_mul_mat_node(graph_ptr, out_put_node.find(TFF_GRAPH_NODE_CPU2GPU)->second,
                                               flash_attn_node);
-        tff::core::graph::NodeMetadata meta_attn_norm_w{node_name + "_attn_norm_mul_w_node"};
+        tff::core::graph::NodeMetadata meta_attn_norm_w{node_name + "_mul_w_node"};
         attn_norm_w->set_node_meta(meta_attn_norm_w);
         auto para_ptr = attn_norm_w->get_params();
         para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
@@ -452,7 +452,7 @@ namespace tff::core::model {
 
         auto ffn_up_w_node = build_mul_mat_node(graph_ptr, ffn_up_node.find(TFF_GRAPH_NODE_CPU2GPU)->second,
                                                 input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-        tff::core::graph::NodeMetadata meta_ffn_up_w_node{node_name + "_ffn_up_mul_w_node"};
+        tff::core::graph::NodeMetadata meta_ffn_up_w_node{node_name + "_mul_w_node"};
         ffn_up_w_node->set_node_meta(meta_ffn_up_w_node);
         auto para_ptr = ffn_up_w_node->get_params();
         para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
@@ -478,7 +478,7 @@ namespace tff::core::model {
 
         auto ffn_gate_w_node = build_mul_mat_node(graph_ptr, ffn_gate_node.find(TFF_GRAPH_NODE_CPU2GPU)->second,
                                                   input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-        tff::core::graph::NodeMetadata meta_ffn_gate_w_node{node_name + "_ffn_gate_mul_w_node"};
+        tff::core::graph::NodeMetadata meta_ffn_gate_w_node{node_name + "_mul_w_node"};
         ffn_gate_w_node->set_node_meta(meta_ffn_gate_w_node);
         auto para_ptr = ffn_gate_w_node->get_params();
         para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
@@ -504,7 +504,7 @@ namespace tff::core::model {
 
         auto ffn_down_w_node = build_mul_mat_node(graph_ptr, ffn_down_node.find(TFF_GRAPH_NODE_CPU2GPU)->second,
                                                   input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-        tff::core::graph::NodeMetadata meta_ffn_down_w_node{node_name + "_ffn_down_mul_w_node"};
+        tff::core::graph::NodeMetadata meta_ffn_down_w_node{node_name + "_mul_w_node"};
         ffn_down_w_node->set_node_meta(meta_ffn_down_w_node);
         auto para_ptr = ffn_down_w_node->get_params();
         para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);

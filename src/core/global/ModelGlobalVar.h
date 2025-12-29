@@ -1089,6 +1089,8 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL, "quant_q8_matmul"},
         {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_RESHAPE, "quantize_q8_reshape"},
         {tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8_RESHAPE, "dequantize_q8_reshape"},
+        //
+        {tff::core::graph::TffOpType::TFF_OP_PRE_ROPE_TABLE, "pre_rope_table"},
     };
 
     template<typename T>

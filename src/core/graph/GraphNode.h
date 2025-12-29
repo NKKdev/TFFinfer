@@ -53,7 +53,7 @@ namespace tff::core::graph {
         friend class Graph;
 
     public:
-        explicit GraphNode(const std::string &name = "") {
+        explicit GraphNode(const std::string &name = ""):_is_fused(false) {
             this->_node_metadata._name = name;
             this->_params_ptr = std::make_shared<tff::core::global::ParamBaseObject>();
             this->_weight_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMWeightMemManager>(
@@ -63,6 +63,13 @@ namespace tff::core::graph {
         };
 
         virtual ~GraphNode() = default;
+
+        bool operator==(const GraphNode &node) const {
+            return this->_node_metadata._name == node._node_metadata._name;
+        }
+        bool operator!=(const GraphNode &node) const {
+            return this->_node_metadata._name != node._node_metadata._name;
+        }
     public:
         //
         virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() {
@@ -108,10 +115,21 @@ namespace tff::core::graph {
             for (auto &in : inputs) {
                 in->set_priority(_src_tensors_ptr.size());
             }
-            _src_tensors_ptr.insert(_src_tensors_ptr.end(),inputs.begin(), inputs.end());
+            _src_tensors_ptr = inputs;
         }
 
         void set_outputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor>> &outputs) {
+            _dst_tensors_ptr = outputs;
+        }
+        //
+        void add_inputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor>> &inputs) {
+            for (auto &in : inputs) {
+                in->set_priority(_src_tensors_ptr.size());
+            }
+            _src_tensors_ptr.insert(_src_tensors_ptr.end(),inputs.begin(), inputs.end());
+        }
+        //
+        void add_outputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor>> &outputs) {
             _dst_tensors_ptr.insert(_dst_tensors_ptr.end(),outputs.begin(), outputs.end());
         }
 
@@ -169,15 +187,77 @@ namespace tff::core::graph {
             return this->_next_nodes;
         }
         //
+        inline void add_successors(const std::weak_ptr<GraphNode> &successor) {
+            auto self = shared_from_this();
+            for (auto iter = this->_next_nodes.begin();iter != this->_next_nodes.end();) {
+                if (const auto& node = *iter; node.lock() == successor.lock()) {
+                    return;
+                }else {
+                    ++iter;
+                }
+            }
+            this->_next_nodes.push_back(successor);
+            //successor.lock()->add_predecessors(self);
+        }
+        //
+        inline void add_predecessors(const std::weak_ptr<GraphNode> &predecessor) {
+            auto self = shared_from_this();
+            for (auto iter = this->_prev_nodes.begin();iter != this->_prev_nodes.end();) {
+                if (const auto& node = *iter; node.lock() == predecessor.lock()) {
+                    return;
+                }else {
+                    ++iter;
+                }
+            }
+            this->_prev_nodes.push_back(predecessor);
+            //predecessor.lock()->add_successors(self);
+        }
+        inline void erase_successors(const std::weak_ptr<GraphNode> &successor) {
+            auto self = shared_from_this();
+            for (auto iter = this->_next_nodes.begin();iter != this->_next_nodes.end();) {
+                if (const auto& node = *iter; node.lock() == successor.lock()) {
+                    iter = this->_next_nodes.erase(iter);
+                    //node.lock()->erase_predecessors(self);
+                    continue;
+                }else {
+                    ++iter;
+                }
+            }
+        }
+        //
+        inline void erase_predecessors(const std::weak_ptr<GraphNode> &predecessor) {
+            auto self = shared_from_this();
+            for (auto iter = this->_prev_nodes.begin();iter != this->_prev_nodes.end();) {
+                if (const auto& node = *iter; node.lock() == predecessor.lock()) {
+                    iter = this->_prev_nodes.erase(iter);
+                    //node.lock()->erase_successors(self);
+                    continue;
+                }else {
+                    ++iter;
+                }
+            }
+        }
+        //
         inline tff::core::memory::DataType data_type() const {
             if (!_src_tensors_ptr.empty()) {
                 auto tensor = *_src_tensors_ptr.begin();
                 return tensor->get_data_type();
             }
+            return tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN;
+        }
+
+        //
+        inline bool is_fuse() const {
+            return this->_is_fused;
+        }
+        //
+        inline void fuse() {
+            this->_is_fused = true;
         }
 
     protected:
         NodeMetadata _node_metadata;
+        bool _is_fused;
 
         std::vector<std::weak_ptr<GraphNode> > _prev_nodes; // 前驱节点
         std::vector<std::weak_ptr<GraphNode> > _next_nodes; // 后继节点

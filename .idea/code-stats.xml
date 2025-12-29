@@ -585,39 +585,111 @@
           <option name="type" value="CODE_MACHINE" />
           <option name="unlockTimestamp" value="1766377211388" />
           <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
         </Achievement>
         <Achievement>
           <option name="type" value="REFACTOR_MASTER" />
           <option name="unlockTimestamp" value="1766377211429" />
           <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
         </Achievement>
         <Achievement>
           <option name="type" value="DELETE_AND_RUN" />
           <option name="unlockTimestamp" value="1766377211451" />
           <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
         </Achievement>
         <Achievement>
           <option name="type" value="ABSOLUTELY_AMAZING" />
           <option name="unlockTimestamp" value="1766377211474" />
           <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
         </Achievement>
         <Achievement>
           <option name="type" value="ART_IS_EXPLOSION" />
           <option name="unlockTimestamp" value="1766377211495" />
           <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
         </Achievement>
         <Achievement>
           <option name="type" value="TERRIFYING_WHEN_THINK" />
           <option name="unlockTimestamp" value="1766377211527" />
           <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
         </Achievement>
         <Achievement>
           <option name="type" value="HAVE_INSIDER_ABORT_DEAL" />
           <option name="unlockTimestamp" value="1766377211565" />
           <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
         </Achievement>
         <Achievement>
           <option name="unlockTimestamp" value="1766384165189" />
+          <option name="unlocked" value="true" />
+          <option name="date" value="2025-12-22" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="CODE_MACHINE" />
+          <option name="unlockTimestamp" value="1766973230024" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="REFACTOR_MASTER" />
+          <option name="unlockTimestamp" value="1766973230070" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="DELETE_AND_RUN" />
+          <option name="unlockTimestamp" value="1766973230091" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="ABSOLUTELY_AMAZING" />
+          <option name="unlockTimestamp" value="1766973230108" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="ART_IS_EXPLOSION" />
+          <option name="unlockTimestamp" value="1766973230126" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="TERRIFYING_WHEN_THINK" />
+          <option name="unlockTimestamp" value="1766973230147" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="HAVE_INSIDER_ABORT_DEAL" />
+          <option name="unlockTimestamp" value="1766973230163" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="unlockTimestamp" value="1766981698941" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="KEYBOARD_FLYING" />
+          <option name="unlockTimestamp" value="1766986332547" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="HARD_WORKER" />
+          <option name="unlockTimestamp" value="1766987231190" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="LEGENDARY_1000" />
+          <option name="unlockTimestamp" value="1766990388334" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="DELETE_DB" />
+          <option name="unlockTimestamp" value="1766990587313" />
+          <option name="unlocked" value="true" />
+        </Achievement>
+        <Achievement>
+          <option name="type" value="CTRL_S_BELIEVER" />
+          <option name="unlockTimestamp" value="1766992331251" />
           <option name="unlocked" value="true" />
         </Achievement>
       </list>
@@ -738,20 +810,34 @@
           <option name="addedLines" value="31" />
           <option name="deletedLines" value="1" />
           <option name="language" value="C++" />
+          <option name="date" value="2025-12-22" />
         </CodeStats>
         <CodeStats>
           <option name="addedLines" value="109" />
           <option name="deletedLines" value="45" />
           <option name="language" value="C/C++ Header" />
+          <option name="date" value="2025-12-22" />
+        </CodeStats>
+        <CodeStats>
+          <option name="addedLines" value="1810" />
+          <option name="deletedLines" value="396" />
+          <option name="language" value="C/C++ Header" />
+        </CodeStats>
+        <CodeStats>
+          <option name="addedLines" value="249" />
+          <option name="deletedLines" value="72" />
+          <option name="language" value="C++" />
         </CodeStats>
       </list>
     </option>
+    <option name="complexPatternCount" value="2" />
     <option name="consecutiveDays" value="1" />
     <option name="largestSingleDelete" value="1193" />
     <option name="maxFileLines" value="2798" />
-    <option name="saveCount" value="146" />
+    <option name="saveCount" value="261" />
+    <option name="todoFixmeCount" value="2" />
     <option name="lastActiveDate" value="2025-11-18" />
-    <option name="firstCodeTimeToday" value="2025-12-22T12:55:45.7036296" />
-    <option name="lastCodeTimeToday" value="2025-12-22T14:16:31.17297163" />
+    <option name="firstCodeTimeToday" value="2025-12-29T12:12:20.721114382" />
+    <option name="lastCodeTimeToday" value="2025-12-29T16:32:42.498031764" />
   </component>
 </project>

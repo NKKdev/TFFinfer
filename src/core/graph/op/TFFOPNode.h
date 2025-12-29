@@ -626,6 +626,37 @@ namespace tff::core::graph::op {
             return callback;
         }
     };
+    //
+    class PreRopeTableNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit PreRopeTableNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_PRE_ROPE_TABLE); }
+
+        ~PreRopeTableNode() override = default;
+
+    public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+            if (this->_op_type != TFF_OP_PRE_ROPE_TABLE) {
+                tff::log::Logger::error("PreRopeTableNode op type(expect TFF_OP_PRE_ROPE_TABLE) is wrong!!");
+                return nullptr;
+            }
+            if (!this->_prev_nodes.empty()) {
+                tff::log::Logger::error("PreRopeTableNode prev_nodes size() is wrong!!");
+                return nullptr;
+            }
+
+            auto params_ptr = this->get_params();
+            auto max_seq_len = params_ptr->get_param<int>(1).value();
+            auto dim = params_ptr->get_param<int>(2).value();
+            std::array<int64_t, MAX_TENSOR_DIM> output_shape{dim, max_seq_len,1,1};
+            auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(),tff::core::memory::DataType::TFF_DATA_TYPE_F32,
+                                                                             output_shape, true,
+                                                                             this->device()->
+                                                                             get_device_buffer_allocator());
+            this->set_outputs(std::vector<std::shared_ptr<tff::core::memory::Tensor>>{output_tensor});
+            auto callback = GraphNode::forward();
+            return callback;
+        }
+    };
 }
 
 

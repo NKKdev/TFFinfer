@@ -31,7 +31,7 @@ namespace tff::core::runtime {
 
     public:
         //
-        bool build_task_schedule(const std::shared_ptr<tff::core::graph::Graph> &graph_ptr) const;
+        bool build_task_schedule(bool is_fuse, const std::shared_ptr<graph::Graph> &graph_ptr) const;
         //
         inline void run() {
             this->_task_scheduler->run();
@@ -39,6 +39,9 @@ namespace tff::core::runtime {
         inline std::shared_ptr<tff::schedule::HybridScheduler> get_task_schedule() const {
             return this->_task_scheduler;
         }
+    protected:
+        void fuse_op_node(std::vector<std::shared_ptr<graph::GraphNode>> &nodes) const;
+        bool fuse(std::shared_ptr<graph::GraphNode> &current_node) const;
 
     protected:
         std::shared_ptr<tff::schedule::HybridScheduler> _task_scheduler;

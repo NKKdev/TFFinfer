@@ -165,5 +165,12 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+    template<typename T>
+    class PreRopeTable : public base::OPCreatorBase<PreRopeTable<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
 }
 #endif //TFFINFER_XGEMM_H

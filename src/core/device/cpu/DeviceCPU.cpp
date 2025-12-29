@@ -22,6 +22,15 @@ namespace tff::core::device::cpu {
     tff::core::device::DeviceType DeviceCPU::get_device_type(size_t _device_id) {
     }
 
+    tff::core::device::DeviceType DeviceCPU::device_type() {
+        std::vector<int> device_list;
+        get_device_id(device_list);
+        if (device_list.empty()) {
+            return tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_UNKNOWN;
+        }
+        return get_device_type(device_list[0]);
+    }
+
     void DeviceCPU::get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) {
     }
 

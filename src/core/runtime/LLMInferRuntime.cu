@@ -12,6 +12,7 @@
 namespace tff::core::runtime {
     bool LLMInferRuntime::load_model(const std::vector<std::string> &model_files_path,
                                      const tff::core::model::ModelConfig &params) {
+        this->_model_config._is_fuse_op = params._is_fuse_op;
         bool bRet = true;
         auto model_detector = tff::core::model::ModelDetectyorRegistry::get().find_dector(params._architectures);
         this->_architecture = model_detector->arch();
@@ -172,7 +173,7 @@ namespace tff::core::runtime {
                 this->init_graph();
             }
             try {
-                this->_task_manager->build_task_schedule(this->_graph_ptr);
+                this->_task_manager->build_task_schedule(this->_model_config._is_fuse_op, this->_graph_ptr);
                 this->_task_manager->run();
             } catch (const std::exception &e) {
                 tff::log::Logger::error("Prefill forward failed: {%s}", e.what());

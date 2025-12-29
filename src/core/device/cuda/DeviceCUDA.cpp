@@ -39,6 +39,15 @@ namespace tff::core::device::cuda {
         return tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU;
     }
 
+    tff::core::device::DeviceType DeviceCUDA::device_type() {
+        std::vector<int> device_list;
+        get_device_id(device_list);
+        if (device_list.empty()) {
+            return tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_UNKNOWN;
+        }
+        return get_device_type(device_list[0]);
+    }
+
     void DeviceCUDA::get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) {
         cudaDeviceProp device_prop{};
         CudaSafeCall(cudaGetDeviceProperties(&device_prop, _device_id));

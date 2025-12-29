@@ -116,6 +116,8 @@ namespace tff::core::graph {
         TFF_OP_QUANTIZE_Q8_MATMUL,
         TFF_OP_DEQUANTIZE_Q8,
         TFF_OP_DEQUANTIZE_Q8_RESHAPE,
+        //
+        TFF_OP_PRE_ROPE_TABLE,
         TFF_OP_COUNT,
     };
     enum MatMulTransType {

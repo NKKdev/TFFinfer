@@ -18,11 +18,9 @@ namespace tff::core::graph {
             return true;
         }
 
-        // 双向链接
-        from->_next_nodes.push_back(to);
-        to->_prev_nodes.push_back(from);
+        from->add_successors(to);
+        to->add_predecessors(from);
 
-        //to->set_inputs(from->outputs());
         return true;
     }
 
