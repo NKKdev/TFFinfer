@@ -148,23 +148,31 @@ namespace tff::core::model {
                                 second;
                         NodeType attn_v_node;
                         build_qkv_node(attn_v_layer, graph_ptr, attn_norm_node, attn_v_node);
+                        //
+                        auto rope_table_node = build_rope_table_node(graph_ptr);
 
                         //
                         auto q_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
                         q_rope_node->bind_devices(attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second->device());
-                        NodeMetadata meta_q_rope_node{attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_rope"};
+                        NodeMetadata meta_q_rope_node{
+                            attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name() + "_rope"
+                        };
                         q_rope_node->set_node_meta(meta_q_rope_node);
                         graph_ptr->add_node(q_rope_node);
                         graph_ptr->add_edge(attn_q_node.find(TFF_GRAPH_NODE_COMPUTE)->second, q_rope_node);
+                        graph_ptr->add_edge(rope_table_node, q_rope_node);
                         attn_q_node[TFF_GRAPH_NODE_COMPUTE] = q_rope_node;
 
                         //
                         auto k_rope_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ROPE);
                         k_rope_node->bind_devices(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->device());
-                        NodeMetadata meta_k_rope_node{attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_rope"};
+                        NodeMetadata meta_k_rope_node{
+                            attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name() + "_rope"
+                        };
                         k_rope_node->set_node_meta(meta_k_rope_node);
                         graph_ptr->add_node(k_rope_node);
                         graph_ptr->add_edge(attn_k_node.find(TFF_GRAPH_NODE_COMPUTE)->second, k_rope_node);
+                        graph_ptr->add_edge(rope_table_node, k_rope_node);
                         attn_k_node[TFF_GRAPH_NODE_COMPUTE] = k_rope_node;
 
 
@@ -175,7 +183,9 @@ namespace tff::core::model {
                         NodeType ffn_inp_node;
                         auto ffn_inp = build_add_node(graph_ptr, attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
                                                       input_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-                        NodeMetadata meta_ffn_inp_node{attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name() + "_add_inp"};
+                        NodeMetadata meta_ffn_inp_node{
+                            attn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name() + "_add_inp"
+                        };
                         ffn_inp->set_node_meta(meta_ffn_inp_node);
                         ffn_inp_node[TFF_GRAPH_NODE_COMPUTE] = ffn_inp;
                         //
@@ -185,7 +195,9 @@ namespace tff::core::model {
                         auto result_node = build_add_node(
                             graph_ptr, ffn_inp_node.find(TFF_GRAPH_NODE_COMPUTE)->second,
                             ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second);
-                        NodeMetadata meta_result_node{ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name()+"_add_ffn_inp_node"};
+                        NodeMetadata meta_result_node{
+                            ffn_node.find(TFF_GRAPH_NODE_COMPUTE)->second->name() + "_add_ffn_inp_node"
+                        };
                         result_node->set_node_meta(meta_result_node);
 
                         input_node[TFF_GRAPH_NODE_COMPUTE] = result_node;
@@ -196,6 +208,28 @@ namespace tff::core::model {
 
         //NodeType output_norm_node;
         //build_output_norm(output_layer_iter->second.begin()->second, graph_ptr, input_node, output_norm_node);
+    }
+
+    //
+    std::shared_ptr<tff::core::graph::GraphNode> LLAMACreator::build_rope_table_node(
+        std::shared_ptr<tff::core::graph::Graph> &graph_ptr) {
+        auto rope_table_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_PRE_ROPE_TABLE);
+        if (rope_table_node != nullptr) {
+            NodeMetadata meta_rope_node{std::string("pre_compute_rope_table_node")};
+            rope_table_node->set_node_meta(meta_rope_node);
+            auto para_ptr = rope_table_node->get_params();
+            auto max_seq_len = _model_loader->get_model_config()._n_ctx;
+            auto embedding_dim = _model_loader->get_model_config()._n_rot;
+            para_ptr->set_param<const uint32_t>(para_ptr->get_param_count(), static_cast<const unsigned &&>(max_seq_len));
+            para_ptr->set_param<const uint32_t>(para_ptr->get_param_count(), static_cast<const unsigned &&>(embedding_dim));
+            auto dev_gpu = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
+                DEVICE_BACKEND_FLAG,
+                tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
+            rope_table_node->bind_devices(dev_gpu);
+
+            graph_ptr->add_node(rope_table_node);
+        }
+        return rope_table_node;
     }
 
     std::shared_ptr<tff::core::graph::GraphNode> LLAMACreator::build_mul_node(
@@ -387,7 +421,6 @@ namespace tff::core::model {
         qkv_node->set_node_meta(meta_qkv_w_mul_node);
         auto para_ptr = qkv_node->get_params();
         para_ptr->set_param(para_ptr->get_param_count(), tff::core::graph::MatMulTransType::TFF_TT);
-
 
 
         auto reshape_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RESHAPE);

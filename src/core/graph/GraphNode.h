@@ -43,6 +43,8 @@ namespace tff::core::graph {
         };
         explicit NodeMetadata(std::string name) : _is_input(false), _is_output(false), _name(std::move(name)) {
         };
+        NodeMetadata(const char *name) : _is_input(false), _is_output(false), _name(name) {
+        };
         NodeMetadata(const bool &is_input, const bool &is_output, const std::string &name) : _is_input(is_input),
             _is_output(is_output), _name(name) {
         };
@@ -83,10 +85,6 @@ namespace tff::core::graph {
             params_ptr->set_param(params_ptr->get_param_count(),this->outputs());
             params_ptr->set_param(params_ptr->get_param_count(),this->_weight_mem_manager_ptr);
 
-            if (inputs().empty()) {
-                tff::log::Logger::error("Node %s : no valid input", this->_node_metadata._name.c_str());
-                return nullptr;
-            }
             auto callback = device()->get_op_func(this->_op_type, this->data_type());
             return callback;
         };
@@ -239,8 +237,8 @@ namespace tff::core::graph {
         }
         //
         inline tff::core::memory::DataType data_type() const {
-            if (!_src_tensors_ptr.empty()) {
-                auto tensor = *_src_tensors_ptr.begin();
+            if (!_dst_tensors_ptr.empty()) {
+                auto tensor = *_dst_tensors_ptr.begin();
                 return tensor->get_data_type();
             }
             return tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN;

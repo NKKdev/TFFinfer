@@ -23,6 +23,7 @@ int main(int argc,char *argv[]) {
     cfg._use_mmap = true;
     cfg._use_f16 = true;
     cfg._is_fuse_op = true;
+    cfg._kv_data_type = tff::core::memory::DataType::TFF_DATA_TYPE_F16;
     const int max_batches = 1;
     llm_runtime.load_model_config(model_config_file_path, cfg);
     std::vector<std::string> model_files;

@@ -12,7 +12,6 @@
 namespace tff::core::runtime {
     bool LLMInferRuntime::load_model(const std::vector<std::string> &model_files_path,
                                      const tff::core::model::ModelConfig &params) {
-        this->_model_config._is_fuse_op = params._is_fuse_op;
         bool bRet = true;
         auto model_detector = tff::core::model::ModelDetectyorRegistry::get().find_dector(params._architectures);
         this->_architecture = model_detector->arch();
@@ -22,7 +21,7 @@ namespace tff::core::runtime {
         this->_model_creator->set_loader(this->_model_loader);
         this->_vocabulary_ptr = std::make_unique<tff::core::model::LLMLLaMaVocabulary>();
 
-        this->load_hparams();
+        this->load_hparams(params._is_fuse_op, params._kv_data_type);
         this->load_vocab();
         this->load_layers();
         return bRet;
@@ -65,14 +64,14 @@ namespace tff::core::runtime {
         kv_cfg._use_sliding_window = this->_model_config._n_swa != 0;
         kv_cfg._max_tokens = this->_model_config._n_ctx;
         kv_cfg._use_f16 = this->_model_config._use_f16;
+        kv_cfg._data_type = this->_model_config._kv_data_type;
         const auto device = *this->_devices.begin();
         if (!device) {
             tff::log::Logger::error("No valid device found in _devices.");
             return false;
         }
         //
-        auto type_size = kv_cfg._use_f16 ? memory::type_traits_auto[memory::DataType::TFF_DATA_TYPE_F16]._type_size:
-        memory::type_traits_auto[memory::DataType::TFF_DATA_TYPE_F32]._type_size;//todo f32 unimplement
+        auto type_size = memory::type_traits_auto[kv_cfg._data_type]._type_size;
 
         const float one_page_size = kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE * type_size;
         tff::log::Logger::info("KV Cache: Size per page: {%lf} bytes", one_page_size);
@@ -273,33 +272,14 @@ namespace tff::core::runtime {
         //this->_n_bytes = this->_model_loader->_n_bytes;
     }
 
-    void LLMInferRuntime::load_hparams() {
+    void LLMInferRuntime::load_hparams(bool is_fuse_op, const tff::core::memory::DataType &kv_data_type) {
         const auto &ctx = _model_loader->get_model_ctx();
-        LOAD_KEY_VALUE(std::string, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
+        LOAD_KEY_VALUE(ctx, std::string, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                        this->_arch_name);
-        LOAD_KEY_VALUE(std::string, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_NAME, this->_name);
-        LOAD_KEY_VALUE(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,
-                       this->_model_config._n_embd);
-        LOAD_KEY_VALUE(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_BLOCK_COUNT,
-                       this->_model_config._n_layer);
-        LOAD_KEY_VALUE(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_COUNT,
-                       this->_model_config._n_expert);
-        LOAD_KEY_VALUE(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_USED_COUNT,
-                       this->_model_config._n_expert_used);
-        LOAD_KEY_VALUE(bool, bool, tff::core::model::ModelMetaKV::LLM_KV_ROPE_SCALING_FINETUNED,
-                       this->_model_config._rope_fine_tuned);
-        LOAD_KEY_VALUE(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_KEY_LENGTH,
-                       this->_model_config._n_embd_head_k);
-        LOAD_KEY_VALUE(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_VALUE_LENGTH,
-                       this->_model_config._n_embd_head_v);
-        LOAD_KEY_VALUE(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ROPE_DIMENSION_COUNT,
-                       this->_model_config._n_rot);
-        LOAD_KEY_VALUES(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_FEED_FORWARD_LENGTH,
-                        this->_model_config._n_ff_arr);
-        LOAD_KEY_VALUES(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,
-                        this->_model_config._n_head_arr);
-        LOAD_KEY_VALUES(uint32_t, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV,
-                        this->_model_config._n_head_kv_arr);
+        LOAD_KEY_VALUE(ctx, std::string, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_NAME, this->_name);
+        this->_model_config = this->_model_loader->get_model_config();
+        this->_model_config._is_fuse_op = is_fuse_op;
+        this->_model_config._kv_data_type = kv_data_type;
     }
 
     void LLMInferRuntime::load_vocab() const {
@@ -355,15 +335,15 @@ namespace tff::core::runtime {
                     this->_layer_map[layer_info.first].insert(std::make_pair(layer_index, tensor_type_graph_map));
                 }
 
-                const auto iter_tmp = this->_layer_map.find(
-                    tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
-                if (iter_tmp != this->_layer_map.end()) {
-                    auto iter_tensor = iter_tmp->second.begin()->second.find(
-                        tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K);
-                    if (iter_tensor != iter_tmp->second.begin()->second.end()) {
-                        this->_model_config._kv_data_type = iter_tensor->second.get()->data_type();
-                    }
-                }
+                // const auto iter_tmp = this->_layer_map.find(
+                //     tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+                // if (iter_tmp != this->_layer_map.end()) {
+                //     auto iter_tensor = iter_tmp->second.begin()->second.find(
+                //         tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K);
+                //     if (iter_tensor != iter_tmp->second.begin()->second.end()) {
+                //         this->_model_config._kv_data_type = iter_tensor->second.get()->data_type();
+                //     }
+                // }
             }
         }
         return true;

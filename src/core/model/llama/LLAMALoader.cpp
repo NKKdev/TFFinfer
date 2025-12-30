@@ -68,6 +68,7 @@ namespace tff::core::model {
             bRet &= this->load_header(i, it->second, _model_ctx);
             bRet &= this->load_kv_meta(i, it->second, _model_ctx);
             bRet &= this->load_tensor_info(i, it->second, _model_ctx);
+            bRet &= this->load_model_config(it->second, _model_ctx);
             if (!bRet) {
                 return bRet;
             }
@@ -242,30 +243,30 @@ namespace tff::core::model {
 
     bool LLAMALoader::load_model_config(const std::shared_ptr<FileLoader> &file_loader,
                                         const std::shared_ptr<tff::core::model::ModelContext> &ctx) {
-        LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                        this->_model_config._arch_name);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,
                        this->_model_config._n_embd);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_BLOCK_COUNT,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_BLOCK_COUNT,
                        this->_model_config._n_layer);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_COUNT,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_COUNT,
                        this->_model_config._n_expert);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_USED_COUNT,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EXPERT_USED_COUNT,
                        this->_model_config._n_expert_used);
-        LOAD_KEY_VALUE(ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_ROPE_SCALING_FINETUNED,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_ROPE_SCALING_FINETUNED,
                        this->_model_config._rope_fine_tuned);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_KEY_LENGTH,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_KEY_LENGTH,
                        this->_model_config._n_embd_head_k);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_VALUE_LENGTH,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_VALUE_LENGTH,
                        this->_model_config._n_embd_head_v);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ROPE_DIMENSION_COUNT,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ROPE_DIMENSION_COUNT,
                        this->_model_config._n_rot);
         //
-        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_FEED_FORWARD_LENGTH,
+        LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_FEED_FORWARD_LENGTH,
                         this->_model_config._n_ff_arr);
-        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,
+        LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,
                         this->_model_config._n_head_arr);
-        LOAD_KEY_VALUES(ModelContext::BasicType, uint32_t,
+        LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t,
                         tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV,
                         this->_model_config._n_head_kv_arr);
 

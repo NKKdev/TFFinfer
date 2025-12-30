@@ -27,50 +27,55 @@ namespace tff::core::model {
 
     protected:
         //
+        std::shared_ptr<tff::core::graph::GraphNode> build_rope_table_node(
+            std::shared_ptr<tff::core::graph::Graph> &graph_ptr);
+
+        //
         std::shared_ptr<tff::core::graph::GraphNode> build_mul_node(
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            std::shared_ptr<tff::core::graph::GraphNode> &a_node, std::shared_ptr<tff::core::graph::GraphNode> &b_node) ;
+            std::shared_ptr<tff::core::graph::GraphNode> &a_node, std::shared_ptr<tff::core::graph::GraphNode> &b_node);
+
         //
         std::shared_ptr<tff::core::graph::GraphNode> build_mul_mat_node(
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            std::shared_ptr<tff::core::graph::GraphNode> &a_node, std::shared_ptr<tff::core::graph::GraphNode> &b_node) ;
+            std::shared_ptr<tff::core::graph::GraphNode> &a_node, std::shared_ptr<tff::core::graph::GraphNode> &b_node);
 
         //
         std::shared_ptr<tff::core::graph::GraphNode> build_add_node(
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
             std::shared_ptr<tff::core::graph::GraphNode> &a_node,
-            std::shared_ptr<tff::core::graph::GraphNode> &b_node) ;
+            std::shared_ptr<tff::core::graph::GraphNode> &b_node);
 
         //
         void build_cpu_node(
             std::shared_ptr<GraphNode> &layer,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            NodeType &out_put_node) ;
+            NodeType &out_put_node);
 
         //
         void build_gpu_node(
             const std::string &node_name,
-            std::shared_ptr<tff::core::graph::Graph> &graph_ptr, NodeType &out_put_node, bool is_input = false) ;
+            std::shared_ptr<tff::core::graph::Graph> &graph_ptr, NodeType &out_put_node, bool is_input = false);
 
         //
         void build_attn_norm(const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                                  tff::core::graph::GraphNode> > &layer_map,
                              std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
                              NodeType &input_node,
-                             NodeType &attn_norm_node) ;
+                             NodeType &attn_norm_node);
 
         //
         void build_inputs(
             const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                 tff::core::graph::GraphNode> > &layer_map,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            NodeType &input_node) ;
+            NodeType &input_node);
 
         //
         void build_qkv_node(std::shared_ptr<GraphNode> &layer,
                             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
                             NodeType &input_node,
-                            NodeType &attn_qkv_node) ;
+                            NodeType &attn_qkv_node);
 
         //
         void build_attn(const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
@@ -80,34 +85,34 @@ namespace tff::core::model {
                         NodeType &q_node,
                         NodeType &k_node,
                         NodeType &v_node,
-                        NodeType &out_put_node) ;
+                        NodeType &out_put_node);
 
         void build_ffn_up(const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                               tff::core::graph::GraphNode> > &layer_map,
                           std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
                           NodeType &input_node,
-                          NodeType &ffn_up_node) ;
+                          NodeType &ffn_up_node);
 
         //
         void build_ffn_gate(const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                                 tff::core::graph::GraphNode> > &layer_map,
                             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
                             NodeType &input_node,
-                            NodeType &ffn_gate_node) ;
+                            NodeType &ffn_gate_node);
 
         //
         void build_ffn_down(const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                                 tff::core::graph::GraphNode> > &layer_map,
                             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
                             NodeType &input_node,
-                            NodeType &ffn_down_node) ;
+                            NodeType &ffn_down_node);
 
         //
         void build_ffn(const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                            tff::core::graph::GraphNode> > &layer_map,
                        std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
                        NodeType &input_node,
-                       NodeType &ffn_node) ;
+                       NodeType &ffn_node);
 
         //
         void build_output_norm(
@@ -115,24 +120,24 @@ namespace tff::core::model {
                 tff::core::graph::GraphNode> > &layer_map,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
             NodeType &input_node,
-            NodeType &output_norm_node) ;
+            NodeType &output_norm_node);
 
         //
         inline void update_mem_node(const tff::core::graph::GraphNodeType &node_type,
-                             const std::shared_ptr<graph::GraphNode> &mem_node) {
+                                    const std::shared_ptr<graph::GraphNode> &mem_node) {
             this->_current_mem_node[node_type] = mem_node;
         }
 
     public:
         void build_layer(std::shared_ptr<tff::core::memory::Tensor> &tensor_ptr,
                          std::shared_ptr<tff::core::graph::GraphNode> &layer_node,
-                         const size_t &total_layer_num = -1, const size_t &layer_index = -1) override ;
+                         const size_t &total_layer_num = -1, const size_t &layer_index = -1) override;
 
         //
         void build_graph(std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
                              std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                                  tff::core::graph::GraphNode> > > > &layer_map,
-                         std::shared_ptr<tff::core::graph::Graph> &graph_ptr) override ;
+                         std::shared_ptr<tff::core::graph::Graph> &graph_ptr) override;
 
         //
         inline const char *get_model_name() override {

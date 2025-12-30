@@ -14,10 +14,10 @@
 using namespace tff::core::global;
 namespace tff::core::model {
 #define TFF_TENSOR_MAX_DIMS 4
-#define LOAD_KEY_VALUES(ValueType,DataType, key_value, dst) \
+#define LOAD_KEY_VALUES(ctx, ValueType,DataType, key_value, dst) \
     dst = get_value<tff::core::model::ModelMetaKV,ValueType, DataType>(key_value, ctx)
-#define LOAD_KEY_VALUE(ValueType,DataType, key_value, dst) \
-    dst = LOAD_KEY_VALUES(ValueType,DataType, key_value, dst)[0]
+#define LOAD_KEY_VALUE(ctx, ValueType,DataType, key_value, dst) \
+    dst = LOAD_KEY_VALUES(ctx, ValueType,DataType, key_value, dst)[0]
 
     // model_list.h
 #define FOR_EACH_MODEL(X) \
@@ -81,6 +81,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         std::unordered_map<uint32_t, bool> _swa_layers;
         //
         tff::core::memory::DataType _kv_data_type;
+        ModelConfig &operator=(const ModelConfig &) = default;
     };
 
     enum TokenType {

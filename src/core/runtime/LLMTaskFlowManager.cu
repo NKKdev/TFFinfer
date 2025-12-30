@@ -80,67 +80,47 @@ namespace tff::core::runtime {
         if (!current_node || current_node->is_fuse()) {
             return false;
         }
-
-        // 收集所有可融合的前驱（必须满足：1. 唯一后继是 current_node；2. 同设备；3. 非特殊节点）
-        std::vector<std::shared_ptr<graph::GraphNode> > fusible_preds;//待融合的算子集合
-        std::vector<std::shared_ptr<graph::GraphNode> > non_fusible_preds;//原始不需要融合的算子集合;
-        for (const auto &weak_pred: current_node->get_predecessors()) {
-            auto pred = weak_pred.lock();
-            if (!pred) continue;
-
-            if (pred->is_input_node() || pred->is_output_node()) {
-                non_fusible_preds.push_back(pred);
-                continue;
-            }
-
-            auto successors = pred->get_successors();
-            if (successors.size() != 1) {
-                non_fusible_preds.push_back(pred);
-                continue;
-            }
-            auto succ = successors[0].lock();
-            if (!succ || succ != current_node) {
-                non_fusible_preds.push_back(pred);
-                continue;
-            }
-
-            // 设备必须一致
-            auto pred_dev = pred->device();
-            auto curr_dev = current_node->device();
-            if (!pred_dev || !curr_dev || pred_dev->device_type() != curr_dev->device_type()) {
-                //non_fusible_preds.push_back(pred);
-                continue;
-            }
-
-            if (pred->op_type() == graph::TFF_OP_MEM_CPY) {
-                //non_fusible_preds.push_back(pred);
-                return false;
-            }
-            if (current_node->op_type() == graph::TFF_OP_FLASH_ATTN_EXT && pred->op_type() == graph::TFF_OP_RESHAPE) {
-                non_fusible_preds.push_back(pred);
-                continue;
-            }
-            fusible_preds.push_back(pred);
-        }
-
-        if (fusible_preds.empty()) {
+        auto match_result = TFF_OP_FUSE_MODEL.find(current_node->op_type());
+        if (match_result == TFF_OP_FUSE_MODEL.end()) {
             return false;
         }
 
-        std::vector<std::shared_ptr<tff::core::memory::Tensor> > new_inputs;
-        for (auto &pred: fusible_preds) {
-            auto pred_inputs = pred->inputs();
-            new_inputs.insert(new_inputs.end(), pred_inputs.begin(), pred_inputs.end());
-        }
-        current_node->set_inputs(new_inputs);
+        // 收集所有可融合的前驱或后驱（必须满足：1. 唯一后继是 current_node；2. 同设备；3. 非特殊节点 4. 符合特定融合模式）
+        std::vector<std::shared_ptr<graph::GraphNode> > pre_fusible_preds;//待融合的算子集合
+        std::vector<std::shared_ptr<graph::GraphNode> > pre_non_fusible_preds;//原始不需要融合的算子集合;
+        for (const auto &weak_pred: current_node->get_predecessors()) {
+            auto pred = weak_pred.lock();
+            if (!pred) {
+                continue;
+            }
 
-        //将原始不需要融合的算子输入加回来
-        for (auto &pred: non_fusible_preds) {
-            auto pred_inputs = pred->outputs();
-            current_node->add_inputs(pred_inputs);
+            if (!can_fuse(current_node, pred)) {
+                pre_non_fusible_preds.push_back(pred);
+            }else {
+                pre_fusible_preds.push_back(pred);
+            }
+        }
+        std::vector<std::shared_ptr<graph::GraphNode> > succ_fusible_preds;//待融合的算子集合
+        std::vector<std::shared_ptr<graph::GraphNode> > succ_non_fusible_preds;//原始不需要融合的算子集合;
+        //
+        for (const auto &weak_pred: current_node->get_successors()) {
+            auto pred = weak_pred.lock();
+            if (!pred) {
+                continue;
+            }
+
+            if (!can_fuse(current_node, pred)) {
+                succ_non_fusible_preds.push_back(pred);
+            }else {
+                succ_fusible_preds.push_back(pred);
+            }
+        }
+        //
+        if (succ_fusible_preds.empty() && pre_fusible_preds.empty()) {
+            return false;
         }
 
-        for (auto &pred: fusible_preds) {
+        for (auto &pred: pre_fusible_preds) {
             for (const auto &weak_grand: pred->get_predecessors()) {
                 auto grand = weak_grand.lock();
                 if (!grand) continue;
@@ -154,8 +134,52 @@ namespace tff::core::runtime {
             current_node->erase_predecessors(pred);
         }
 
-        tff::log::Logger::info("Fused %zu predecessor(s) into node '%s'",
-                               fusible_preds.size(), current_node->name().c_str());
+        for (auto &pred: succ_fusible_preds) {
+            for (const auto &weak_grand: pred->get_successors()) {
+                auto grand = weak_grand.lock();
+                if (!grand) continue;
+
+                grand->add_predecessors(current_node);
+                current_node->add_successors(weak_grand);
+            }
+
+            pred->fuse();
+            pred->erase_predecessors(current_node);
+            current_node->erase_successors(pred);
+        }
+        return true;
+    }
+    bool LLMTaskFlowManager::can_fuse(std::shared_ptr<graph::GraphNode> &current_node,
+        std::shared_ptr<graph::GraphNode> &pre_node) const {
+        if (pre_node->is_input_node() || pre_node->is_output_node()) {
+            return false;
+        }
+
+        auto successors = pre_node->get_successors();
+        if (successors.size() != 1) {
+            return false;
+        }
+        auto succ = successors[0].lock();
+        if (!succ || succ != current_node) {
+            return false;
+        }
+
+        // 设备必须一致
+        auto pred_dev = pre_node->device();
+        auto curr_dev = current_node->device();
+        if (!pred_dev || !curr_dev || pred_dev->device_type() != curr_dev->device_type()) {
+            return false;
+        }
+        auto match_result = TFF_OP_FUSE_MODEL.find(current_node->op_type());
+        if (match_result == TFF_OP_FUSE_MODEL.end()) {
+            return false;
+        }
+        auto iter = std::find(match_result->second.begin(), match_result->second.end(), pre_node->op_type());
+        if (iter != match_result->second.end()) {
+            return true;
+        }else {
+            return false;
+        }
         return true;
     }
 }

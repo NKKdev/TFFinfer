@@ -15,17 +15,17 @@ namespace tff::core::model {
         bool bRet = true;
         this->_model_loader = model_loader;
         const auto &ctx = this->_model_loader->get_model_ctx();
-        LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                                this->_arch_name);
-        LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MODEL,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MODEL,
                        this->_tokenizer_model);
-        LOAD_KEY_VALUE(ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_PRE,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_PRE,
                        this->_tokenizer_pre);
-        LOAD_KEY_VALUE(ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_TOKEN_TYPE_COUNT,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_TOKEN_TYPE_COUNT,
                        this->_n_token_types);
-        LOAD_KEY_VALUE(ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_PREFIX,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_PREFIX,
                        this->_add_space_prefix);
-        LOAD_KEY_VALUE(ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_REMOVE_EXTRA_WS,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_REMOVE_EXTRA_WS,
                        this->_remove_extra_whitespaces);
 
         if (this->_tokenizer_pre == "smollm") {
@@ -57,7 +57,7 @@ namespace tff::core::model {
         const auto &ctx = _model_loader->get_model_ctx();
         //
         std::vector<std::string> merge_vector;
-        LOAD_KEY_VALUES(std::vector<std::string>,std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MERGES,
+        LOAD_KEY_VALUES(ctx, std::vector<std::string>,std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_MERGES,
                         merge_vector);
 
         for (int i = 0; i < merge_vector.size(); i++) {
@@ -80,14 +80,14 @@ namespace tff::core::model {
         const auto &ctx = _model_loader->get_model_ctx();
         //
         std::vector<std::string> token_data;
-        LOAD_KEY_VALUES(std::vector<std::string>, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_LIST,
+        LOAD_KEY_VALUES(ctx, std::vector<std::string>, std::string, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_LIST,
                         token_data);
         //
         std::vector<float> token_scores;
-        LOAD_KEY_VALUES(ModelContext::BasicType,float, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_SCORES, token_scores);
+        LOAD_KEY_VALUES(ctx, ModelContext::BasicType,float, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_SCORES, token_scores);
         //
         std::vector<uint32_t> token_types;
-        LOAD_KEY_VALUES(ModelContext::BasicType,uint32_t, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_TOKEN_TYPE,
+        LOAD_KEY_VALUES(ctx, ModelContext::BasicType,uint32_t, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_TOKEN_TYPE,
                         token_types);
         if (token_data.empty()) {
             return false;
@@ -131,12 +131,12 @@ namespace tff::core::model {
         const auto &ctx = _model_loader->get_model_ctx();
         for (auto &pair: LLM_SPECIAL_TOKENS) {
             //
-            LOAD_KEY_VALUE(ModelContext::BasicType,uint32_t, pair.first, pair.second);
+            LOAD_KEY_VALUE(ctx, ModelContext::BasicType,uint32_t, pair.first, pair.second);
         }
 
-        LOAD_KEY_VALUE(ModelContext::BasicType,bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_BOS, this->_add_bos);
-        LOAD_KEY_VALUE(ModelContext::BasicType,bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_EOS, this->_add_eos);
-        LOAD_KEY_VALUE(ModelContext::BasicType,bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_SEP, this->_add_sep);
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType,bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_BOS, this->_add_bos);
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType,bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_EOS, this->_add_eos);
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType,bool, tff::core::model::ModelMetaKV::LLM_KV_TOKENIZER_ADD_SEP, this->_add_sep);
 
 #define UPDATE_SPECIAL_TOKEN(special_token_type, key, value) \
     if (LLM_SPECIAL_TOKENS[special_token_type] == LLAMA_TOKEN_NULL) { \

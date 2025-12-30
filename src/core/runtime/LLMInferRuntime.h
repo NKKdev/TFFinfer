@@ -81,7 +81,7 @@ namespace tff::core::runtime {
         }
 
 
-        void load_hparams();
+        void load_hparams(bool is_fuse_op, const memory::DataType &kv_data_type);
 
         void load_vocab() const;
 

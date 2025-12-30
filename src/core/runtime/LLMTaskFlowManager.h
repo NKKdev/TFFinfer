@@ -42,6 +42,8 @@ namespace tff::core::runtime {
     protected:
         void fuse_op_node(std::vector<std::shared_ptr<graph::GraphNode>> &nodes) const;
         bool fuse(std::shared_ptr<graph::GraphNode> &current_node) const;
+        //
+        bool can_fuse(std::shared_ptr<graph::GraphNode> &current_node, std::shared_ptr<graph::GraphNode> &pre_node) const;
 
     protected:
         std::shared_ptr<tff::schedule::HybridScheduler> _task_scheduler;

@@ -43,5 +43,6 @@ namespace tff::core::graph::op {
 
     REGISTER_MODULE_OBJECT_PROTOTYPE(MemRefNode, GraphNode, OP_NODE_FLAG, TFF_OP_MEM_REF);
 
+    REGISTER_MODULE_OBJECT_PROTOTYPE(PreRopeTableNode, GraphNode, OP_NODE_FLAG, TFF_OP_PRE_ROPE_TABLE);
 
 }

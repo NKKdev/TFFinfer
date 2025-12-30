@@ -39,9 +39,12 @@ namespace tff::core::graph::op {
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
-
+            if (this->inputs().empty()) {
+                tff::log::Logger::error("MatMulNode inputs is empty!!");
+                return nullptr;
+            }
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
             std::array<int64_t, MAX_TENSOR_DIM> output_shape{input_tensor_1->get_shape()[0], input_tensor_0->get_shape()[1], 1, 1};
@@ -109,7 +112,7 @@ namespace tff::core::graph::op {
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
@@ -142,7 +145,7 @@ namespace tff::core::graph::op {
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
             if (this->_src_tensors_ptr.empty()) {
                 tff::log::Logger::error("current node(%s) has invalid input", this->_node_metadata._name.c_str());
@@ -310,7 +313,7 @@ namespace tff::core::graph::op {
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
@@ -367,7 +370,7 @@ namespace tff::core::graph::op {
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
@@ -447,7 +450,7 @@ namespace tff::core::graph::op {
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
 
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
@@ -511,7 +514,7 @@ namespace tff::core::graph::op {
             }
             for (auto &pre_node : this->_prev_nodes) {
                 auto output_tensor = pre_node.lock()->outputs();
-                this->set_inputs(output_tensor);
+                this->add_inputs(output_tensor);
             }
             // auto memcpy_kind_opt = this->_params_ptr->get_param<int>(1);
             // if (!memcpy_kind_opt.has_value()) {
@@ -553,7 +556,7 @@ namespace tff::core::graph::op {
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
@@ -606,13 +609,13 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("FlashAttnNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            if (this->_prev_nodes.size() != 3) {
+            if (this->_prev_nodes.size() != 4) {
                 tff::log::Logger::error("FlashAttnNode prev_nodes size() is wrong!!");
                 return nullptr;
             }
             for (auto &prev_node : this->_prev_nodes) {
                 auto pre_output_tensor = prev_node.lock()->outputs();
-                this->set_inputs(pre_output_tensor);
+                this->add_inputs(pre_output_tensor);
             }
             auto input_tensor_0 = *this->_src_tensors_ptr.begin();
             auto input_tensor_1 = *this->_src_tensors_ptr.rbegin();
@@ -645,8 +648,12 @@ namespace tff::core::graph::op {
             }
 
             auto params_ptr = this->get_params();
-            auto max_seq_len = params_ptr->get_param<int>(1).value();
-            auto dim = params_ptr->get_param<int>(2).value();
+            if (params_ptr->get_param_count() < 3) {
+                tff::log::Logger::error("PreRopeTableNode params size() is wrong!!");
+                return nullptr;
+            }
+            auto max_seq_len = params_ptr->get_param<const uint32_t>(1).value();
+            auto dim = params_ptr->get_param<const uint32_t>(2).value();
             std::array<int64_t, MAX_TENSOR_DIM> output_shape{dim, max_seq_len,1,1};
             auto output_tensor = std::make_shared<tff::core::memory::Tensor>(output_shape.size(),tff::core::memory::DataType::TFF_DATA_TYPE_F32,
                                                                              output_shape, true,
