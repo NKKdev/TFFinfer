@@ -898,7 +898,7 @@ int main234(int argc, char *argv) {
     flash_attention<T, 0>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table, mask);
 
 #else
-    int dim = 1024;
+    int dim = 512;
     int m = dim;
     int n = dim;
     int k = 64;
@@ -913,7 +913,15 @@ int main234(int argc, char *argv) {
     b_mat.resize(batch * num_kv_heads * n * k);
     std::vector<T> c_mat;
     c_mat.resize(batch * num_kv_heads * n * k);
-
+    std::vector<T> mask;
+    mask.resize(batch * num_kv_heads * n * n);
+    T neg_inf = __float2half(-INFINITY);  // 将 -inf 转为 half
+    mask.assign(mask.size(), neg_inf);
+    for (int i = 0;i < n; ++i) {
+        for (int j = 0;j <= i; ++j) {
+            mask[i * n + j] = 0;
+        }
+    }
     PopulateVector<T>(a_mat, mt, dist);
     PopulateVector<T>(b_mat, mt, dist);
     PopulateVector<T>(c_mat, mt, dist);
@@ -924,7 +932,7 @@ int main234(int argc, char *argv) {
         sin_table[i] = std::sin(angles[i]);
     }
 
-    flash_attention<T, 1>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table);
+    flash_attention<T, 0>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table, mask);
 #endif
 
 
