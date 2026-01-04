@@ -9,22 +9,22 @@
 #include <iostream>
 #include <typeinfo>
 namespace tff::core::model {
-    class ModelDetectyorRegistry {
+    class ModelDetectorRegistry {
     public:
-        static ModelDetectyorRegistry &get() {
-            static ModelDetectyorRegistry instance;
+        static ModelDetectorRegistry &get() {
+            static ModelDetectorRegistry instance;
             return instance;
         }
 
 
         // 自动探测并返回合适的读取器
-        static std::shared_ptr<ModelDetectorBase> find_dector(const std::vector<std::string> &architectures) {
+        static std::shared_ptr<ModelDetectorBase> find_dector(const std::string &file_format) {
             auto detectors = tff::factory::ModuleFactory::instance()->create_shared_list<ModelDetectorBase>(MODEL_DETECTOR_FLAG);
             for (auto &detector: detectors) {
                 auto detector_ptr = detector.second.creator();
                 std::cout << "Created object type: " << typeid(*detector_ptr).name() << std::endl;
                 if (detector_ptr) {
-                    if (detector_ptr->matches(architectures)){
+                    if (detector_ptr->matches(file_format)){
                         //detector_ptr->model_registry();
                         return detector_ptr;
                     }

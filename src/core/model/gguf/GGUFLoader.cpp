@@ -5,15 +5,14 @@
 #include "model/FileLoader.h"
 #include "Logger.h"
 #include "mem/BaseDefine.h"
-#include "LLAMALoader.h"
+#include "GGUFLoader.h"
 #include "global/GlobalDefine.h"
 
 namespace tff::core::model {
-    REGISTER_MODULE_OBJECT(LLAMALoader, ModelLoaderBase, MODEL_LOADER_FLAG,
-                       std::string(LLM_ARCH_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA
-                       )->second));
+    REGISTER_MODULE_OBJECT(GGUFLoader, ModelLoaderBase, MODEL_LOADER_FLAG,
+                       tff::core::model::to_string(tff::core::model::ModelFileFormat::TFF_MODEL_FORMAT_GGUF));
 
-    tff::core::model::ModelLoadResult tff::core::model::LLAMALoader::load_from_file(
+    tff::core::model::ModelLoadResult tff::core::model::GGUFLoader::load_from_file(
         const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
         bool bRet = this->load(model_files_name, use_mmap, check_tensors);
         if (bRet) {
@@ -24,23 +23,19 @@ namespace tff::core::model {
     }
 
 
-    const char *tff::core::model::LLAMALoader::get_arch_name() const {
+    const char *tff::core::model::GGUFLoader::get_arch_name() const {
         return this->_model_config._arch_name.c_str();
     }
 
-    const tff::core::model::ModelConfig &tff::core::model::LLAMALoader::get_model_config() const {
+    const tff::core::model::ModelConfig &tff::core::model::GGUFLoader::get_model_config() const {
         return this->_model_config;
     }
 
-    bool tff::core::model::LLAMALoader::supports_mmap() const {
+    bool tff::core::model::GGUFLoader::supports_mmap() const {
         return ModelLoaderBase::supports_mmap();
     }
 
-    bool tff::core::model::LLAMALoader::supports_mlock() const {
-        return ModelLoaderBase::supports_mlock();
-    }
-
-    std::vector<std::string> tff::core::model::LLAMALoader::get_tensor_names() const {
+    std::vector<std::string> tff::core::model::GGUFLoader::get_tensor_names() const {
         std::vector<std::string> tensor_names;
         for (size_t i = 0; i < this->_n_tensors; i++) {
             auto &tensor_info = this->_model_ctx->_tensor_info[i];
@@ -50,7 +45,7 @@ namespace tff::core::model {
     }
 
 
-    bool LLAMALoader::load(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
+    bool GGUFLoader::load(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
         bool bRet = true;
         for (size_t i = 0; i < model_files_name.size(); i++) {
             const std::string &model_file_name = model_files_name[i];
@@ -77,7 +72,7 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::check_file(const std::shared_ptr<FileLoader> &file_loader) const {
+    bool GGUFLoader::check_file(const std::shared_ptr<FileLoader> &file_loader) const {
         std::vector<char> buffer_format;
         file_loader->read<char>(buffer_format, 4);
         for (uint32_t i = 0; i < buffer_format.size(); i++) {
@@ -94,7 +89,7 @@ namespace tff::core::model {
         return true;
     }
 
-    bool LLAMALoader::load_header(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
+    bool GGUFLoader::load_header(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
                                   const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         bRet &= file_loader->read(gguf_ctx->_version);
@@ -104,7 +99,7 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::load_kv_meta(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
+    bool GGUFLoader::load_kv_meta(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
                                    const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         for (size_t i = 0; i < this->_n_kv; i++) {
@@ -140,14 +135,14 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::load_tensor_info(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
+    bool GGUFLoader::load_tensor_info(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
                                        const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         for (size_t i = 0; i < this->_n_tensors; i++) {
             tff::core::model::GGUFTensorInfo tensor_info;
             file_loader->read(tensor_info._name);
             //
-            //tff::log::Logger::info("tensor info name:%s", tensor_info._name.c_str());
+            tff::log::Logger::info("tensor info name:%s", tensor_info._name.c_str());
             for (auto &j: gguf_ctx->_tensor_info) {
                 if (tensor_info._name == j._name) {
                     bRet &= false;
@@ -219,7 +214,7 @@ namespace tff::core::model {
         return bRet;
     }
 
-    bool LLAMALoader::load_tensor_data(const std::shared_ptr<FileLoader> &file_loader,
+    bool GGUFLoader::load_tensor_data(const std::shared_ptr<FileLoader> &file_loader,
                                        const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         if (this->_alloc) {
             std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator =
@@ -241,7 +236,7 @@ namespace tff::core::model {
         return true;
     }
 
-    bool LLAMALoader::load_model_config(const std::shared_ptr<FileLoader> &file_loader,
+    bool GGUFLoader::load_model_config(const std::shared_ptr<FileLoader> &file_loader,
                                         const std::shared_ptr<tff::core::model::ModelContext> &ctx) {
         LOAD_KEY_VALUE(ctx, ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                        this->_model_config._arch_name);
@@ -273,7 +268,7 @@ namespace tff::core::model {
         return true;
     }
 
-    tff::core::memory::ModelTensorType LLAMALoader::get_model_tensor_type(const std::string &tensor_name) const {
+    tff::core::memory::ModelTensorType GGUFLoader::get_model_tensor_type(const std::string &tensor_name) const {
         std::string tmp = tensor_name.substr(0, tensor_name.find(".weight"));
         auto tensor_names_map = LLM_TENSOR_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->
                 second;

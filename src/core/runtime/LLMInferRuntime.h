@@ -53,6 +53,8 @@ namespace tff::core::runtime {
 
         //
         bool load_model_config(const std::string &model_config_file_path, tff::core::model::ModelConfig &params);
+        //
+        bool build_model_creator();
 
         //
         bool init_device();
@@ -72,6 +74,8 @@ namespace tff::core::runtime {
         int encode(const std::vector<std::string> &prompt_batches);
         //
         void build_inputs(std::shared_ptr<LLMBatch> &batch);
+        //
+        void build_output();
 
     protected:
         void load_stats();
@@ -85,10 +89,12 @@ namespace tff::core::runtime {
 
         void load_vocab() const;
 
-        bool load_layers();
+        bool build_layers();
 
         //
         bool load_tensor_data();
+        //
+        void bind_device(std::shared_ptr<layer::ModelLayerObject> &layer_obj, const int &total_layer_index);
 
     public:
         std::string _name;
@@ -115,7 +121,7 @@ namespace tff::core::runtime {
         std::shared_ptr<tff::core::model::ModelCreatorBase> _model_creator;
         //
         std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
-            std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<tff::core::graph::GraphNode> > > >
+            std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<tff::core::model::layer::ModelLayerObject> > > >
         _layer_map;
         //
         std::shared_ptr<tff::core::graph::Graph> _graph_ptr;

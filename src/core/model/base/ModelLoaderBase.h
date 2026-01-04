@@ -29,11 +29,8 @@ namespace tff::core::model {
         ModelLoaderBase() = default;
         ~ModelLoaderBase() override = default;
 
-        // 【必须】从路径加载模型
-        // 返回：是否成功
         virtual ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) = 0;
 
-        // 【必须】获取模型上下文（包含权重、缓冲区等）
         virtual std::shared_ptr<tff::core::model::ModelContext> get_model_ctx() = 0;
 
         virtual ModelLoadResult convert_to_gguf(const std::string & output_path) {
@@ -44,13 +41,8 @@ namespace tff::core::model {
 
         virtual const ModelConfig & get_model_config() const = 0;
 
-        // 【可选】是否支持 mmap
         virtual bool supports_mmap() const { return true; }
 
-        // 【可选】是否支持 mlock
-        virtual bool supports_mlock() const { return true; }
-
-        // 【可选】获取所有需要加载的张量名称列表（用于预分配）
         virtual std::vector<std::string> get_tensor_names() const = 0;
         //
         virtual const std::unordered_map<std::string, ModelWeight> &get_weight_map() const = 0;

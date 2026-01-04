@@ -6,6 +6,7 @@
 #define TFFINFER_UTIL_H
 #include <cstdint>
 #include <math.h>
+#include <filesystem>
 #include "libdivideInc.h"
 #include "device/cuda/cudaInc.h"
 
@@ -109,6 +110,13 @@ namespace tff::utils {
         return std::tuple<int16_t, uint8_t>{magic, more};
     }
 
+    static std::string get_file_ext(const std::string& fullPath) {
+        std::string ext = std::filesystem::path(fullPath).extension().string();
+        if (!ext.empty() && ext[0] == '.') {
+            return ext.substr(1);
+        }
+        return ext;
+    }
 
 
 }

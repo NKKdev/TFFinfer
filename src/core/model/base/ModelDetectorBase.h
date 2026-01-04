@@ -20,21 +20,13 @@ namespace tff::core::model {
 
         virtual ~ModelDetectorBase() = default;
     public:
-        // 检查模型是否匹配此架构
-        virtual bool matches(const std::vector<std::string> &architectures) const = 0;
-
-        // 获取该模型的名称（用于日志）
+        // 检查模型是否匹配此格式
+        virtual bool matches(const std::string &file_format) const = 0;
+        // 获取该模型格式的名称
         virtual const char* name() const = 0;
-        //
-        virtual tff::core::model::ModelArchitectureType arch() const = 0;
-
         // 创建该模型的加载器
         virtual std::shared_ptr<ModelLoaderBase> create_loader() = 0;
-        //
-        virtual std::shared_ptr<ModelCreatorBase> create_creator() = 0;
 
-        // （可选）优先级，用于解决冲突
-        virtual int priority() const { return 50; } // 默认优先级
     };
 }
 

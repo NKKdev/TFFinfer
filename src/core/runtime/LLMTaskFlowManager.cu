@@ -27,8 +27,8 @@ namespace tff::core::runtime {
         std::unordered_map<std::shared_ptr<tff::core::graph::GraphNode>, tf::Task> node_to_task;
         node_to_task.reserve(topo.size());
         for (const auto &node: topo) {
-            tff::log::Logger::info("layer node: %s build op callback\n", node->name().c_str());
-            if (!node || !node->device() || node->is_fuse()) {
+            //tff::log::Logger::info("layer node: %s build op callback\n", node->name().c_str());
+            if (!node || node->device().empty() || node->is_fuse()) {
                 continue;
             }
 
@@ -167,7 +167,7 @@ namespace tff::core::runtime {
         // 设备必须一致
         auto pred_dev = pre_node->device();
         auto curr_dev = current_node->device();
-        if (!pred_dev || !curr_dev || pred_dev->device_type() != curr_dev->device_type()) {
+        if (pred_dev.empty() || curr_dev.empty()) {// todo 20260104;
             return false;
         }
         auto match_result = TFF_OP_FUSE_MODEL.find(current_node->op_type());

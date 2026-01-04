@@ -223,9 +223,9 @@ namespace tff::kernel {
     }
 
     template<typename T>
-    void tff::kernel::QuantQ8MatMul<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    void tff::kernel::QuantQ8MatMulReshape<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
-        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), QuantQ8MatMul<T>::get_op_name().c_str());
+        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), QuantQ8MatMulReshape<T>::get_op_name().c_str());
         auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             1, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
@@ -274,7 +274,7 @@ namespace tff::kernel {
     }
 
     template<typename T>
-    std::string tff::kernel::QuantQ8MatMul<T>::get_op_name() {
+    std::string tff::kernel::QuantQ8MatMulReshape<T>::get_op_name() {
         auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL);
         if (it == core::global::TFF_OP_TYPE_MAP.end()) {
             tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
@@ -286,9 +286,9 @@ namespace tff::kernel {
         return name;
     }
 
-    template class tff::kernel::QuantQ8MatMul<float>;
-    template class tff::kernel::QuantQ8MatMul<half>;
-    REGISTER_OP_OBJECT(QuantQ8MatMul, float);
+    template class tff::kernel::QuantQ8MatMulReshape<float>;
+    template class tff::kernel::QuantQ8MatMulReshape<half>;
+    REGISTER_OP_OBJECT(QuantQ8MatMulReshape, float);
 
-    REGISTER_OP_OBJECT(QuantQ8MatMul, half);
+    REGISTER_OP_OBJECT(QuantQ8MatMulReshape, half);
 }

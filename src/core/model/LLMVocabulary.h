@@ -68,6 +68,10 @@ namespace tff::core::model {
         inline std::vector<int32_t> get_eog_tokens() const {
             return this->_eog_tokens;
         }
+        //
+        inline int get_vocab_size() const {
+            return this->_id_to_token.size();
+        };
 
     public:
         //

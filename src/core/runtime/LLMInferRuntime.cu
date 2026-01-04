@@ -12,18 +12,21 @@
 namespace tff::core::runtime {
     bool LLMInferRuntime::load_model(const std::vector<std::string> &model_files_path,
                                      const tff::core::model::ModelConfig &params) {
+        if (model_files_path.empty()) {
+            return false;
+        }
         bool bRet = true;
-        auto model_detector = tff::core::model::ModelDetectyorRegistry::get().find_dector(params._architectures);
-        this->_architecture = model_detector->arch();
+        auto model_detector = tff::core::model::ModelDetectorRegistry::find_dector(
+            tff::utils::get_file_ext(model_files_path[0]));
+
         this->_model_loader = model_detector->create_loader();
         this->_model_loader->load_from_file(model_files_path, params._use_mmap, params._check_tensors);
-        this->_model_creator = model_detector->create_creator();
-        this->_model_creator->set_loader(this->_model_loader);
+        this->build_model_creator();
         this->_vocabulary_ptr = std::make_unique<tff::core::model::LLMLLaMaVocabulary>();
 
         this->load_hparams(params._is_fuse_op, params._kv_data_type);
         this->load_vocab();
-        this->load_layers();
+        this->build_layers();
         return bRet;
     }
 
@@ -32,6 +35,18 @@ namespace tff::core::runtime {
         tff::core::model::ModelConfigReader::Config cfg = tff::core::model::ModelConfigReader::read(
             model_config_file_path);
         params._architectures = cfg.architectures;
+        return true;
+    }
+
+    bool LLMInferRuntime::build_model_creator() {
+        auto creator = tff::factory::ModuleFactory::instance()->create_shared<ModelCreatorBase>(
+            MODEL_CREATOR_FLAG, std::string(this->_model_loader->get_arch_name()));
+        if (creator == nullptr) {
+            tff::log::Logger::error("Model creator is nullptr.");
+            return false;
+        }
+        this->_model_creator = creator;
+        this->_model_creator->set_loader(this->_model_loader);
         return true;
     }
 
@@ -165,9 +180,11 @@ namespace tff::core::runtime {
     }
 
     bool LLMInferRuntime::prefill() {
-        this->_kv_cache_ptr->begine_prefill(this->_llm_batch_manager_ptr->_ubatches.size(), this->_llm_batch_manager_ptr->_max_seq_size);
+        this->_kv_cache_ptr->begine_prefill(this->_llm_batch_manager_ptr->_ubatches.size(),
+                                            this->_llm_batch_manager_ptr->_max_seq_size);
         for (auto &batch: this->_llm_batch_manager_ptr->_ubatches) {
             this->build_inputs(batch);
+            this->build_output();
             if (!this->_graph_ptr) {
                 this->init_graph();
             }
@@ -229,18 +246,22 @@ namespace tff::core::runtime {
         //set embedding layer input
         auto &tokens_data = batch->_tokens;
         auto &input_pos = batch->_pos;
-        auto token_tensor = std::make_shared<tff::core::memory::Tensor>(MAX_TENSOR_DIM,tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-                                                                        std::array<int64_t, MAX_TENSOR_DIM>{
-                                                                            static_cast<int64_t>(tokens_data.size())
-                                                                        ,1,1,1}, true);
+        auto token_tensor = std::make_shared<tff::core::memory::Tensor>(
+            MAX_TENSOR_DIM, tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+            std::array<int64_t, MAX_TENSOR_DIM>{
+                static_cast<int64_t>(tokens_data.size()), 1, 1, 1
+            }, true);
         token_tensor->set_buffer_data(tokens_data.data(),
                                       tokens_data.size() * memory::type_traits_auto[
                                           tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
         token_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
 
         auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(MAX_TENSOR_DIM,
-            tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-            std::array<int64_t, MAX_TENSOR_DIM>{static_cast<int64_t>(input_pos.size()),1,1,1}, true);
+                                                                            tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+                                                                            std::array<int64_t, MAX_TENSOR_DIM>{
+                                                                                static_cast<int64_t>(input_pos.size()),
+                                                                                1, 1, 1
+                                                                            }, true);
         input_pos_tensor->set_buffer_data(input_pos.data(),
                                           input_pos.size() * memory::type_traits_auto[
                                               tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
@@ -250,19 +271,56 @@ namespace tff::core::runtime {
         if (input_layer_iter != this->_layer_map.end()) {
             for (auto &layers: input_layer_iter->second) {
                 auto &layer = layers.second;
-                auto input_pos_layer = layer.find(memory::ModelTensorType::LLM_TENSOR_TOKEN_POS);
-                if (input_pos_layer == layer.end()) {
-                    std::shared_ptr<tff::core::graph::GraphNode> layer_node;
-                    this->_model_creator->build_layer(input_pos_tensor, layer_node);
-                    layer.insert(std::make_pair(input_pos_tensor->get_tensor_type(), layer_node));
+                auto input_pos_layer_iter = layer.find(memory::ModelTensorType::LLM_TENSOR_TOKEN_POS);
+                if (input_pos_layer_iter == layer.end()) {
+                    auto input_pos_layer = std::make_shared<tff::core::model::layer::ModelLayerObject>();
+                    input_pos_layer->_type = LLM_TENSOR_LAYER_INPUT;
+                    input_pos_layer->_layer_name = "input_pos";
+                    input_pos_layer->_tensor = input_pos_tensor;
+                    this->bind_device(input_pos_layer, this->_model_config._n_layer);
+
+                    layer.insert(std::make_pair(input_pos_tensor->get_tensor_type(), input_pos_layer));
                 }
                 //
-                auto input_token_embed_layer = layer.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
-                if (input_token_embed_layer == layer.end()) {
-                    std::shared_ptr<tff::core::graph::GraphNode> layer_node;
-                    this->_model_creator->build_layer(token_tensor, layer_node);
-                    layer.insert(std::make_pair(token_tensor->get_tensor_type(), layer_node));
+                auto input_token_embed_layer_iter = layer.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
+                if (input_token_embed_layer_iter == layer.end()) {
+                    auto input_token_layer = std::make_shared<tff::core::model::layer::ModelLayerObject>();
+                    input_token_layer->_type = LLM_TENSOR_LAYER_INPUT;
+                    input_token_layer->_layer_name = "input_token";
+                    input_token_layer->_tensor = token_tensor;
+                    this->bind_device(input_token_layer, this->_model_config._n_layer);
+
+                    layer.insert(std::make_pair(token_tensor->get_tensor_type(), input_token_layer));
                 }
+            }
+        }
+    }
+
+    void LLMInferRuntime::build_output() {
+        auto output_tensor = std::make_shared<tff::core::memory::Tensor>(
+            MAX_TENSOR_DIM, tff::core::memory::DataType::TFF_DATA_TYPE_F32,
+            std::array<int64_t, MAX_TENSOR_DIM>{
+                static_cast<int64_t>(this->_model_config._n_embd), this->_vocabulary_ptr->get_vocab_size(), 1, 1
+            }, true);
+
+        output_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_OUTPUT);
+
+
+        auto input_layer_iter = this->_layer_map.find(LLM_TENSOR_LAYER_OUTPUT);
+        if (input_layer_iter != this->_layer_map.end()) {
+            for (auto &layers: input_layer_iter->second) {
+                auto &layer = layers.second;
+                auto out_put_layer_iter = layer.find(memory::ModelTensorType::LLM_TENSOR_OUTPUT);
+                if (out_put_layer_iter == layer.end()) {
+                    auto out_put_layer = std::make_shared<tff::core::model::layer::ModelLayerObject>();
+                    out_put_layer->_type = LLM_TENSOR_LAYER_OUTPUT;
+                    out_put_layer->_layer_name = "output";
+                    out_put_layer->_tensor = output_tensor;
+                    this->bind_device(out_put_layer, this->_model_config._n_layer);
+
+                    layer.insert(std::make_pair(output_tensor->get_tensor_type(), out_put_layer));
+                }
+
             }
         }
     }
@@ -287,11 +345,10 @@ namespace tff::core::runtime {
     }
 
     //
-    bool LLMInferRuntime::load_layers() {
-        const std::string &name = std::string(tff::core::global::LLM_ARCH_NAMES.find(this->_architecture)->second);
+    bool LLMInferRuntime::build_layers() {
+        const std::string &name = this->_model_config._arch_name;
         auto &weight_map = this->_model_loader->get_weight_map();
         size_t total_layer_num = this->_model_config._n_layer;
-
         for (auto &weight: weight_map) {
             size_t layer_index = 0;
             std::shared_ptr<tff::core::graph::GraphNode> layer_node;
@@ -311,42 +368,78 @@ namespace tff::core::runtime {
                 const std::string substr = layer_name.substr(0, pos0);
                 return substr;
             };
-            if (this->_model_creator) {
-                this->_model_creator->build_layer(tensor, layer_node, total_layer_num, layer_index);
-                if (!layer_node) {
-                    tff::log::Logger::error("current layer %s create failed!! \n", weight.first.c_str());
-                    continue;
-                }
-                layer_node->set_file_idx(weight.second._idx);
-                layer_node->set_name(get_layer_name(weight.first));
-                layer_node->get_params()->set_param(0, get_layer_name(weight.first));
-                layer_node->get_params()->set_param(1, weight.second._idx);
-                layer_node->get_params()->set_param(2, weight.second._offs);
-                layer_node->get_params()->set_param(3, weight.second._byte_size);
-                layer_node->get_params()->set_param(4, this->_model_loader);
-                auto iter = this->_layer_map[layer_info.first].find(layer_index);
-                if (iter != this->_layer_map[layer_info.first].end()) {
-                    iter->second.insert(std::make_pair(tensor->get_tensor_type(), layer_node));
-                } else {
-                    std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                                tff::core::graph::GraphNode> >
-                            tensor_type_graph_map;
-                    tensor_type_graph_map.insert(std::make_pair(tensor->get_tensor_type(), layer_node));
-                    this->_layer_map[layer_info.first].insert(std::make_pair(layer_index, tensor_type_graph_map));
-                }
 
-                // const auto iter_tmp = this->_layer_map.find(
-                //     tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
-                // if (iter_tmp != this->_layer_map.end()) {
-                //     auto iter_tensor = iter_tmp->second.begin()->second.find(
-                //         tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K);
-                //     if (iter_tensor != iter_tmp->second.begin()->second.end()) {
-                //         this->_model_config._kv_data_type = iter_tensor->second.get()->data_type();
-                //     }
-                // }
+            auto layer = std::make_shared<tff::core::model::layer::ModelLayerObject>();
+            layer->_type = layer_info.first;
+            layer->_layer_name = get_layer_name(weight.first);
+            layer->_tensor = weight.second._tensor_ptr;
+            this->bind_device(layer, total_layer_num);
+
+            auto iter = this->_layer_map[layer_info.first].find(layer_index);
+            if (iter != this->_layer_map[layer_info.first].end()) {
+                iter->second.insert(std::make_pair(tensor->get_tensor_type(), layer));
+            } else {
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                            tff::core::model::layer::ModelLayerObject> >
+                        tensor_type_graph_map;
+                tensor_type_graph_map.insert(std::make_pair(tensor->get_tensor_type(), layer));
+                this->_layer_map[layer_info.first].insert(std::make_pair(layer_index, tensor_type_graph_map));
             }
         }
         return true;
+    }
+
+    void LLMInferRuntime::bind_device(std::shared_ptr<tff::core::model::layer::ModelLayerObject> &layer_obj,
+                                      const int &total_layer_index) {
+        auto get_device = [](const std::string &device_type_flag, const int &layer_index,
+                             const int &total_layer_index)-> std::unordered_map<int, std::shared_ptr<
+            tff::core::device::DeviceBaseObject> > {
+            auto device = tff::factory::ModuleFactory::instance()->create_shared<
+                tff::core::device::DeviceBaseObject>(
+                DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
+            std::vector<float> device_splits;
+
+            std::vector<int> device_list;
+            device->get_device_id(device_list);
+            for (size_t i = 0; i < device_list.size(); ++i) {
+                size_t total_mem;
+                size_t free_mem;
+                device->get_device_mem(i, &free_mem, &total_mem);
+                device_splits.push_back(static_cast<float>(free_mem));
+            }
+
+            //计算切分点;
+            float split_sum = 0.0f;
+            for (size_t i = 0; i < device_list.size(); ++i) {
+                split_sum += device_splits[i];
+                device_splits[i] = split_sum;
+            }
+            for (size_t i = 0; i < device_list.size(); ++i) {
+                device_splits[i] /= split_sum;
+            }
+            //
+            const int layer_device_id = std::upper_bound(device_splits.begin(),
+                                                         device_splits.begin() + device_list.size(),
+                                                         float(layer_index) / total_layer_index) -
+                                        device_splits.
+                                        begin();
+            return {{layer_device_id, device}};
+        };
+        switch (layer_obj->_type) {
+            case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
+                layer_obj->_device_list = get_device(
+                    DEVICE_BACKEND_TYPE_CPU, layer_obj->_layer_index, total_layer_index);
+                break;
+            }
+            case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT:
+            case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING: {
+                layer_obj->_device_list = get_device(
+                    DEVICE_BACKEND_TYPE_CUDA, layer_obj->_layer_index, total_layer_index);
+                break;
+            }
+            default:
+                break;
+        }
     }
 
     bool LLMInferRuntime::load_tensor_data() {

@@ -11,13 +11,13 @@
 #include "Logger.h"
 
 namespace tff::core::model {
-    class LLAMALoader : public ModelLoaderBase {
+    class GGUFLoader : public ModelLoaderBase {
     public:
-        LLAMALoader() {
+        GGUFLoader() {
             _model_ctx = std::make_shared<tff::core::model::ModelContext>();
         };
 
-        ~LLAMALoader() override = default;
+        ~GGUFLoader() override = default;
 
     public:
         //
@@ -33,8 +33,6 @@ namespace tff::core::model {
         const ModelConfig &get_model_config() const override;
 
         bool supports_mmap() const override;
-
-        bool supports_mlock() const override;
 
         std::vector<std::string> get_tensor_names() const override;
 

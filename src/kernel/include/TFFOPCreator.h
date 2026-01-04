@@ -143,6 +143,14 @@ namespace tff::kernel {
     };
 
     template<typename T>
+    class QuantQ8MatMulReshape : public base::OPCreatorBase<QuantQ8MatMulReshape<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
+
+    template<typename T>
     class QuantQ8MatMul : public base::OPCreatorBase<QuantQ8MatMul<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
@@ -165,6 +173,7 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
     template<typename T>
     class PreRopeTable : public base::OPCreatorBase<PreRopeTable<T>, T> {
     public:

@@ -11,6 +11,8 @@
 #include "Memory.h"
 #include "BaseDefine.h"
 #include "global/GlobalDefine.h"
+#include "graph/GraphNode.h"
+
 namespace tff::core::memory {
     class Tensor :public std::enable_shared_from_this<Tensor>{
     public:
@@ -351,6 +353,13 @@ namespace tff::core::memory {
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
 
+#ifndef _EXPLICIT_DAG
+        //
+        std::vector<std::shared_ptr<Tensor>> _inputs;
+
+        tff::core::graph::TffOpType _op_type = tff::core::graph::TffOpType::TFF_OP_NONE;
+        std::shared_ptr<tff::core::global::ParamBaseObject> _params_ptr;
+#endif
     private:
         mutable std::mutex _mutex;
     };

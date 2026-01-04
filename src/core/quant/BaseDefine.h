@@ -21,7 +21,7 @@ namespace tff::core::quant {
 
     struct Q_8_0 {
         static constexpr int BLOCK_SIZE = 32;
-        float d;
+        half d;
         int8_t qs[BLOCK_SIZE];
 
         static void dequantize(const Q_8_0 *blocks, float *out, const int64_t elem_count) {
@@ -69,7 +69,7 @@ namespace tff::core::quant {
         static constexpr bool is_quantized() { return true; };
     };
 
-    static_assert(sizeof(tff::core::quant::Q_8_0) == 36);
+    static_assert(sizeof(tff::core::quant::Q_8_0) == 34);
 
     //
     struct Q_8_1 {
@@ -124,7 +124,7 @@ namespace tff::core::quant {
 
         static constexpr bool is_quantized() { return true; };
     };
-
+    static_assert(sizeof(tff::core::quant::Q_8_1) == 36);
 
     //非量化类型;
     template<typename T, typename = void>

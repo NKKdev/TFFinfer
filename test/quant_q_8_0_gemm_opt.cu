@@ -31,7 +31,22 @@ constexpr int PAD_SIZE = 4;
 constexpr int DOUBLE_BUFFER_PAD_SIZE = 4;
 constexpr int VEC_DOT_PRODUCT = QUANT_BLOCK_SIZE / sizeof(int);
 
+__device__ __forceinline__ int swizzle_addr(
+    int row,           // 逻辑行号
+    int col,           // 逻辑列号（以元素为单位）
+    int B,             // 行混淆粒度参数
+    int M,             // 最小不变单元参数
+    int S              // Swizzle 起始偏移参数
+) {
+    int row_low = row & ((1 << B) - 1);
+    int row_high = row >> B;
 
+    int swizzled_col = (row_low << M) ^ col;
+
+    int block_width = 1 << (S + M);
+    int addr = (row_high * block_width) + swizzled_col;
+    return addr;
+}
 template<const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K,
     const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE>
 __device__ void load_tile(const int ld, const int dim,
@@ -891,7 +906,7 @@ void quant_q_8_0_gemm_nt_double_buffer(const int m, const int n, const int k, co
 #endif
 }
 
-int main(int argc, char *argv[]) {
+int main232313(int argc, char *argv[]) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     std::mt19937 mt(42);

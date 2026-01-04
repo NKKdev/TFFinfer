@@ -14,7 +14,7 @@ static void rtrim(std::string& s) {
     );
 }
 
-int main456(int argc,char *argv[]) {
+int main(int argc,char *argv[]) {
     std::string model_config_file_path(argv[1]);
     std::string model_file(argv[2]);
     tff::core::runtime::LLMInferRuntime llm_runtime;

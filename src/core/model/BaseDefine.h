@@ -22,10 +22,9 @@ namespace tff::core::model {
     // model_list.h
 #define FOR_EACH_MODEL(X) \
 X(TFF_MODEL_ARCH_UNKNOWN, "unknown")\
-X(TFF_MODEL_ARCH_LLAMA,   "LlamaForCausalLM") \
-X(TFF_MODEL_ARCH_QWEN,    "QWenLMHeadModel") \
-X(TFF_MODEL_ARCH_MISTRAL, "MistralForCausalLM") \
-X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
+X(TFF_MODEL_ARCH_LLAMA,   "LLAMA") \
+X(TFF_MODEL_ARCH_QWEN3,    "qwen3") \
+X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
 
     enum class ModelArchitectureType {
 #define DEFINE_ENUM(name, type_str) name,
@@ -33,6 +32,36 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
 #undef DEFINE_ENUM
         TFF_MODEL_ARCH_COUNT
     };
+
+    constexpr const char* to_string(const ModelArchitectureType arch_type) {
+#define CASE_STR(name, str) case ModelArchitectureType::name: return str;
+        switch (arch_type) {
+            FOR_EACH_MODEL(CASE_STR)
+            default: return "invalid";
+        }
+#undef CASE_STR
+    }
+
+#define FOR_EACH_MODEL_FILE_FORMAT(X) \
+    X(TFF_MODEL_FORMAT_UNKNOWN, "unknown")\
+    X(TFF_MODEL_FORMAT_GGUF,   "gguf") \
+
+    enum class ModelFileFormat {
+#define DEFINE_ENUM(name, type_str) name,
+        FOR_EACH_MODEL_FILE_FORMAT(DEFINE_ENUM)
+#undef DEFINE_ENUM
+        TFF_MODEL_FORMAT_COUNT
+    };
+    // 转字符串
+
+    constexpr const char* to_string(const ModelFileFormat fmt) {
+#define CASE_STR(name, str) case ModelFileFormat::name: return str;
+        switch (fmt) {
+            FOR_EACH_MODEL_FILE_FORMAT(CASE_STR)
+            default: return "invalid";
+        }
+#undef CASE_STR
+    }
 
     enum ModelType {
         TFF_MODEL_TYPE_UNKNOWN = 0,
@@ -51,6 +80,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         std::string _arch_name;
         std::vector<std::string> _architectures;
         //
+        bool _is_load_weight_infer = false;
         bool _is_fuse_op = false;
         bool _use_f16;
         bool _vocab_only{};
@@ -176,79 +206,6 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
         TokenAttribute _attribute;
         float _score;
     };
-
-    //
-    struct ModelWeight {
-        uint16_t _idx;
-        size_t _offs;
-        double _byte_size;
-        double _alignment_size;
-        std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
-    };
-
-    //
-    struct GGUFTensorInfo {
-        std::string _name;
-        uint64_t _offset;
-        double _byte_size;
-        std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
-    };
-
-    //
-    struct ModelContext {
-        uint32_t _version = GGUF_VERSION;
-
-        using BasicType = std::variant<
-            uint8_t, int8_t, uint16_t, int16_t,
-            uint32_t, int32_t, uint64_t, int64_t,
-            float, double, bool, std::string
-        >;
-
-        using KVValue = std::variant<
-            BasicType,
-            std::vector<uint8_t>, std::vector<int8_t>,
-            std::vector<uint16_t>, std::vector<int16_t>,
-            std::vector<uint32_t>, std::vector<int32_t>,
-            std::vector<uint64_t>, std::vector<int64_t>,
-            std::vector<float>, std::vector<double>,
-            std::vector<bool>, std::vector<std::string>
-        >;
-
-        std::unordered_map<std::string, KVValue> _kv;
-
-        std::vector<GGUFTensorInfo> _tensor_info;
-
-        size_t _alignment = GGUF_DEFAULT_ALIGNMENT;
-        size_t _offset = 0;
-        float _size = 0;
-        float _max_tensor_byte_size = 0;
-
-        std::shared_ptr<tff::core::memory::Memory> _data_memory_ptr;
-
-        bool check_version() const {
-            if ((_version & 0x0000FFFF) == 0x00000000) {
-                tff::log::Logger::error(
-                    "%s: failed to load model: this GGUF file version %d  is extremely large, is there a mismatch between the host and model endianness?\n",
-                    __func__, _version);
-                return false;
-            }
-
-            if (_version == 1) {
-                tff::log::Logger::error("%s: GGUFv1 is no longer supported, please use a more up-to-date version\n",
-                                        __func__);
-                return false;
-            }
-            if (_version > GGUF_VERSION) {
-                tff::log::Logger::error(
-                    "%s: this GGUF file is version %d but this software only supports up to version %d\n",
-                    __func__, _version, GGUF_VERSION);
-                return false;
-            }
-
-            return true;
-        }
-    };
-
     //
     enum ModelMetaKV {
         LLM_KV_GENERAL_TYPE,
@@ -401,9 +358,6 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
 
         LLM_KV_SHORTCONV_L_CACHE,
     };
-
-
-
     //
     enum ModelTensorLayerType {
         LLM_TENSOR_LAYER_NONE,
@@ -413,5 +367,76 @@ X(TFF_MODEL_ARCH_GEMMA,   "GemmaForCausalLM")
     };
 
     //
+     //
+    struct ModelWeight {
+        uint16_t _idx;
+        size_t _offs;
+        double _byte_size;
+        double _alignment_size;
+        std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
+    };
+
+    //
+    struct GGUFTensorInfo {
+        std::string _name;
+        uint64_t _offset;
+        double _byte_size;
+        std::shared_ptr<tff::core::memory::Tensor> _tensor_ptr;
+    };
+
+    //
+    struct ModelContext {
+        uint32_t _version = GGUF_VERSION;
+
+        using BasicType = std::variant<
+            uint8_t, int8_t, uint16_t, int16_t,
+            uint32_t, int32_t, uint64_t, int64_t,
+            float, double, bool, std::string
+        >;
+
+        using KVValue = std::variant<
+            BasicType,
+            std::vector<uint8_t>, std::vector<int8_t>,
+            std::vector<uint16_t>, std::vector<int16_t>,
+            std::vector<uint32_t>, std::vector<int32_t>,
+            std::vector<uint64_t>, std::vector<int64_t>,
+            std::vector<float>, std::vector<double>,
+            std::vector<bool>, std::vector<std::string>
+        >;
+
+        std::unordered_map<std::string, KVValue> _kv;
+
+        std::vector<GGUFTensorInfo> _tensor_info;
+
+        size_t _alignment = GGUF_DEFAULT_ALIGNMENT;
+        size_t _offset = 0;
+        float _size = 0;
+        float _max_tensor_byte_size = 0;
+
+        std::shared_ptr<tff::core::memory::Memory> _data_memory_ptr;
+
+        bool check_version() const {
+            if ((_version & 0x0000FFFF) == 0x00000000) {
+                tff::log::Logger::error(
+                    "%s: failed to load model: this GGUF file version %d  is extremely large, is there a mismatch between the host and model endianness?\n",
+                    __func__, _version);
+                return false;
+            }
+
+            if (_version == 1) {
+                tff::log::Logger::error("%s: GGUFv1 is no longer supported, please use a more up-to-date version\n",
+                                        __func__);
+                return false;
+            }
+            if (_version > GGUF_VERSION) {
+                tff::log::Logger::error(
+                    "%s: this GGUF file is version %d but this software only supports up to version %d\n",
+                    __func__, _version, GGUF_VERSION);
+                return false;
+            }
+
+            return true;
+        }
+    };
 }
 #endif //TFFINFER_MODEL_BASEDEFINE_H

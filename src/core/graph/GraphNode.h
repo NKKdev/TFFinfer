@@ -76,7 +76,7 @@ namespace tff::core::graph {
         //
         virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() {
             const auto dev = device();
-            if (!dev) {
+            if (dev.empty()) {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
                 return nullptr;
             }
@@ -85,7 +85,7 @@ namespace tff::core::graph {
             params_ptr->set_param(params_ptr->get_param_count(),this->outputs());
             params_ptr->set_param(params_ptr->get_param_count(),this->_weight_mem_manager_ptr);
 
-            auto callback = device()->get_op_func(this->_op_type, this->data_type());
+            auto callback = device()[0]->get_op_func(this->_op_type, this->data_type());
             return callback;
         };
     public:
@@ -143,12 +143,12 @@ namespace tff::core::graph {
 
         const auto &devices() const { return _devices; }
         //
-        inline void bind_devices(const std::shared_ptr<tff::core::device::DeviceBaseObject> &device) {
-            this->_devices.insert(device);
+        inline void bind_devices(std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> &device) {
+            this->_devices = device;
         }
 
-        std::shared_ptr<tff::core::device::DeviceBaseObject> device() const {
-            return _devices.empty() ? nullptr : *_devices.begin();
+        std::unordered_map<int, std::shared_ptr<device::DeviceBaseObject>> device() const {
+            return _devices;
         }
 
         //
@@ -252,13 +252,18 @@ namespace tff::core::graph {
         inline void fuse() {
             this->_is_fused = true;
         }
-
+        //
+        inline std::string &name() {
+            return this->_node_metadata._name;
+        }
+    public:
+        std::vector<std::weak_ptr<GraphNode> > _prev_nodes; // 前驱节点
+        std::vector<std::weak_ptr<GraphNode> > _next_nodes; // 后继节点
     protected:
         NodeMetadata _node_metadata;
         bool _is_fused;
 
-        std::vector<std::weak_ptr<GraphNode> > _prev_nodes; // 前驱节点
-        std::vector<std::weak_ptr<GraphNode> > _next_nodes; // 后继节点
+
         mutable std::mutex _mutex;
 
         uint32_t _layer_id = 0;
@@ -273,7 +278,7 @@ namespace tff::core::graph {
         tff::core::model::ModelTensorLayerType _layer_type =
                 tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_NONE;
 
-        std::set<std::shared_ptr<tff::core::device::DeviceBaseObject>, tff::core::device::DevicePtrComparator> _devices;
+        std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> _devices;
         //
         std::shared_ptr<tff::core::runtime::LLMWeightMemManager> _weight_mem_manager_ptr;
     };

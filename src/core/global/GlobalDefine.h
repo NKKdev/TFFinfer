@@ -39,6 +39,7 @@
 //
 #define MAX_PREFETCH_BUFFER_SIZE 32
 #define MAX_TENSOR_DIM 4
+#define MAX_TENSOR_INPUTS 5
 namespace tff::core::global {
 
     //
