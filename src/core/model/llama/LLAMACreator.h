@@ -142,12 +142,12 @@ namespace tff::core::model {
         }
 
         //
-        inline void set_loader(const std::shared_ptr<tff::core::model::ModelLoaderBase> &loader) override {
-            this->_model_loader = loader;
-        }
-
-    protected:
-        std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
+    //     inline void set_loader(const std::shared_ptr<tff::core::model::ModelLoaderBase> &loader) override {
+    //         this->_model_loader = loader;
+    //     }
+    //
+    // protected:
+    //     std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
 
     public:
         NodeType _current_mem_node;

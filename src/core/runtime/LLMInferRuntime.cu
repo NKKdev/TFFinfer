@@ -46,7 +46,17 @@ namespace tff::core::runtime {
             return false;
         }
         this->_model_creator = creator;
-        this->_model_creator->set_loader(this->_model_loader);
+        auto &cfg = this->_model_loader->get_model_config();
+        model::GraphContext ctx{};
+        ctx._n_embd_head = cfg._n_embd;
+        ctx._max_seq_len = cfg._n_ctx;
+        ctx._n_embd_head_k = cfg._n_embd_head_k;
+        ctx._n_embd_head_v = cfg._n_embd_head_v;
+        ctx._n_head = cfg._n_head_arr[0];
+        ctx._n_head_kv = cfg._n_head_kv_arr[0];
+        ctx._n_layer = cfg._n_layer;
+        ctx._use_fp16 = cfg._use_f16;
+        this->_model_creator->build_model_context(ctx);
         return true;
     }
 
@@ -353,6 +363,9 @@ namespace tff::core::runtime {
             size_t layer_index = 0;
             std::shared_ptr<tff::core::graph::GraphNode> layer_node;
             auto tensor = weight.second._tensor_ptr;
+            if (tensor->get_tensor_type() == memory::ModelTensorType::LLM_TENSOR_ATTN_K_NORM) {
+                int tmp = 9;
+            }
             auto &layer_info = tff::core::global::LLM_LAYER_OP_INFOS.find(tensor->get_tensor_type())->second;
             if (layer_info.first == tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING) {
                 auto get_layer_index = [](const std::string &layer_name) -> size_t {
@@ -396,7 +409,7 @@ namespace tff::core::runtime {
             tff::core::device::DeviceBaseObject> > {
             auto device = tff::factory::ModuleFactory::instance()->create_shared<
                 tff::core::device::DeviceBaseObject>(
-                DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
+                DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(device_type_flag));
             std::vector<float> device_splits;
 
             std::vector<int> device_list;

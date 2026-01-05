@@ -205,6 +205,34 @@ namespace tff::core::global {
                 {tff::core::memory::LLM_TENSOR_FFN_UP_EXPS, "blk.%d.ffn_up_exps"},
             },
         },
+        {
+            tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_QWEN3,
+            {
+                {tff::core::memory::LLM_TENSOR_TOKEN_EMBD, "token_embd"},
+                {tff::core::memory::LLM_TENSOR_OUTPUT_NORM, "output_norm"},
+                {tff::core::memory::LLM_TENSOR_OUTPUT, "output"},
+                {tff::core::memory::LLM_TENSOR_ROPE_FREQS, "rope_freqs"},
+                {tff::core::memory::LLM_TENSOR_ATTN_NORM, "blk.%d.attn_norm"},
+                {tff::core::memory::LLM_TENSOR_ATTN_Q, "blk.%d.attn_q"},
+                {tff::core::memory::LLM_TENSOR_ATTN_K, "blk.%d.attn_k"},
+                {tff::core::memory::LLM_TENSOR_ATTN_V, "blk.%d.attn_v"},
+                {tff::core::memory::LLM_TENSOR_ATTN_Q_NORM, "blk.%d.attn_q_norm"},
+                {tff::core::memory::LLM_TENSOR_ATTN_K_NORM, "blk.%d.attn_k_norm"},
+                {tff::core::memory::LLM_TENSOR_ATTN_OUT, "blk.%d.attn_output"},
+                {tff::core::memory::LLM_TENSOR_ATTN_ROT_EMBD, "blk.%d.attn_rot_embd"},
+                {tff::core::memory::LLM_TENSOR_FFN_GATE_INP, "blk.%d.ffn_gate_inp"},
+                {tff::core::memory::LLM_TENSOR_FFN_NORM, "blk.%d.ffn_norm"},
+                {tff::core::memory::LLM_TENSOR_FFN_GATE, "blk.%d.ffn_gate"},
+                {tff::core::memory::LLM_TENSOR_FFN_DOWN, "blk.%d.ffn_down"},
+                {tff::core::memory::LLM_TENSOR_FFN_UP, "blk.%d.ffn_up"},
+                {tff::core::memory::LLM_TENSOR_FFN_GATE_EXP, "blk.%d.ffn_gate.%d"},
+                {tff::core::memory::LLM_TENSOR_FFN_DOWN_EXP, "blk.%d.ffn_down.%d"},
+                {tff::core::memory::LLM_TENSOR_FFN_UP_EXP, "blk.%d.ffn_up.%d"},
+                {tff::core::memory::LLM_TENSOR_FFN_GATE_EXPS, "blk.%d.ffn_gate_exps"},
+                {tff::core::memory::LLM_TENSOR_FFN_DOWN_EXPS, "blk.%d.ffn_down_exps"},
+                {tff::core::memory::LLM_TENSOR_FFN_UP_EXPS, "blk.%d.ffn_up_exps"},
+            },
+        },
     };
     static const std::unordered_map<tff::core::memory::ModelTensorType, std::pair<
         tff::core::model::ModelTensorLayerType, tff::core::graph::TffOpType> > LLM_LAYER_OP_INFOS = {
@@ -218,7 +246,7 @@ namespace tff::core::global {
         },
         {
             tff::core::memory::LLM_TENSOR_TOKEN_EMBD,
-            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_EMBEDDING}
+            {LLM_TENSOR_LAYER_INPUT, tff::core::graph::TffOpType::TFF_OP_MEM_REF}
         },
         {
             tff::core::memory::LLM_TENSOR_POS_EMBD,
@@ -850,7 +878,7 @@ namespace tff::core::global {
             {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
         },
     };
-     static const std::unordered_map<tff::core::memory::ModelTensorType, std::pair<
+    static const std::unordered_map<tff::core::memory::ModelTensorType, std::pair<
         tff::core::model::ModelTensorLayerType, tff::core::graph::TffOpType> > LLM_LAYER_OP_INFOS_EXT = {
         {
             tff::core::memory::ModelTensorType::LLM_TENSOR_TOKEN_POS,
@@ -1783,7 +1811,7 @@ namespace tff::core::global {
 
         auto kv_it = ctx->_kv.find(key_value);
         if (kv_it == ctx->_kv.end()) {
-            return result; // 未找到
+            return result;
         }
 
         const auto &kvval = kv_it->second;
@@ -1791,11 +1819,9 @@ namespace tff::core::global {
         std::visit([&result](const auto &val) {
             using T = std::decay_t<decltype(val)>;
 
-            // 情况1：直接是 std::vector<DataType>
             if constexpr (std::is_same_v<T, std::vector<DataType> >) {
                 result = val;
             }
-            // 情况2：是其他 std::vector<U>
             else if constexpr (is_vector_v<T>) {
                 using U = typename T::value_type;
                 for (const auto &item: val) {
@@ -1806,10 +1832,8 @@ namespace tff::core::global {
                             result.push_back(*cvt);
                         }
                     }
-                    // 否则忽略或日志警告
                 }
             }
-            // 情况3：是 BasicType（嵌套 variant）
             else if constexpr (std::is_same_v<T, ModelContext::BasicType>) {
                 std::visit([&result](const auto &inner) {
                     using U = std::decay_t<decltype(inner)>;
@@ -1822,7 +1846,6 @@ namespace tff::core::global {
                     }
                 }, val);
             }
-            // 情况4：是单个标量值（非 BasicType，但可转换）
             else if constexpr (!is_vector_v<T> && !std::is_same_v<T, ModelContext::BasicType>) {
                 if constexpr (std::is_convertible_v<T, DataType>) {
                     result.push_back(static_cast<DataType>(val));
@@ -1832,7 +1855,6 @@ namespace tff::core::global {
                     }
                 }
             }
-            // 其他情况：不支持，忽略
         }, kvval);
         return result;
     }

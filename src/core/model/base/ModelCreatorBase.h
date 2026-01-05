@@ -15,6 +15,21 @@
 #include "model/base/ModelLoaderBase.h"
 
 namespace tff::core::model {
+    struct GraphContext {
+
+        int _n_layer;
+        int _n_rot;
+        int _n_embd_head;
+        int _n_embd_head_k;
+        int _n_embd_head_v;
+        int _n_head;
+        int _n_head_kv;
+        int _n_tokens;
+        int _max_seq_len;
+
+        bool _use_fp16;
+        GraphContext &operator=(const GraphContext &) = default;
+    };
     class ModelCreatorBase {
     public:
         ModelCreatorBase() = default;
@@ -29,16 +44,17 @@ namespace tff::core::model {
         using NodeType = std::unordered_map<tff::core::graph::GraphNodeType, std::shared_ptr<graph::GraphNode> >;
 
     public:
-        virtual void build_graph(std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
-                                     std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                                         tff::core::model::layer::ModelLayerObject> > > > &layer_map,
-                                 std::shared_ptr<tff::core::graph::Graph> &graph_ptr) = 0;
+        virtual void build_graph(
+            std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::model::layer::ModelLayerObject> > > > &layer_map,
+            std::shared_ptr<tff::core::graph::Graph> &graph_ptr) = 0;
 
         //
         virtual const char *get_model_name() = 0;
 
         //
-        virtual void set_loader(const std::shared_ptr<tff::core::model::ModelLoaderBase> &loader) = 0;
+        virtual void build_model_context(const model::GraphContext &ctx) = 0;
     };
 }
 #endif //TFFINFER_MODELCREATORBASE_H

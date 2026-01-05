@@ -81,8 +81,12 @@ namespace tff::core::graph {
                 return nullptr;
             }
             auto params_ptr = this->get_params();
-            params_ptr->set_param(params_ptr->get_param_count(),this->inputs());
-            params_ptr->set_param(params_ptr->get_param_count(),this->outputs());
+            std::vector<std::shared_ptr<tff::core::memory::Tensor>> inputs;
+            for (auto &node : this->_input_nodes) {
+                inputs.push_back(node->get_tensor());
+            }
+            params_ptr->set_param(params_ptr->get_param_count(),inputs);
+            params_ptr->set_param(params_ptr->get_param_count(),this->_tensor);
             params_ptr->set_param(params_ptr->get_param_count(),this->_weight_mem_manager_ptr);
 
             auto callback = device()[0]->get_op_func(this->_op_type, this->data_type());
@@ -104,7 +108,7 @@ namespace tff::core::graph {
 
         // 获取层类型（可选）
         tff::core::model::ModelTensorLayerType layer_type() const { return _layer_type; }
-
+#ifdef _EXPLICIT_DAG
         // 输入/输出 Tensor
         std::vector<std::shared_ptr<tff::core::memory::Tensor>> inputs() const { return _src_tensors_ptr; }
         std::vector<std::shared_ptr<tff::core::memory::Tensor>> outputs() const { return _dst_tensors_ptr; }
@@ -130,53 +134,7 @@ namespace tff::core::graph {
         void add_outputs(const std::vector<std::shared_ptr<tff::core::memory::Tensor>> &outputs) {
             _dst_tensors_ptr.insert(_dst_tensors_ptr.end(),outputs.begin(), outputs.end());
         }
-
-        //
-        inline void set_layer_id(const uint32_t &layer_id) { _layer_id = layer_id; }
-        //
-        inline uint32_t layer_id() const { return _layer_id; }
-        //
-        inline void set_layer_type(const tff::core::model::ModelTensorLayerType _layer_type) {
-            this->_layer_type = _layer_type;
-        }
-
-
-        const auto &devices() const { return _devices; }
-        //
-        inline void bind_devices(std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> &device) {
-            this->_devices = device;
-        }
-
-        std::unordered_map<int, std::shared_ptr<device::DeviceBaseObject>> device() const {
-            return _devices;
-        }
-
-        //
-        virtual void release() {
-        }
-        //
-        inline void set_node_meta(const NodeMetadata &meta) {
-            this->_node_metadata = meta;
-            this->_params_ptr->set_param(0, _node_metadata._name);
-        };
-
-        inline bool is_input_node() const {
-            return this->_node_metadata._is_input;
-        }
-
-        //
-        inline bool is_output_node() const {
-            return this->_node_metadata._is_output;
-        }
-        //
-        inline void set_params(const std::shared_ptr<tff::core::global::ParamBaseObject> &params) {
-            *this->_params_ptr = *params;
-        }
-        //
-        inline std::shared_ptr<tff::core::global::ParamBaseObject> get_params() const {
-            return this->_params_ptr;
-        }
-        //
+         //
         inline std::vector<std::weak_ptr<GraphNode>> get_predecessors() const {
             return this->_prev_nodes;
         }
@@ -243,6 +201,39 @@ namespace tff::core::graph {
             }
             return tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN;
         }
+#endif
+
+        const auto &devices() const { return _devices; }
+        //
+        inline void bind_devices(std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> &device) {
+            this->_devices = device;
+        }
+
+        std::unordered_map<int, std::shared_ptr<device::DeviceBaseObject>> device() const {
+            return _devices;
+        }
+        //
+        inline void set_node_meta(const NodeMetadata &meta) {
+            this->_node_metadata = meta;
+            this->_params_ptr->set_param(0, _node_metadata._name);
+        };
+
+        inline bool is_input_node() const {
+            return this->_node_metadata._is_input;
+        }
+
+        //
+        inline bool is_output_node() const {
+            return this->_node_metadata._is_output;
+        }
+        //
+        inline void set_params(const std::shared_ptr<tff::core::global::ParamBaseObject> &params) {
+            *this->_params_ptr = *params;
+        }
+        //
+        inline std::shared_ptr<tff::core::global::ParamBaseObject> get_params() const {
+            return this->_params_ptr;
+        }
 
         //
         inline bool is_fuse() const {
@@ -256,9 +247,46 @@ namespace tff::core::graph {
         inline std::string &name() {
             return this->_node_metadata._name;
         }
-    public:
-        std::vector<std::weak_ptr<GraphNode> > _prev_nodes; // 前驱节点
-        std::vector<std::weak_ptr<GraphNode> > _next_nodes; // 后继节点
+        //
+        inline tff::core::memory::DataType data_type() const {
+            return this->_tensor->get_data_type();
+        }
+        //
+        inline bool is_leaf() const {
+            return _input_nodes.empty();
+        }
+        inline void set_tensor(const std::shared_ptr<tff::core::memory::Tensor> &tensor) {
+            this->_tensor = tensor;
+        }
+        //
+        inline const std::shared_ptr<tff::core::memory::Tensor> &get_tensor() {
+            return this->_tensor;
+        }
+        inline void add_src_node(const std::shared_ptr<GraphNode> &src_node) {
+
+            auto iter = std::find(this->_input_nodes.begin(), this->_input_nodes.end(), src_node);
+            if (iter == this->_input_nodes.end()) {
+                for (auto &node:this->input_nodes()) {
+                    if (node->name() == src_node->name()) {
+                        return;
+                    }
+                }
+                this->_input_nodes.push_back(src_node);
+            }
+        }
+        inline void remove_src_node(const std::shared_ptr<GraphNode> &src_node) {
+            std::vector<std::shared_ptr<GraphNode>>::iterator iter = this->_input_nodes.begin();
+            for (; iter != this->_input_nodes.end();) {
+                if (*iter == src_node) {
+                    iter = this->_input_nodes.erase(iter);
+                }else {
+                    ++iter;
+                }
+            }
+        }
+        inline std::vector<std::shared_ptr<GraphNode>> input_nodes() const {
+            return this->_input_nodes;
+        }
     protected:
         NodeMetadata _node_metadata;
         bool _is_fused;
@@ -269,8 +297,7 @@ namespace tff::core::graph {
         uint32_t _layer_id = 0;
         uint32_t _file_idx = 0;
 
-        std::vector<std::shared_ptr<tff::core::memory::Tensor>> _src_tensors_ptr;
-        std::vector<std::shared_ptr<tff::core::memory::Tensor>> _dst_tensors_ptr;
+
 
         TffOpType _op_type = TFF_OP_NONE;
         std::shared_ptr<tff::core::global::ParamBaseObject> _params_ptr;
@@ -281,15 +308,19 @@ namespace tff::core::graph {
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> _devices;
         //
         std::shared_ptr<tff::core::runtime::LLMWeightMemManager> _weight_mem_manager_ptr;
-    };
 
-    struct CompareByLayerID {
-        bool operator()(const std::shared_ptr<GraphNode> &node1, const std::shared_ptr<GraphNode> &node2) const {
-            if (node1->layer_id() != node2->layer_id()) {
-                return node1->layer_id() < node2->layer_id();
-            }
-            return node1->name() < node2->name();
-        }
+#ifndef _EXPLICIT_DAG
+        //
+        std::vector<std::shared_ptr<GraphNode>> _input_nodes;
+        std::shared_ptr<tff::core::memory::Tensor> _tensor;
+#else
+    public:
+        std::vector<std::weak_ptr<GraphNode> > _prev_nodes; // 前驱节点
+        std::vector<std::weak_ptr<GraphNode> > _next_nodes; // 后继节点
+
+        std::vector<std::shared_ptr<tff::core::memory::Tensor>> _src_tensors_ptr;
+        std::vector<std::shared_ptr<tff::core::memory::Tensor>> _dst_tensors_ptr;
+#endif
     };
 }
 

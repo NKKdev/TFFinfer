@@ -11,7 +11,6 @@
 #include "Memory.h"
 #include "BaseDefine.h"
 #include "global/GlobalDefine.h"
-#include "graph/GraphNode.h"
 
 namespace tff::core::memory {
     class Tensor :public std::enable_shared_from_this<Tensor>{
@@ -23,6 +22,36 @@ namespace tff::core::memory {
         };
 
     public:
+        Tensor(const std::shared_ptr<Tensor> &other, bool _use_external = false) noexcept {
+            release();
+            _use_external = other->_use_external;
+            _external_memory_index = other->_external_memory_index;
+            _data_type = other->_data_type;
+            _tensor_type = other->_tensor_type;
+            _type_size = other->_type_size;
+            _blk_size = other->_blk_size;
+            _n_dims = other->_n_dims;
+            _shape = other->_shape;
+            _strides = other->_strides;
+            _allocator = other->_allocator;
+            if (!_use_external) {
+                auto total_bytes = std::accumulate(
+                                       _shape.begin(), _shape.end(), 1ULL, std::multiplies<uint64_t>()
+                                   ) * _type_size;
+                _buffer = std::make_shared<tff::core::memory::Memory>(
+                    total_bytes, nullptr, _use_external, _allocator
+                );
+                _buffer->allocate();
+                _is_allocated = true;
+            } else {
+                if (other->_buffer) {
+                    _buffer = std::make_shared<tff::core::memory::Memory>(
+                        other->_buffer->byte_size(), other->_buffer->ptr(), true, _allocator
+                    );
+                }
+                _is_allocated = other->_is_allocated;
+            }
+        }
         Tensor(const int n_dim = 4, const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
                std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
                bool use_external = false,
@@ -35,6 +64,26 @@ namespace tff::core::memory {
                 return;
             }
             this->set_dims(n_dim);
+            for (size_t i = 0; i < this->_shape.size(); ++i) {
+                this->set_shape(this->_shape[i], i);
+            }
+            this->set_data_type(data_type);
+            if (!use_external) {
+                this->allocate();
+            }
+        }
+        Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
+               std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
+               bool use_external = false,
+               std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
+                       nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
+                                  _shape(std::move(shapes)),
+                                  _allocator(std::move(alloc)) {
+            if (_shape.empty()) {
+                tff::log::Logger::error("tensor shape is invalid!!");
+                return;
+            }
+            this->set_dims(shapes.size());
             for (size_t i = 0; i < this->_shape.size(); ++i) {
                 this->set_shape(this->_shape[i], i);
             }
@@ -353,13 +402,7 @@ namespace tff::core::memory {
         std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
 
-#ifndef _EXPLICIT_DAG
-        //
-        std::vector<std::shared_ptr<Tensor>> _inputs;
 
-        tff::core::graph::TffOpType _op_type = tff::core::graph::TffOpType::TFF_OP_NONE;
-        std::shared_ptr<tff::core::global::ParamBaseObject> _params_ptr;
-#endif
     private:
         mutable std::mutex _mutex;
     };

@@ -12,6 +12,7 @@
 #include "Logger.h"
 #include "global/OPDefine.h"
 using namespace tff::core::global;
+
 namespace tff::core::model {
 #define TFF_TENSOR_MAX_DIMS 4
 #define LOAD_KEY_VALUES(ctx, ValueType,DataType, key_value, dst) \
@@ -22,9 +23,9 @@ namespace tff::core::model {
     // model_list.h
 #define FOR_EACH_MODEL(X) \
 X(TFF_MODEL_ARCH_UNKNOWN, "unknown")\
-X(TFF_MODEL_ARCH_LLAMA,   "LLAMA") \
+X(TFF_MODEL_ARCH_LLAMA,   "llama") \
 X(TFF_MODEL_ARCH_QWEN3,    "qwen3") \
-X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
+X(TFF_MODEL_ARCH_GEMMA,   "gemma")
 
     enum class ModelArchitectureType {
 #define DEFINE_ENUM(name, type_str) name,
@@ -33,7 +34,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
         TFF_MODEL_ARCH_COUNT
     };
 
-    constexpr const char* to_string(const ModelArchitectureType arch_type) {
+    constexpr const char *to_string(const ModelArchitectureType arch_type) {
 #define CASE_STR(name, str) case ModelArchitectureType::name: return str;
         switch (arch_type) {
             FOR_EACH_MODEL(CASE_STR)
@@ -42,9 +43,16 @@ X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
 #undef CASE_STR
     }
 
+    constexpr ModelArchitectureType from_string(std::string_view enum_str) {
+#define CASE_STR(name, str) if (enum_str == str) return ModelArchitectureType::name;
+        FOR_EACH_MODEL(CASE_STR)
+#undef CASE_STR
+        return ModelArchitectureType::TFF_MODEL_ARCH_UNKNOWN;
+    }
+
 #define FOR_EACH_MODEL_FILE_FORMAT(X) \
     X(TFF_MODEL_FORMAT_UNKNOWN, "unknown")\
-    X(TFF_MODEL_FORMAT_GGUF,   "gguf") \
+    X(TFF_MODEL_FORMAT_GGUF,   "gguf")
 
     enum class ModelFileFormat {
 #define DEFINE_ENUM(name, type_str) name,
@@ -52,15 +60,23 @@ X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
 #undef DEFINE_ENUM
         TFF_MODEL_FORMAT_COUNT
     };
+
     // 转字符串
 
-    constexpr const char* to_string(const ModelFileFormat fmt) {
+    constexpr const char *to_string(const ModelFileFormat fmt) {
 #define CASE_STR(name, str) case ModelFileFormat::name: return str;
         switch (fmt) {
             FOR_EACH_MODEL_FILE_FORMAT(CASE_STR)
             default: return "invalid";
         }
 #undef CASE_STR
+    }
+
+    constexpr ModelFileFormat fmt_from_string(std::string_view enum_str) {
+#define CASE_STR(name, str) if (enum_str == str) return ModelFileFormat::name;
+        FOR_EACH_MODEL_FILE_FORMAT(CASE_STR)
+#undef CASE_STR
+        return ModelFileFormat::TFF_MODEL_FORMAT_UNKNOWN;
     }
 
     enum ModelType {
@@ -111,6 +127,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
         std::unordered_map<uint32_t, bool> _swa_layers;
         //
         tff::core::memory::DataType _kv_data_type;
+
         ModelConfig &operator=(const ModelConfig &) = default;
     };
 
@@ -206,6 +223,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
         TokenAttribute _attribute;
         float _score;
     };
+
     //
     enum ModelMetaKV {
         LLM_KV_GENERAL_TYPE,
@@ -358,6 +376,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
 
         LLM_KV_SHORTCONV_L_CACHE,
     };
+
     //
     enum ModelTensorLayerType {
         LLM_TENSOR_LAYER_NONE,
@@ -367,7 +386,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "Gemma")\
     };
 
     //
-     //
+    //
     struct ModelWeight {
         uint16_t _idx;
         size_t _offs;

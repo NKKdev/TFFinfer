@@ -10,7 +10,7 @@
 
 namespace tff::core::model {
     REGISTER_MODULE_OBJECT(GGUFLoader, ModelLoaderBase, MODEL_LOADER_FLAG,
-                       tff::core::model::to_string(tff::core::model::ModelFileFormat::TFF_MODEL_FORMAT_GGUF));
+                           tff::core::model::to_string(tff::core::model::ModelFileFormat::TFF_MODEL_FORMAT_GGUF));
 
     tff::core::model::ModelLoadResult tff::core::model::GGUFLoader::load_from_file(
         const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
@@ -62,8 +62,9 @@ namespace tff::core::model {
             bRet &= this->check_file(it->second);
             bRet &= this->load_header(i, it->second, _model_ctx);
             bRet &= this->load_kv_meta(i, it->second, _model_ctx);
-            bRet &= this->load_tensor_info(i, it->second, _model_ctx);
             bRet &= this->load_model_config(it->second, _model_ctx);
+            bRet &= this->load_tensor_info(i, it->second, _model_ctx);
+
             if (!bRet) {
                 return bRet;
             }
@@ -90,7 +91,7 @@ namespace tff::core::model {
     }
 
     bool GGUFLoader::load_header(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
-                                  const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+                                 const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         bRet &= file_loader->read(gguf_ctx->_version);
         bRet &= gguf_ctx->check_version();
@@ -100,13 +101,14 @@ namespace tff::core::model {
     }
 
     bool GGUFLoader::load_kv_meta(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
-                                   const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+                                  const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         for (size_t i = 0; i < this->_n_kv; i++) {
             std::string key;
             tff::core::model::GGUFType meta_type = TFF_GGUF_TYPE_UNKNOWN;
             bool is_array = false;
             bRet &= file_loader->read(key);
+            tff::log::Logger::info("kv key: %s \n", key.c_str());
             for (size_t j = 0; j < gguf_ctx->_kv.size(); j++) {
                 if (gguf_ctx->_kv.contains(key)) {
                     tff::log::Logger::error("%s: key '%s' already exists\n", __func__, key.c_str());
@@ -136,7 +138,7 @@ namespace tff::core::model {
     }
 
     bool GGUFLoader::load_tensor_info(const size_t &file_index, const std::shared_ptr<FileLoader> &file_loader,
-                                       const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+                                      const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         bool bRet = true;
         for (size_t i = 0; i < this->_n_tensors; i++) {
             tff::core::model::GGUFTensorInfo tensor_info;
@@ -198,8 +200,8 @@ namespace tff::core::model {
             }
             gguf_ctx->_size += padded_size;
             gguf_ctx->_max_tensor_byte_size = gguf_ctx->_max_tensor_byte_size < padded_size
-                                                 ? padded_size
-                                                 : gguf_ctx->_max_tensor_byte_size;
+                                                  ? padded_size
+                                                  : gguf_ctx->_max_tensor_byte_size;
 
             //
             ModelWeight model_weight;
@@ -215,7 +217,7 @@ namespace tff::core::model {
     }
 
     bool GGUFLoader::load_tensor_data(const std::shared_ptr<FileLoader> &file_loader,
-                                       const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
+                                      const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         if (this->_alloc) {
             std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator =
                     tff::factory::ModuleFactory::instance()->create_shared<
@@ -237,8 +239,9 @@ namespace tff::core::model {
     }
 
     bool GGUFLoader::load_model_config(const std::shared_ptr<FileLoader> &file_loader,
-                                        const std::shared_ptr<tff::core::model::ModelContext> &ctx) {
-        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, std::string, tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
+                                       const std::shared_ptr<tff::core::model::ModelContext> &ctx) {
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, std::string,
+                       tff::core::model::ModelMetaKV::LLM_KV_GENERAL_ARCHITECTURE,
                        this->_model_config._arch_name);
         LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_EMBEDDING_LENGTH,
                        this->_model_config._n_embd);
@@ -250,16 +253,21 @@ namespace tff::core::model {
                        this->_model_config._n_expert_used);
         LOAD_KEY_VALUE(ctx, ModelContext::BasicType, bool, tff::core::model::ModelMetaKV::LLM_KV_ROPE_SCALING_FINETUNED,
                        this->_model_config._rope_fine_tuned);
-        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_KEY_LENGTH,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t,
+                       tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_KEY_LENGTH,
                        this->_model_config._n_embd_head_k);
-        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_VALUE_LENGTH,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t,
+                       tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_VALUE_LENGTH,
                        this->_model_config._n_embd_head_v);
-        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ROPE_DIMENSION_COUNT,
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, uint32_t,
+                       tff::core::model::ModelMetaKV::LLM_KV_ROPE_DIMENSION_COUNT,
                        this->_model_config._n_rot);
         //
-        LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_FEED_FORWARD_LENGTH,
+        LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t,
+                        tff::core::model::ModelMetaKV::LLM_KV_FEED_FORWARD_LENGTH,
                         this->_model_config._n_ff_arr);
-        LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t, tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,
+        LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t,
+                        tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT,
                         this->_model_config._n_head_arr);
         LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t,
                         tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV,
@@ -268,24 +276,84 @@ namespace tff::core::model {
         return true;
     }
 
-    tff::core::memory::ModelTensorType GGUFLoader::get_model_tensor_type(const std::string &tensor_name) const {
-        std::string tmp = tensor_name.substr(0, tensor_name.find(".weight"));
-        auto tensor_names_map = LLM_TENSOR_NAMES.find(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_LLAMA)->
-                second;
-        for (auto &tensor_type: tensor_names_map) {
-            auto str = std::string(tensor_type.second);
-            auto pos = str.find_last_of(".");
-            if (pos == std::string::npos) {
-                if (str.find(tmp) != std::string::npos || tmp.find(str) != std::string::npos) {
-                    return tensor_type.first;
+    std::vector<std::string> split(const std::string &s, char delimiter) {
+        std::vector<std::string> tokens;
+        std::string token;
+        std::istringstream tokenStream(s);
+        while (std::getline(tokenStream, token, delimiter)) {
+            tokens.push_back(token);
+        }
+        return tokens;
+    }
+
+    bool is_digits(const std::string &str) {
+        return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
+    }
+
+    bool matches_pattern(const std::string &raw_name, const std::string &pattern) {
+        auto name_tokens = split(raw_name, '.');
+        auto pat_tokens = split(pattern, '.');
+        if (name_tokens.size() != pat_tokens.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < name_tokens.size(); ++i) {
+            if (pat_tokens[i] == "%d") {
+                if (!is_digits(name_tokens[i])) {
+                    return false;
                 }
             } else {
-                std::string substr = str.substr(str.find_last_of("."), str.size() - pos);
-                if (substr.find(tmp) != std::string::npos || tmp.find(substr) != std::string::npos) {
-                    return tensor_type.first;
+                if (name_tokens[i] != pat_tokens[i]) {
+                    return false;
                 }
+            }
+        }
+        return true;
+    }
+
+    tff::core::memory::ModelTensorType GGUFLoader::get_model_tensor_type(const std::string &tensor_name) const {
+        std::string raw_name = tensor_name;
+        const std::string weight_suffix = ".weight";
+        if (raw_name.size() >= weight_suffix.size() &&
+            raw_name.substr(raw_name.size() - weight_suffix.size()) == weight_suffix) {
+            raw_name.resize(raw_name.size() - weight_suffix.size());
+        }
+
+        auto arch = tff::core::model::from_string(this->_model_config._arch_name);
+        auto it = LLM_TENSOR_NAMES.find(arch);
+        if (it == LLM_TENSOR_NAMES.end()) {
+            return tff::core::memory::ModelTensorType::LLM_TENSOR_TYPE_UNKNOWN;
+        }
+        const auto &tensor_map = it->second;
+        for (const auto &[tensor_type, pattern_str]: tensor_map) {
+            std::string pattern(pattern_str);
+
+            if (matches_pattern(raw_name, pattern)) {
+                return tensor_type;
             }
         }
         return tff::core::memory::ModelTensorType::LLM_TENSOR_TYPE_UNKNOWN;
     }
+
+    // tff::core::memory::ModelTensorType GGUFLoader::get_model_tensor_type(const std::string &tensor_name) const {
+    //     std::string tmp = tensor_name.substr(0, tensor_name.find(".weight"));
+    //     auto tensor_names_map = LLM_TENSOR_NAMES.find(tff::core::model::from_string(this->_model_config._arch_name));
+    //     if (tensor_names_map == LLM_TENSOR_NAMES.end()) {
+    //         return memory::ModelTensorType::LLM_TENSOR_TYPE_UNKNOWN;
+    //     }
+    //     for (auto &tensor_type: tensor_names_map->second) {
+    //         auto str = std::string(tensor_type.second);
+    //         auto pos = str.find_last_of(".");
+    //         if (pos == std::string::npos) {
+    //             if (str.find(tmp) != std::string::npos || tmp.find(str) != std::string::npos) {
+    //                 return tensor_type.first;
+    //             }
+    //         } else {
+    //             std::string substr = str.substr(str.find_last_of("."), str.size() - pos);
+    //             if (substr.find(tmp) != std::string::npos || tmp.find(substr) != std::string::npos) {
+    //                 return tensor_type.first;
+    //             }
+    //         }
+    //     }
+    //     return tff::core::memory::ModelTensorType::LLM_TENSOR_TYPE_UNKNOWN;
+    // }
 }

@@ -40,10 +40,11 @@ namespace tff::core::runtime {
             return this->_task_scheduler;
         }
     protected:
-        void fuse_op_node(std::vector<std::shared_ptr<graph::GraphNode>> &nodes) const;
-        bool fuse(std::shared_ptr<graph::GraphNode> &current_node) const;
+        void fuse_op_node(const std::shared_ptr<graph::Graph> &graph_ptr, const std::vector<std::shared_ptr<graph::GraphNode>> &nodes) const;
+        bool fuse(const std::shared_ptr<graph::Graph> &graph_ptr, const std::shared_ptr<graph::GraphNode> &current_node) const;
         //
-        bool can_fuse(std::shared_ptr<graph::GraphNode> &current_node, std::shared_ptr<graph::GraphNode> &pre_node) const;
+        bool can_fuse(const std::shared_ptr<graph::Graph> &graph_ptr, const std::shared_ptr<graph::GraphNode> &current_node, std::shared_ptr<
+                      graph::GraphNode> &pre_node) const;
 
     protected:
         std::shared_ptr<tff::schedule::HybridScheduler> _task_scheduler;
