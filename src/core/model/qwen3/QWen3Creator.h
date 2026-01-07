@@ -117,8 +117,7 @@ namespace tff::core::model {
         std::shared_ptr<tff::core::graph::GraphNode> build_rope_table_node();
 
         std::shared_ptr<tff::core::graph::GraphNode> build_mul_node(
-            std::shared_ptr<GraphNode> &a_node,
-            std::shared_ptr<GraphNode> &b_node);
+            std::shared_ptr<layer::ModelLayerObject> &layer, std::shared_ptr<GraphNode> &a_node);
 
     protected:
         model::GraphContext _model_ctx;

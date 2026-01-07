@@ -29,23 +29,26 @@ namespace tff::core::device {
 
         virtual tff::core::device::DeviceType get_device_type(size_t _device_id) = 0;
         virtual tff::core::device::DeviceType device_type() = 0;
+        //
+        virtual std::string get_device_type_flag(size_t _device_id) = 0;
 
         virtual void get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) = 0;
 
-        virtual void device_init(size_t _device_id) = 0;
+        virtual void device_init() = 0;
 
-        virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator() = 0;
+        virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(const int &device_id) = 0;
 
         //
         virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
             const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) = 0;
 
     public:
-        uint32_t _sched_priority = TFF_DEVICE_PRIORITY_DEFAULT;
+        uint32_t _sched_priority = TFF_DEVICE_PRIORITY_GPU;
+        std::unordered_map<int, std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject>> _mem_buffer_allocators;
     };
 
     // 优先级排序;
-    struct DevicePtrComparator {
+    struct DeviceComparator {
         bool operator()(
             const std::shared_ptr<tff::core::device::DeviceBaseObject> &a,
             const std::shared_ptr<tff::core::device::DeviceBaseObject> &b
@@ -53,7 +56,7 @@ namespace tff::core::device {
             if (!a && !b) return false;
             if (!a) return true;
             if (!b) return false;
-            return a->_sched_priority > b->_sched_priority; // 字典序降序
+            return a->_sched_priority > b->_sched_priority;
         }
     };
     static size_t get_device_size(const std::string &device_key) {

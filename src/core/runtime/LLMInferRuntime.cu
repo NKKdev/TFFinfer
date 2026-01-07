@@ -48,7 +48,7 @@ namespace tff::core::runtime {
         this->_model_creator = creator;
         auto &cfg = this->_model_loader->get_model_config();
         model::GraphContext ctx{};
-        ctx._n_embd_head = cfg._n_embd;
+        ctx._n_embd_head = cfg._n_embd / cfg._n_head_arr[0];
         ctx._max_seq_len = cfg._n_ctx;
         ctx._n_embd_head_k = cfg._n_embd_head_k;
         ctx._n_embd_head_v = cfg._n_embd_head_v;
@@ -67,6 +67,12 @@ namespace tff::core::runtime {
         if (gpu_device) {
             this->_devices.insert(gpu_device);
             this->_has_gpu_backend = true;
+            std::vector<int> device_ids;
+            gpu_device->get_device_id(device_ids);
+            for (auto device_id: device_ids) {
+                this->_devices_map.insert(std::make_pair(device_id, gpu_device));
+            }
+
         }
 
         auto cpu_device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
@@ -74,6 +80,11 @@ namespace tff::core::runtime {
             tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
         if (cpu_device) {
             this->_devices.insert(cpu_device);
+            std::vector<int> device_ids;
+            cpu_device->get_device_id(device_ids);
+            for (auto device_id: device_ids) {
+                this->_devices_map.insert(std::make_pair(device_id, cpu_device));
+            }
         }
 
         return this->_devices.empty() ? false : true;
@@ -150,7 +161,7 @@ namespace tff::core::runtime {
             this->_kv_cache_ptr = std::make_shared<tff::core::memory::LLMKVCache>(
                 this->_model_config._kv_data_type,
                 kv_cfg,
-                device->get_device_buffer_allocator()
+                device->get_device_buffer_allocator(TODO)
             );
             tff::log::Logger::info("KV Cache successfully initialized with {%d} pages.", kv_cfg._total_pages);
         } catch (const std::exception &e) {
@@ -160,17 +171,14 @@ namespace tff::core::runtime {
             tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
             return false;
         }
-        if (this->_weight_mem_manager_ptr == nullptr) {
+        if (this->_mem_manager_ptr == nullptr) {
             tff::log::Logger::info("Memory Manager created failed.");
             return false;
         }
 
-        //init weight mem buffer;
-        if (this->_weight_mem_manager_ptr->init(this->_model_loader->get_model_ctx()->_max_tensor_byte_size)) {
-            tff::log::Logger::info("LLMInferRuntime context initialized successfully.");
-            return true;
-        } else {
-            tff::log::Logger::info("LLMInferRuntime context initialized failed.");
+        //init mem buffer;
+        if (!this->init_mem_manager()) {
+            tff::log::Logger::error("Failed to initialize memory manager.");
             return false;
         }
 
@@ -187,6 +195,42 @@ namespace tff::core::runtime {
         this->_model_creator->build_graph(this->_layer_map, this->_graph_ptr);
 
         return true;
+    }
+
+    bool LLMInferRuntime::init_mem_manager() const {
+        if (this->_graph_ptr == nullptr) {
+            tff::log::Logger::error("model graph is invalid!!\n");
+            return false;
+        }
+        if (this->_mem_manager_ptr == nullptr) {
+            tff::log::Logger::error("model memory manager is invalid!!\n");
+            return false;
+        }
+        std::unordered_map<std::string, std::unordered_map<int, int>> mem_buffer_offset_map;
+        for (auto &node : this->_graph_ptr->total_nodes()) {
+            auto current_device = node->device().begin();
+            auto [start, end] = this->_graph_ptr->get_lifetime(node);
+            auto mem_offset = this->_mem_manager_ptr->allocate_memory(node->get_tensor()->get_bytes(),
+                start, end, current_device->first);
+            node->get_tensor()->set_external_memory_index(mem_offset);
+            auto device_type_flag =  current_device->second->get_device_type_flag(current_device->first);
+            auto iter = mem_buffer_offset_map.find(device_type_flag);
+            if (iter != mem_buffer_offset_map.end()) {
+                mem_buffer_offset_map[device_type_flag].insert(std::make_pair(current_device->first, mem_offset));
+            }else {
+                std::unordered_map<int, int> device_mem_offset_map;
+                device_mem_offset_map.insert(std::make_pair(current_device->first, mem_offset));
+                mem_buffer_offset_map.insert(std::make_pair(device_type_flag, device_mem_offset_map));
+            }
+        }
+        bool bRet = true;
+        for (auto &mem_buffer_offset: mem_buffer_offset_map) {
+            for (auto &mem_buffer : mem_buffer_offset.second) {
+                bRet &= this->_mem_manager_ptr->init(mem_buffer.first);
+            }
+        }
+
+        return bRet;
     }
 
     bool LLMInferRuntime::prefill() {

@@ -10,6 +10,7 @@ namespace tff::core::graph {
         _node_to_index.clear();
         _leaf_to_index.clear();
     }
+
     bool Graph::is_leaf_node(const std::shared_ptr<GraphNode> &node) const {
         return node->is_leaf();
     }
@@ -39,8 +40,8 @@ namespace tff::core::graph {
             size_t idx = _nodes.size();
             _nodes.push_back(node);
             _node_to_index[node] = idx;
-
         }
+        _total_nodes.push_back(node);
     }
 
     void Graph::build_graph(std::shared_ptr<GraphNode> output_node) {
@@ -48,6 +49,8 @@ namespace tff::core::graph {
         clear();
 
         visit(output_node);
+        //
+        this->analyze_lifetimes();
     }
 
     bool Graph::has_cycle(std::shared_ptr<GraphNode> output_node) {
@@ -71,4 +74,49 @@ namespace tff::core::graph {
         return dfs(output_node);
     }
 
+    //
+    void Graph::analyze_lifetimes() {
+        const int INF = 1e9;
+        for (auto &node: _total_nodes) {
+            _first_use[node] = INF;
+            _last_use[node] = -1;
+        }
+
+        std::unordered_map<std::shared_ptr<GraphNode>, int> exec_time;
+        for (int i = 0; i < _total_nodes.size(); ++i) {
+            exec_time[_total_nodes[i]] = i;
+        }
+        std::unordered_map<std::shared_ptr<GraphNode>, std::vector<std::shared_ptr<GraphNode> > > consumers;
+        for (auto &node: _total_nodes) {
+            for (auto &input: node->_input_nodes) {
+                if (input) {
+                    consumers[input].push_back(node);
+                }
+            }
+        }
+        for (auto &node: _total_nodes) {
+            if (consumers.count(node) == 0) {
+                _first_use[node] = exec_time[node];
+                _last_use[node] = exec_time[node];
+            } else {
+                int min_time = INF, max_time = -1;
+                for (auto &consumer: consumers[node]) {
+                    int t = exec_time[consumer];
+                    min_time = std::min(min_time, t);
+                    max_time = std::max(max_time, t);
+                }
+                _first_use[node] = min_time;
+                _last_use[node] = max_time;
+            }
+        }
+    }
+
+    std::pair<int, int> Graph::get_lifetime(const std::shared_ptr<GraphNode> &node) const {
+        auto it1 = _first_use.find(node);
+        auto it2 = _last_use.find(node);
+        if (it1 != _first_use.end() && it2 != _last_use.end()) {
+            return {it1->second, it2->second};
+        }
+        return {-1, -1};
+    }
 } // namespace tff::core::graph

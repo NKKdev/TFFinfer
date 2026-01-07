@@ -6,7 +6,7 @@
 #define TFFINFER_TFFOPNODE_H
 #include "graph/GraphNode.h"
 #include "ModuleFactory.h"
-#include "global/GlobalDefine.h"
+
 #include "FunctionFactory.h"
 #include "kernel/include/TFFOPCreator.h"
 #include "kernel/include/Buffer.h"
@@ -18,7 +18,7 @@ namespace tff::core::graph::op {
             set_op_type(TFF_OP_MUL_MAT);
         }
 
-        ~MatMulNode() override = default;
+        ~MatMulNode() = default;
 
     public:
         template<typename T>

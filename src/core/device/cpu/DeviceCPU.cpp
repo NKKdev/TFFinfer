@@ -30,14 +30,16 @@ namespace tff::core::device::cpu {
         }
         return get_device_type(device_list[0]);
     }
-
+    std::string DeviceCPU::get_device_type_flag(size_t _device_id) {
+        return DEVICE_BACKEND_TYPE_CUDA;
+    }
     void DeviceCPU::get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) {
     }
 
-    void DeviceCPU::device_init(size_t _device_id) {
+    void DeviceCPU::device_init() {
     }
 
-    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCPU::get_device_buffer_allocator() {
+    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCPU::get_device_buffer_allocator(const int &device_id) {
         return tff::factory::ModuleFactory::instance()->create_shared<
                         tff::core::memory::MemBufferAllocatorBaseObject>(MEMORY_ALLOCATOR_FLAG,
                                                                          tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));

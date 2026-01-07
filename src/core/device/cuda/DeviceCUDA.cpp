@@ -6,6 +6,7 @@
 #include "cudaInc.h"
 #include "Logger.h"
 #include "global/ModelGlobalVar.h"
+#include "mem/MemBufferAllocatorCUDA.h"
 namespace tff::core::device::cuda {
     REGISTER_MODULE_OBJECT(DeviceCUDA, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA)
 
@@ -48,6 +49,10 @@ namespace tff::core::device::cuda {
         return get_device_type(device_list[0]);
     }
 
+    std::string DeviceCUDA::get_device_type_flag(size_t _device_id) {
+        return DEVICE_BACKEND_TYPE_CUDA;
+    }
+
     void DeviceCUDA::get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) {
         cudaDeviceProp device_prop{};
         CudaSafeCall(cudaGetDeviceProperties(&device_prop, _device_id));
@@ -62,11 +67,18 @@ namespace tff::core::device::cuda {
         _device_props.type = get_device_type(_device_id);
     }
 
-    void DeviceCUDA::device_init(size_t _device_id) {
-        CudaSafeCall(cudaSetDevice(_device_id));
+    void DeviceCUDA::device_init() {
+        std::vector<int> device_list;
+        get_device_id(device_list);
+        for (size_t i = 0; i < device_list.size(); i++) {
+            CudaSafeCall(cudaSetDevice(device_list[i]));
+            auto mem_buffer_allocator = std::make_shared<core::memory::MemBufferAllocatorCUDA>();
+            this->_mem_buffer_allocators.insert(std::make_pair(device_list[i], mem_buffer_allocator));
+        }
+
     }
 
-    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCUDA::get_device_buffer_allocator() {
+    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCUDA::get_device_buffer_allocator(const int &device_id) {
         return tff::factory::ModuleFactory::instance()->create_shared<
             tff::core::memory::MemBufferAllocatorBaseObject>(MEMORY_ALLOCATOR_FLAG,
                                                              tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));

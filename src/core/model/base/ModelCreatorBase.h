@@ -37,9 +37,7 @@ namespace tff::core::model {
         virtual ~ModelCreatorBase() = default;
 
     public:
-#define ADD_NODE(enum_op_type) \
-        tff::factory::ModuleFactory::instance()->create_shared<tff::core::graph::GraphNode>(OP_NODE_FLAG,\
-        tff::factory::ModuleKeyType(enum_op_type));
+
 
         using NodeType = std::unordered_map<tff::core::graph::GraphNodeType, std::shared_ptr<graph::GraphNode> >;
 

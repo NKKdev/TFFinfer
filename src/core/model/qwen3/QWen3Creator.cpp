@@ -62,12 +62,12 @@ namespace tff::core::model {
                                                                       this->_model_ctx._n_embd_head,
                                                                       this->_model_ctx._n_head,
                                                                       this->_model_ctx._n_tokens);
-                        auto attn_k_reshape_node = build_reshape_node(memory::ModelTensorType::LLM_TENSOR_ATTN_Q,
+                        auto attn_k_reshape_node = build_reshape_node(memory::ModelTensorType::LLM_TENSOR_ATTN_K,
                                                                       layer_map, attn_k_node,
                                                                       this->_model_ctx._n_embd_head,
                                                                       this->_model_ctx._n_head_kv,
                                                                       this->_model_ctx._n_tokens);
-                        auto attn_v_reshape_node = build_reshape_node(memory::ModelTensorType::LLM_TENSOR_ATTN_Q,
+                        auto attn_v_reshape_node = build_reshape_node(memory::ModelTensorType::LLM_TENSOR_ATTN_V,
                                                                       layer_map, attn_v_node,
                                                                       this->_model_ctx._n_embd_head,
                                                                       this->_model_ctx._n_head_kv,
@@ -131,31 +131,28 @@ namespace tff::core::model {
             auto dev_gpu = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
                 DEVICE_BACKEND_FLAG,
                 tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
-            auto tensor = std::make_shared<tff::core::memory::Tensor>(4, memory::DataType::TFF_DATA_TYPE_F32,
-                                                                      std::array<int64_t, MAX_TENSOR_DIM>{
-                                                                          embedding_dim, max_seq_len, 1, 1
-                                                                      }, false, dev_gpu->get_device_buffer_allocator());
+
             std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject> > devices = {{0, dev_gpu}};
             rope_table_node->bind_devices(devices);
-            rope_table_node->set_tensor(tensor);
+            rope_table_node->set_tensor(std::make_shared<tff::core::memory::Tensor>(4, memory::DataType::TFF_DATA_TYPE_F32,
+                                                                      std::array<int64_t, MAX_TENSOR_DIM>{
+                                                                          embedding_dim, max_seq_len, 1, 1
+                                                                      }));
         }
         return rope_table_node;
     }
 
     std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_mul_node(
-        std::shared_ptr<tff::core::graph::GraphNode> &a_node,
-        std::shared_ptr<tff::core::graph::GraphNode> &b_node) {
+        std::shared_ptr<core::model::layer::ModelLayerObject> &layer,
+        std::shared_ptr<tff::core::graph::GraphNode> &a_node) {
         auto out_put_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MUL);
         out_put_node->set_node_meta(NodeMetadata({a_node->name() + "_mul_w"}));
         auto devices = a_node->devices();
         out_put_node->bind_devices(devices);
         out_put_node->add_src_node(a_node);
-        out_put_node->add_src_node(b_node);
+        out_put_node->add_inputs(layer->_tensor);
 
-        auto &inp_tensor = a_node->get_tensor();
-        auto tensor = std::make_shared<memory::Tensor>(inp_tensor->get_shape().size(),
-                                                       inp_tensor->get_data_type(), inp_tensor->get_shape(), false,
-                                                       inp_tensor->get_allocator());
+        auto tensor = std::make_shared<memory::Tensor>(a_node->get_tensor());
         out_put_node->set_tensor(tensor);
         return out_put_node;
     }
@@ -190,12 +187,12 @@ namespace tff::core::model {
         std::array<int64_t, MAX_TENSOR_DIM> shape = {
             layer->_tensor->get_shape()[1], b_node->get_tensor()->get_shape()[1], 1, 1
         };
-        auto tensor = std::make_shared<tff::core::memory::Tensor>(layer->_tensor->get_shape().size(),
-                                                                  memory::DataType::TFF_DATA_TYPE_F32, shape, false,
-                                                                  layer->_tensor->get_allocator());
-        result->set_tensor(tensor);
-        result->add_src_node(a_node);
+
+        result->set_tensor(std::make_shared<tff::core::memory::Tensor>(layer->_tensor->get_shape().size(),
+                                                                  memory::DataType::TFF_DATA_TYPE_F32, shape));
+        result->add_inputs(layer->_tensor);
         result->add_src_node(b_node);
+
         return result;
     }
 
@@ -208,8 +205,7 @@ namespace tff::core::model {
         out_put_node->bind_devices(devices);
         out_put_node->add_src_node(a_node);
         out_put_node->add_src_node(b_node);
-        auto tensor = std::make_shared<tff::core::memory::Tensor>(a_node->get_tensor(), inplace);
-        out_put_node->set_tensor(tensor);
+        out_put_node->set_tensor(std::make_shared<tff::core::memory::Tensor>(a_node->get_tensor(), inplace));
         return out_put_node;
     }
 
@@ -230,14 +226,11 @@ namespace tff::core::model {
         rms_norm_node->bind_devices(layer->_device_list);
         rms_norm_node->add_src_node(input_node);
         auto &inp_tensor = input_node->get_tensor();
-        auto tensor = std::make_shared<memory::Tensor>(inp_tensor->get_shape().size(),
-                                                       inp_tensor->get_data_type(), inp_tensor->get_shape(), false,
-                                                       inp_tensor->get_allocator());
-        rms_norm_node->set_tensor(tensor);
+        rms_norm_node->set_tensor(std::make_shared<memory::Tensor>(inp_tensor->get_shape().size(),
+                                                       inp_tensor->get_data_type(), inp_tensor->get_shape()));
 
         if (layer != nullptr) {
-            auto norm_w_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_REF);
-            auto rms_norm_mul_w_node = build_mul_node(rms_norm_node, norm_w_node);
+            auto rms_norm_mul_w_node = build_mul_node(layer, rms_norm_node);
             return rms_norm_mul_w_node;
         } else {
             return nullptr;
@@ -257,8 +250,7 @@ namespace tff::core::model {
         rope_node->add_src_node(rope_table_node);
         auto tensor = std::make_shared<memory::Tensor>(input_node->get_tensor()->get_shape().size(),
                                                        memory::DataType::TFF_DATA_TYPE_F32,
-                                                       input_node->get_tensor()->get_shape(),
-                                                       false, input_node->get_tensor()->get_allocator());
+                                                       input_node->get_tensor()->get_shape());
         rope_node->set_tensor(tensor);
 
         return rope_node;
@@ -286,25 +278,23 @@ namespace tff::core::model {
         this->_model_ctx._n_tokens = input_token_layer->_tensor->get_shape()[0];
 
         auto input_token_node = ADD_NODE(TFF_OP_MEM_REF);
-        input_token_node->set_node_meta(NodeMetadata{input_token_layer->_layer_name});
+        input_token_node->set_node_meta(NodeMetadata{true, false,input_token_layer->_layer_name});
         input_token_node->bind_devices(input_token_layer->_device_list);
         input_token_node->set_tensor(input_token_layer->_tensor);
 
 
         auto embedding_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_EMBEDDING);
-        const tff::core::graph::NodeMetadata meta_tokenize_node{true, false, layer->_layer_name + "_embedding"};
+        const tff::core::graph::NodeMetadata meta_tokenize_node{false, false, layer->_layer_name + "_embedding"};
         embedding_node->set_node_meta(meta_tokenize_node);
         embedding_node->bind_devices(layer->_device_list);
         embedding_node->add_src_node(input_token_node);
-        embedding_node->add_src_node(embedding_node);
+        embedding_node->add_src_node(embd_weight_node);
 
         std::array<int64_t, MAX_TENSOR_DIM> shape = {
             embd_weight_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[1], 1
         };
-        auto tensor = std::make_shared<tff::core::memory::Tensor>(
-            MAX_TENSOR_DIM, memory::DataType::TFF_DATA_TYPE_F32, shape,
-            false, embedding_node->device().begin()->second->get_device_buffer_allocator());
-        embedding_node->set_tensor(tensor);
+        embedding_node->set_tensor(std::make_shared<tff::core::memory::Tensor>(
+            MAX_TENSOR_DIM, memory::DataType::TFF_DATA_TYPE_F32, shape));
 
         return embedding_node;
     }
@@ -340,7 +330,7 @@ namespace tff::core::model {
 
         std::array<int64_t, MAX_TENSOR_DIM> shapes = {dim0, dim1, dim2, 1};
         auto tensor = std::make_shared<memory::Tensor>(MAX_TENSOR_DIM, input_node->get_tensor()->get_data_type(),
-                                                       shapes, true);
+                                                       shapes);
         reshape_node->set_tensor(tensor);
         reshape_node->add_src_node(input_node);
 
@@ -386,7 +376,7 @@ namespace tff::core::model {
                                                            q_node->get_tensor()->get_shape()[2],
                                                            q_node->get_tensor()->get_shape()[1],
                                                            q_node->get_tensor()->get_shape()[3]
-                                                       }, false, q_node->get_tensor()->get_allocator());
+                                                       });
         flash_attn_node->set_tensor(tensor);
 
         auto flash_attn_mul_w_node = build_mul_mat_node(layer, flash_attn_node);

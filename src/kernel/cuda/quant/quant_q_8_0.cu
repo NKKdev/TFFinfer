@@ -99,7 +99,7 @@ namespace tff::kernel {
             2, para_ptr);
         const auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
+                tff::core::runtime::LLMMemManager> >(3, para_ptr);
 
         if (input_tensors.size() != 1) {
             tff::log::Logger::error("memcpy kernel param is invalid!");
@@ -117,12 +117,12 @@ namespace tff::kernel {
         }
         const auto& output_tensor = output_tensors.at(0);
         if (output_tensor->get_buffer() == nullptr) {
-            auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
-            if (mem_buffer_pair.second == nullptr) {
-                tff::log::Logger::error("mem_buffer_pair buffer is nullptr!");
-                return;
-            }
-            output_tensor->set_buffer_data(mem_buffer_pair.second, output_tensor->get_bytes(), mem_buffer_pair.first);
+            // auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
+            // if (mem_buffer_pair.second == nullptr) {
+            //     tff::log::Logger::error("mem_buffer_pair buffer is nullptr!");
+            //     return;
+            // }
+            // output_tensor->set_buffer_data(mem_buffer_pair.second, output_tensor->get_bytes(), mem_buffer_pair.first);
         }
         const int M = input_tensor->get_shape()[1];
         const int N = input_tensor->get_shape()[0];

@@ -13,7 +13,9 @@
 #include "global/ParamBaseObject.h"
 #include "device/DeviceBaseObject.h"
 #include "Logger.h"
-#include "runtime/LLMWeightMemManager.h"
+
+#include "runtime/LLMMemManager.h"
+#include "global/GlobalDefine.h"
 class Graph;
 
 namespace tff::core::graph {
@@ -58,7 +60,7 @@ namespace tff::core::graph {
         explicit GraphNode(const std::string &name = ""):_is_fused(false) {
             this->_node_metadata._name = name;
             this->_params_ptr = std::make_shared<tff::core::global::ParamBaseObject>();
-            this->_weight_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMWeightMemManager>(
+            this->_weight_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMMemManager>(
                 tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
                     WEIGHT_MEM_BUFFER_MANAGER_FLAG,
                     tff::factory::ModuleKeyType(WEIGHT_MEM_BUFFER_MANAGER_FLAG)));
@@ -81,15 +83,12 @@ namespace tff::core::graph {
                 return nullptr;
             }
             auto params_ptr = this->get_params();
-            std::vector<std::shared_ptr<tff::core::memory::Tensor>> inputs;
-            for (auto &node : this->_input_nodes) {
-                inputs.push_back(node->get_tensor());
-            }
-            params_ptr->set_param(params_ptr->get_param_count(),inputs);
+
+            params_ptr->set_param(params_ptr->get_param_count(),this->_inputs);
             params_ptr->set_param(params_ptr->get_param_count(),this->_tensor);
             params_ptr->set_param(params_ptr->get_param_count(),this->_weight_mem_manager_ptr);
 
-            auto callback = device()[0]->get_op_func(this->_op_type, this->data_type());
+            auto callback = this->_devices[0]->get_op_func(this->_op_type, this->data_type());
             return callback;
         };
     public:
@@ -253,7 +252,7 @@ namespace tff::core::graph {
         }
         //
         inline bool is_leaf() const {
-            return _input_nodes.empty();
+            return this->is_input_node();
         }
         inline void set_tensor(const std::shared_ptr<tff::core::memory::Tensor> &tensor) {
             this->_tensor = tensor;
@@ -271,8 +270,30 @@ namespace tff::core::graph {
                         return;
                     }
                 }
-                this->_input_nodes.push_back(src_node);
+                if (this->_devices.begin()->first != src_node->device().begin()->first) {//设备不一致，自动插入拷贝节点;
+                    auto mem_cpy_node = ADD_NODE(TFF_OP_MEM_CPY);
+                    mem_cpy_node->set_node_meta(NodeMetadata(src_node->name() + "_mem_cpy"));
+                    mem_cpy_node->bind_devices(this->_devices);
+                    auto tensor = std::make_shared<tff::core::memory::Tensor>(src_node->get_tensor());
+                    mem_cpy_node->set_tensor(tensor);
+                    auto params = mem_cpy_node->get_params();
+                    auto src_type = src_node->device().begin()->second->get_device_type(src_node->device().begin()->first);
+                    auto dst_type = this->_devices.begin()->second->get_device_type(src_node->device().begin()->first);
+                    params->set_param(params->get_param_count(), make_cpy_kind(src_type, dst_type));
+                    mem_cpy_node->add_src_node(src_node);
+
+                    this->_input_nodes.push_back(mem_cpy_node);
+                    this->add_inputs(mem_cpy_node->get_tensor());
+                }else {
+                    this->_input_nodes.push_back(src_node);
+                    this->add_inputs(src_node->get_tensor());
+                }
+
             }
+        }
+        //
+        inline void add_inputs( const std::shared_ptr<core::memory::Tensor> &tensor) {
+            this->_inputs.push_back(tensor);
         }
         inline void remove_src_node(const std::shared_ptr<GraphNode> &src_node) {
             std::vector<std::shared_ptr<GraphNode>>::iterator iter = this->_input_nodes.begin();
@@ -307,11 +328,12 @@ namespace tff::core::graph {
 
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> _devices;
         //
-        std::shared_ptr<tff::core::runtime::LLMWeightMemManager> _weight_mem_manager_ptr;
+        std::shared_ptr<tff::core::runtime::LLMMemManager> _weight_mem_manager_ptr;
 
 #ifndef _EXPLICIT_DAG
         //
         std::vector<std::shared_ptr<GraphNode>> _input_nodes;
+        std::vector<std::shared_ptr<memory::Tensor>> _inputs;
         std::shared_ptr<tff::core::memory::Tensor> _tensor;
 #else
     public:
@@ -322,6 +344,8 @@ namespace tff::core::graph {
         std::vector<std::shared_ptr<tff::core::memory::Tensor>> _dst_tensors_ptr;
 #endif
     };
+
+
 }
 
 

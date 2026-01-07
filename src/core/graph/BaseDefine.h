@@ -126,5 +126,9 @@ namespace tff::core::graph {
         TFF_TN = 2,
         TFF_TT = 3,
     };
+
+#define ADD_NODE(enum_op_type) \
+tff::factory::ModuleFactory::instance()->create_shared<tff::core::graph::GraphNode>(OP_NODE_FLAG,\
+tff::factory::ModuleKeyType(enum_op_type));
 }
 #endif //TFFINFER_BASEDEFINE_H

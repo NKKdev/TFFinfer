@@ -14,7 +14,7 @@ namespace tff::core::memory {
         explicit Memory() = default;
 
         explicit Memory(size_t byte_size, void* ptr = nullptr,bool use_external = false,
-            std::shared_ptr<MemBufferAllocatorBaseObject> allocator = nullptr) {
+            std::shared_ptr<MemBufferAllocatorBaseObject> allocator = nullptr){
             this->byte_size_ = byte_size;
             this->_allocator = std::move(allocator);
             if (use_external) {
@@ -77,6 +77,7 @@ namespace tff::core::memory {
         inline void occupy() {
             this->_is_used = true;
         }
+
     private:
         size_t byte_size_ = 0;
         void* ptr_ = nullptr;

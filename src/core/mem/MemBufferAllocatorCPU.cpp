@@ -4,7 +4,6 @@
 
 #include "MemBufferAllocatorCPU.h"
 namespace tff::core::memory {
-    REGISTER_MODULE_OBJECT(MemBufferAllocatorCPU, MemBufferAllocatorBaseObject,MEMORY_ALLOCATOR_FLAG, DEVICE_BACKEND_TYPE_CPU)
     void tff::core::memory::MemBufferAllocatorCPU::release(void *ptr) const {
         if (ptr) {
             free(ptr);ptr = nullptr;

@@ -31,7 +31,7 @@ namespace tff::kernel {
             2, para_ptr);
         auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
+                tff::core::runtime::LLMMemManager> >(3, para_ptr);
 
 
 

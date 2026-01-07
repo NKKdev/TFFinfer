@@ -22,9 +22,10 @@ namespace tff::core::device::cuda {
         void get_device_mem(size_t _device_id, size_t *_free_mem, size_t *_total_mem) override;
         tff::core::device::DeviceType get_device_type(size_t _device_id) override ;
         tff::core::device::DeviceType device_type() override ;
+        std::string get_device_type_flag(size_t _device_id) override ;
         void get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) override ;
-        void device_init(size_t _device_id) override ;
-        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator() override;
+        void device_init() override ;
+        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(const int &device_id) override;
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
             const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) override ;
     };

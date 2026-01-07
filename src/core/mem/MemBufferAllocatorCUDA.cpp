@@ -7,16 +7,16 @@
 #include "device/cuda/cudaInc.h"
 
 namespace tff::core::memory {
-    REGISTER_MODULE_OBJECT(MemBufferAllocatorCUDA, MemBufferAllocatorBaseObject, MEMORY_ALLOCATOR_FLAG, DEVICE_BACKEND_TYPE_CUDA)
-
     void tff::core::memory::MemBufferAllocatorCUDA::release(void *ptr) const {
         if (ptr != nullptr) {
+            CudaSafeCall(cudaSetDevice(this->_device_id));
             CudaSafeCall(cudaFree(ptr));
             ptr = nullptr;
         }
     }
 
     void *tff::core::memory::MemBufferAllocatorCUDA::allocate(const size_t byte_size) const {
+        CudaSafeCall(cudaSetDevice(this->_device_id));
         void *ptr = nullptr;
         CudaSafeCall(cudaMalloc(&ptr, byte_size));
         if (ptr == nullptr) {

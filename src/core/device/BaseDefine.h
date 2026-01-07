@@ -51,6 +51,8 @@ namespace tff::core::device {
         struct DeviceCaps caps;
     };
 
+
+
 }
 
 #endif //TFFINFER_DEVICE_BASEDEFINE_H

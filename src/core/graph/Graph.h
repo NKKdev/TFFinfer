@@ -25,12 +25,18 @@ namespace tff::core::graph {
 
         const std::vector<std::shared_ptr<GraphNode>>& leafs() const { return _leafs; }
         const std::vector<std::shared_ptr<GraphNode>>& nodes() const { return _nodes; }
+        const std::vector<std::shared_ptr<GraphNode>>& total_nodes() const { return this->_total_nodes; }
         const std::unordered_map<std::shared_ptr<GraphNode>, size_t>& use_counts() const { return _use_counts; }
 
 
         void clear();
 
         bool has_cycle(std::shared_ptr<GraphNode> output_node);
+
+        void analyze_lifetimes();
+
+        std::pair<int, int> get_lifetime(const std::shared_ptr<GraphNode> &node) const;
+
         //
         inline int get_use_count(std::shared_ptr<GraphNode> &node) {
             if (this->_use_counts.find(node) != this->_use_counts.end()) {
@@ -62,11 +68,16 @@ namespace tff::core::graph {
     private:
         std::vector<std::shared_ptr<GraphNode>> _leafs;
         std::vector<std::shared_ptr<GraphNode>> _nodes;
+        std::vector<std::shared_ptr<GraphNode>> _total_nodes;
         std::unordered_map<std::shared_ptr<GraphNode>, size_t> _use_counts;
         std::unordered_set<std::shared_ptr<GraphNode>> _visited;
 
         std::unordered_map<std::shared_ptr<GraphNode>, size_t> _node_to_index;
         std::unordered_map<std::shared_ptr<GraphNode>, size_t> _leaf_to_index;
+
+    private:
+        std::unordered_map<std::shared_ptr<GraphNode>, int> _first_use;
+        std::unordered_map<std::shared_ptr<GraphNode>, int> _last_use;
     };
 
 } // namespace tff::core::graph

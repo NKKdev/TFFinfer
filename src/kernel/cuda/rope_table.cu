@@ -41,14 +41,14 @@ namespace tff::kernel {
     template<typename T>
     void precompute_rope_table(const int max_seq_len, const int dim, const float base,
         std::shared_ptr<tff::core::memory::Tensor> &out_table,
-        std::shared_ptr<core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
+        std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
         if (out_table->get_buffer() == nullptr) {
-            auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
-            if (mem_buffer_pair.second == nullptr) {
-                tff::log::Logger::error("There is no valid GPU memory for rope table buffer");
-                return;
-            }
-            out_table->set_buffer_data(mem_buffer_pair.second, out_table->get_bytes(), mem_buffer_pair.first);
+            // auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
+            // if (mem_buffer_pair.second == nullptr) {
+            //     tff::log::Logger::error("There is no valid GPU memory for rope table buffer");
+            //     return;
+            // }
+            // out_table->set_buffer_data(mem_buffer_pair.second, out_table->get_bytes(), mem_buffer_pair.first);
         }
 
         constexpr int BLOCK_DIM_M = 64;
@@ -74,7 +74,7 @@ namespace tff::kernel {
             5, para_ptr);
         auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
+                tff::core::runtime::LLMMemManager> >(3, para_ptr);
         if (output_tensors.size() != 1) {
             tff::log::Logger::error("Output tensor size mismatch");
             return;

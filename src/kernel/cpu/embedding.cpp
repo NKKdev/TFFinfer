@@ -5,15 +5,15 @@
 #include "include/TFFOPCreator.h"
 #include "model/base/ModelLoaderBase.h"
 #include "model/FileLoader.h"
-#include "runtime/LLMWeightMemManager.h"
+#include "runtime/LLMMemManager.h"
 #include "kernel/include/BaseDefine.h"
 namespace tff::kernel {
     template<typename T>
     static void embedding_kernel_cpu(
                                      std::vector<std::shared_ptr<tff::core::memory::Tensor>> &inputs,
-                                     std::vector<std::shared_ptr<tff::core::memory::Tensor>> &outputs,
+                                    std::shared_ptr<tff::core::memory::Tensor> &outputs,
                                      std::shared_ptr<
-                                         tff::core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
+                                         tff::core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
         if (inputs.empty()) {
             tff::log::Logger::error("embedding kernel inputs is empty");
             return;
@@ -22,10 +22,7 @@ namespace tff::kernel {
             tff::log::Logger::error("embedding kernel inputs size is invalid");
             return;
         }
-        if (outputs.size() != 1) {
-            tff::log::Logger::error("embedding kernel outputs size is invalid");
-            return;
-        }
+
         const auto& token_embed = *inputs.begin();
         if (token_embed == nullptr || token_embed->get_buffer() == nullptr) {
             tff::log::Logger::error("embedding kernel inputs is empty");
@@ -41,14 +38,14 @@ namespace tff::kernel {
         auto batch_token_buffer = batch_token->get_buffer();
         auto dequantize_callback = core::memory::type_traits_auto[token_embed->get_data_type()].dequantize_callback;
         //
-        auto &output_tensor = *outputs.begin();
+        auto &output_tensor = outputs;
         if (output_tensor == nullptr) {
             tff::log::Logger::error("embedding output tensor is empty");
             return;
         }
-        auto mem_buffer = mem_buffer_manager_ptr->get_cpu_mapped_memory();
-        output_tensor->set_buffer_data(mem_buffer.second, output_tensor->get_bytes(), mem_buffer.first);
-        auto output_tensor_buffer = mem_buffer.second;
+        //auto mem_buffer = mem_buffer_manager_ptr->get_cpu_mapped_memory();
+        //output_tensor->set_buffer_data(mem_buffer.second, output_tensor->get_bytes(), mem_buffer.first);
+        void *output_tensor_buffer;// = mem_buffer.second;
 
         for (size_t i = 0; i < batch_token->get_shape().size(); ++i) {
             auto &shape_dim = batch_token->get_shape()[i];
@@ -71,17 +68,17 @@ namespace tff::kernel {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>> >(
             1, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>> >(
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
-        std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
+        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
+                tff::core::runtime::LLMMemManager> >(3, para_ptr);
 
         if (input_tensors.empty()) {
             tff::log::Logger::error("embedding input tensors is empty");
             return;
         }
-        if (output_tensors.empty()) {
+        if (output_tensors == nullptr) {
             tff::log::Logger::error("embedding output tensors is empty");
             return;
         }

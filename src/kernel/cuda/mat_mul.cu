@@ -550,7 +550,7 @@ namespace tff::kernel {
     static void gemm_kernel_cuda(const tff::core::graph::MatMulTransType &trans_type,
                                  std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
                                  std::vector<std::shared_ptr<tff::core::memory::Tensor> > &dst,
-                                 std::shared_ptr<core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
+                                 std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
         auto &input_tensor_a = *src.begin();
         auto &input_tensor_b = *src.rbegin();
         auto &output_tensor = *dst.begin();
@@ -580,12 +580,12 @@ namespace tff::kernel {
         }
 
 
-        auto mem_buffer = mem_buffer_manager_ptr->get_gpu_memory();
-        if (mem_buffer.second == nullptr) {
-            tff::log::Logger::error("rms_norm_kernel_cuda: mem_buffer_manager_ptr is nullptr!");
-            return;
-        }
-        output_tensor->set_buffer_data(mem_buffer.second, output_tensor->get_bytes(), mem_buffer.first);
+        // auto mem_buffer = mem_buffer_manager_ptr->get_gpu_memory();
+        // if (mem_buffer.second == nullptr) {
+        //     tff::log::Logger::error("rms_norm_kernel_cuda: mem_buffer_manager_ptr is nullptr!");
+        //     return;
+        // }
+        // output_tensor->set_buffer_data(mem_buffer.second, output_tensor->get_bytes(), mem_buffer.first);
 
 
         constexpr int ELEMENTS_PER_LOAD = 4;
@@ -644,9 +644,9 @@ namespace tff::kernel {
             2, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             3, para_ptr);
-        std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
+        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(4, para_ptr);
+                tff::core::runtime::LLMMemManager> >(4, para_ptr);
 
         if (input_tensors.size() != 2) {
             tff::log::Logger::error("memcpy kernel param is invalid!");

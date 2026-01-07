@@ -18,7 +18,7 @@
 #include "mem/LLMKVCache.h"
 #include "mem/MemBufferAllocatorBaseObject.h"
 #include "ExportInc.h"
-#include "LLMWeightMemManager.h"
+#include "LLMMemManager.h"
 #include "model/base/ModelCreatorBase.h"
 #include "runtime/LLMBatchManager.h"
 #include "runtime/LLMTaskFlowManager.h"
@@ -27,12 +27,16 @@ namespace tff::core::runtime {
     class DEEP_TFF_API LLMInferRuntime {
     public:
         LLMInferRuntime() : _type(), _architecture() {
+            this->init_device();
             //
             //this->_scheduler = std::make_shared<tff::schedule::HybridScheduler>();
-            this->_weight_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMWeightMemManager>(
+            this->_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMMemManager>(
                 tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
                     WEIGHT_MEM_BUFFER_MANAGER_FLAG,
                     tff::factory::ModuleKeyType(WEIGHT_MEM_BUFFER_MANAGER_FLAG)));
+            if (this->_mem_manager_ptr != nullptr) {
+                this->_mem_manager_ptr->init_device(this->_devices_map);
+            }
             this->_llm_batch_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMBatchManager>(
                 tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
                     BATCH_MANAGER_FLAG,
@@ -64,6 +68,8 @@ namespace tff::core::runtime {
 
         //
         bool init_graph();
+        //
+        bool init_mem_manager() const;
 
         //
         bool prefill();
@@ -115,7 +121,8 @@ namespace tff::core::runtime {
 
         std::unordered_map<std::string, std::string> _model_meta_kv;
 
-        std::set<std::shared_ptr<tff::core::device::DeviceBaseObject>, tff::core::device::DevicePtrComparator> _devices;
+        std::set<std::shared_ptr<tff::core::device::DeviceBaseObject>, tff::core::device::DeviceComparator> _devices;
+        std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> _devices_map;
 
         std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
         std::shared_ptr<tff::core::model::ModelCreatorBase> _model_creator;
@@ -135,7 +142,7 @@ namespace tff::core::runtime {
         //
         std::shared_ptr<tff::core::runtime::LLMBatchManager> _llm_batch_manager_ptr;
         //
-        std::shared_ptr<tff::core::runtime::LLMWeightMemManager> _weight_mem_manager_ptr;
+        std::shared_ptr<tff::core::runtime::LLMMemManager> _mem_manager_ptr;
         //
         std::shared_ptr<tff::core::runtime::LLMTaskFlowManager> _task_manager;
     };

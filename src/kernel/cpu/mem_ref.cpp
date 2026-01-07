@@ -4,7 +4,7 @@
 #include "include/TFFOPCreator.h"
 #include "model/base/ModelLoaderBase.h"
 #include "model/FileLoader.h"
-#include "runtime/LLMWeightMemManager.h"
+#include "runtime/LLMMemManager.h"
 namespace tff::kernel {
     template<typename T>
     void tff::kernel::MemRef<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {

@@ -29,11 +29,13 @@ namespace tff::core::device::cpu {
 
         tff::core::device::DeviceType device_type();
 
+        std::string get_device_type_flag(size_t _device_id);
+
         void get_device_props(size_t _device_id, tff::core::device::DeviceProperties &_device_props) override;
 
-        void device_init(size_t _device_id) override;
+        void device_init() override;
 
-        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator() override;
+        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(const int &device_id) override;
 
         //
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(

@@ -450,9 +450,9 @@ namespace tff::kernel {
             1, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             2, para_ptr);
-        std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
+        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(3, para_ptr);
+                tff::core::runtime::LLMMemManager> >(3, para_ptr);
         auto rope_flag = get_param_value<const int>(4, para_ptr);
         if (rope_flag == 1) {
             if (input_tensors.size() != 4) {

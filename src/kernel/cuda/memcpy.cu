@@ -5,14 +5,14 @@
 #include "kernel/include/TFFOPCreator.h"
 #include "model/base/ModelLoaderBase.h"
 #include "model/FileLoader.h"
-#include "runtime/LLMWeightMemManager.h"
+#include "runtime/LLMMemManager.h"
 
 namespace tff::kernel {
     template<typename T>
     static void memcpy_kernel_cuda(
         const std::shared_ptr<tff::core::memory::Tensor> &src,
         const std::shared_ptr<tff::core::memory::Tensor> &dst,
-        std::shared_ptr<core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr,
+        std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr,
         tff::core::memory::MemCpyKind kind) {
         if (src == nullptr || dst == nullptr) {
             tff::log::Logger::error("memcpy kernel param is invalid!");
@@ -22,12 +22,12 @@ namespace tff::kernel {
             tff::log::Logger::error("memcpy kernel param is invalid!");
             return;
         }
-        auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
-        dst->set_buffer_data(mem_buffer_pair.second, dst->get_bytes(), mem_buffer_pair.first);
-        dst->get_allocator()->memcpy(src->get_buffer()->ptr(), mem_buffer_pair.second,
-        dst->get_bytes(), kind);
-        //释放缓存;
-        mem_buffer_manager_ptr->reset_cpu_mapped_memory(src->get_external_memory_index());
+        // auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
+        // dst->set_buffer_data(mem_buffer_pair.second, dst->get_bytes(), mem_buffer_pair.first);
+        // dst->get_allocator()->memcpy(src->get_buffer()->ptr(), mem_buffer_pair.second,
+        // dst->get_bytes(), kind);
+        // //释放缓存;
+        // mem_buffer_manager_ptr->reset_cpu_mapped_memory(src->get_external_memory_index());
     }
 
     //
@@ -40,9 +40,9 @@ namespace tff::kernel {
             2, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             3, para_ptr);
-        std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
+        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(4, para_ptr);
+                tff::core::runtime::LLMMemManager> >(4, para_ptr);
 
         if (input_tensors.size() != 1) {
             tff::log::Logger::error("memcpy kernel param is invalid!");

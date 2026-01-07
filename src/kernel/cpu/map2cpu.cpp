@@ -5,7 +5,7 @@
 #include "include/TFFOPCreator.h"
 #include "model/base/ModelLoaderBase.h"
 #include "model/FileLoader.h"
-#include "runtime/LLMWeightMemManager.h"
+#include "runtime/LLMMemManager.h"
 
 namespace tff::kernel {
     template<typename T>
@@ -16,7 +16,7 @@ namespace tff::kernel {
                                        std::vector<std::shared_ptr<tff::core::memory::Tensor>> &inputs,
                                        std::vector<std::shared_ptr<tff::core::memory::Tensor>> &outputs,
                                        std::shared_ptr<
-                                           tff::core::runtime::LLMWeightMemManager> &mem_buffer_manager_ptr) {
+                                           tff::core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
         if (model_file_index < 0) {
             tff::log::Logger::error("Model file index is invalid");
             return;
@@ -48,29 +48,20 @@ namespace tff::kernel {
             tff::log::Logger::error("mem_map2cpu_kernel_cpu Input tensor is already allocated");
             return;
         }
-        auto mem_buffer = mem_buffer_manager_ptr->get_cpu_mapped_memory();
-        if (mem_buffer.second == nullptr) {
-            //tff::log::Logger::error("Failed to get memory mapped memory");
-            return;
-        }
-        input_tensor->set_buffer_data(mem_buffer.second, input_tensor->get_bytes(), mem_buffer.first);
-
-
-        auto device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
-            DEVICE_BACKEND_FLAG,
-            tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
-        if (device == nullptr) {
-            tff::log::Logger::error("Failed to create device object");
-            return;
-        }
-        auto allocator = device->get_device_buffer_allocator();
+        // auto mem_buffer = mem_buffer_manager_ptr->get_cpu_mapped_memory();
+        // if (mem_buffer.second == nullptr) {
+        //     //tff::log::Logger::error("Failed to get memory mapped memory");
+        //     return;
+        // }
+        // input_tensor->set_buffer_data(mem_buffer.second, input_tensor->get_bytes(), mem_buffer.first);
+        auto allocator = input_tensor->get_allocator();
         if (allocator == nullptr) {
             tff::log::Logger::error("Failed to create device buffer allocator");
             return;
         }
 
         //std::shared_ptr<tff::core::memory::Tensor> output_tensor = input_tensor;
-        allocator->memcpy((void*)buffer, mem_buffer.second, data_size);
+        //allocator->memcpy((void*)buffer, mem_buffer.second, data_size);
     }
 
     template<typename T>
@@ -86,9 +77,9 @@ namespace tff::kernel {
             5, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>> >(
             6, para_ptr);
-        std::shared_ptr<core::runtime::LLMWeightMemManager> mem_buffer_manager_ptr = get_param_value<
+        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMWeightMemManager> >(7, para_ptr);
+                tff::core::runtime::LLMMemManager> >(7, para_ptr);
 
         mem_map2cpu_kernel_cpu<T>(model_file_index, offset, data_size, model_loader_ptr, input_tensors, output_tensors,
                                   mem_buffer_manager_ptr);
