@@ -72,16 +72,14 @@ namespace tff::core::device::cuda {
         get_device_id(device_list);
         for (size_t i = 0; i < device_list.size(); i++) {
             CudaSafeCall(cudaSetDevice(device_list[i]));
-            auto mem_buffer_allocator = std::make_shared<core::memory::MemBufferAllocatorCUDA>();
+            auto mem_buffer_allocator = std::make_shared<core::memory::MemBufferAllocatorCUDA>(device_list[i]);
             this->_mem_buffer_allocators.insert(std::make_pair(device_list[i], mem_buffer_allocator));
         }
 
     }
 
     std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCUDA::get_device_buffer_allocator(const int &device_id) {
-        return tff::factory::ModuleFactory::instance()->create_shared<
-            tff::core::memory::MemBufferAllocatorBaseObject>(MEMORY_ALLOCATOR_FLAG,
-                                                             tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
+        return this->_mem_buffer_allocators[device_id];
     }
 
     //

@@ -10,7 +10,7 @@
 namespace tff::core::memory {
     class MemBufferAllocatorBaseObject : public tff::module::ModuleObject {
     public:
-        MemBufferAllocatorBaseObject()=default;
+        MemBufferAllocatorBaseObject(int device_id): _device_id(device_id){};
         ~MemBufferAllocatorBaseObject() override = default;
     public:
         [[nodiscard]] virtual tff::core::device::DeviceType device_type() const = 0;

@@ -21,23 +21,23 @@ namespace tff::core::runtime {
                     tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
                         std::string(TASK_GRAPH_FLAG), std::string(TASK_GRAPH_TYPE));
             this->_task_scheduler = std::dynamic_pointer_cast<tff::schedule::HybridScheduler>(schedule_ptr);
-            this->_weight_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMMemManager>(
-                tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
-                    WEIGHT_MEM_BUFFER_MANAGER_FLAG,
-                    tff::factory::ModuleKeyType(WEIGHT_MEM_BUFFER_MANAGER_FLAG)));
         };
 
         ~LLMTaskFlowManager() override = default;
 
     public:
         //
-        bool build_task_schedule(bool is_fuse, const std::shared_ptr<graph::Graph> &graph_ptr) const;
+        bool build_task_schedule(const schedule::TaskType &type, const std::shared_ptr<graph::Graph> &graph_ptr, bool is_fuse = false) const;
         //
-        inline void run() {
-            this->_task_scheduler->run();
+        inline void run(const tff::schedule::TaskType &type) {
+            this->_task_scheduler->run(type);
         }
         inline std::shared_ptr<tff::schedule::HybridScheduler> get_task_schedule() const {
             return this->_task_scheduler;
+        }
+        //
+        inline void clear() {
+
         }
     protected:
         void fuse_op_node(const std::shared_ptr<graph::Graph> &graph_ptr, const std::vector<std::shared_ptr<graph::GraphNode>> &nodes) const;
@@ -48,7 +48,6 @@ namespace tff::core::runtime {
 
     protected:
         std::shared_ptr<tff::schedule::HybridScheduler> _task_scheduler;
-        std::shared_ptr<tff::core::runtime::LLMMemManager> _weight_mem_manager_ptr;
     };
 }
 

@@ -73,10 +73,10 @@ namespace tff::core::model {
                                                                       this->_model_ctx._n_head_kv,
                                                                       this->_model_ctx._n_tokens);
 
-                        auto attn_q_norm_node = build_norm(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q,
+                        auto attn_q_norm_node = build_norm(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q_NORM,
                                                            layer_map, attn_q_reshape_node);
 
-                        auto attn_k_norm_node = build_norm(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K,
+                        auto attn_k_norm_node = build_norm(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K_NORM,
                                                            layer_map, attn_k_reshape_node);
                         //
 
@@ -112,7 +112,6 @@ namespace tff::core::model {
 
         graph_ptr->build_graph(out_put_node);
     }
-
     //
     std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_rope_table_node() {
         auto rope_table_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_PRE_ROPE_TABLE);
@@ -224,7 +223,7 @@ namespace tff::core::model {
         auto rms_norm_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_RMS_NORM);
         rms_norm_node->set_node_meta(NodeMetadata{layer->_layer_name + "_rms_norm"});
         rms_norm_node->bind_devices(layer->_device_list);
-        rms_norm_node->add_src_node(input_node);
+        input_node = rms_norm_node->add_src_node(input_node);
         auto &inp_tensor = input_node->get_tensor();
         rms_norm_node->set_tensor(std::make_shared<memory::Tensor>(inp_tensor->get_shape().size(),
                                                        inp_tensor->get_data_type(), inp_tensor->get_shape()));
@@ -287,8 +286,8 @@ namespace tff::core::model {
         const tff::core::graph::NodeMetadata meta_tokenize_node{false, false, layer->_layer_name + "_embedding"};
         embedding_node->set_node_meta(meta_tokenize_node);
         embedding_node->bind_devices(layer->_device_list);
-        embedding_node->add_src_node(input_token_node);
         embedding_node->add_src_node(embd_weight_node);
+        embedding_node->add_src_node(input_token_node);
 
         std::array<int64_t, MAX_TENSOR_DIM> shape = {
             embd_weight_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[1], 1

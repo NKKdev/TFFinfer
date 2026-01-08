@@ -24,13 +24,17 @@ namespace tff::core::graph {
         _visited.insert(node);
         _use_counts[node] = 0;
 
-
-        for (auto &input: node->_input_nodes) {
+        for (auto &input : node->_input_nodes) {
             if (input != nullptr) {
                 visit(input);
                 _use_counts[input]++;
             }
         }
+
+        _total_nodes.push_back(node);
+
+        int time_step = static_cast<int>(_total_nodes.size() - 1);
+        _exec_time[node] = time_step;
 
         if (is_leaf_node(node)) {
             size_t idx = _leafs.size();
@@ -41,7 +45,6 @@ namespace tff::core::graph {
             _nodes.push_back(node);
             _node_to_index[node] = idx;
         }
-        _total_nodes.push_back(node);
     }
 
     void Graph::build_graph(std::shared_ptr<GraphNode> output_node) {
@@ -77,33 +80,43 @@ namespace tff::core::graph {
     //
     void Graph::analyze_lifetimes() {
         const int INF = 1e9;
-        for (auto &node: _total_nodes) {
+        for (auto &node : _total_nodes) {
             _first_use[node] = INF;
             _last_use[node] = -1;
         }
 
-        std::unordered_map<std::shared_ptr<GraphNode>, int> exec_time;
-        for (int i = 0; i < _total_nodes.size(); ++i) {
-            exec_time[_total_nodes[i]] = i;
-        }
-        std::unordered_map<std::shared_ptr<GraphNode>, std::vector<std::shared_ptr<GraphNode> > > consumers;
-        for (auto &node: _total_nodes) {
-            for (auto &input: node->_input_nodes) {
+        std::unordered_map<std::shared_ptr<GraphNode>, std::vector<std::shared_ptr<GraphNode>>> consumers;
+        for (auto &node : _total_nodes) {
+            for (auto &input : node->_input_nodes) {
                 if (input) {
                     consumers[input].push_back(node);
                 }
             }
         }
-        for (auto &node: _total_nodes) {
-            if (consumers.count(node) == 0) {
-                _first_use[node] = exec_time[node];
-                _last_use[node] = exec_time[node];
+
+        for (auto &node : _total_nodes) {
+            if (consumers.find(node) == consumers.end() || consumers[node].empty()) {
+                if (_exec_time.find(node) != _exec_time.end()) {
+                    int t = _exec_time[node];
+                    _first_use[node] = t;
+                    _last_use[node] = t;
+                }else {
+                    tff::log::Logger::error("current node: %s has no exec time");
+                    continue;
+                }
+
             } else {
                 int min_time = INF, max_time = -1;
-                for (auto &consumer: consumers[node]) {
-                    int t = exec_time[consumer];
-                    min_time = std::min(min_time, t);
-                    max_time = std::max(max_time, t);
+                for (auto &consumer : consumers[node]) {
+                    if (_exec_time.find(consumer) != _exec_time.end()) {
+                        int t = _exec_time[consumer];
+                        min_time = std::min(min_time, _exec_time[node]);
+                        max_time = std::max(max_time, t);
+                    }else {
+                        tff::log::Logger::error("current node: %s has no exec time");
+                        continue;
+                    }
+
                 }
                 _first_use[node] = min_time;
                 _last_use[node] = max_time;

@@ -30,12 +30,14 @@ namespace tff::core::runtime {
             this->init_device();
             //
             //this->_scheduler = std::make_shared<tff::schedule::HybridScheduler>();
-            this->_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMMemManager>(
-                tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
-                    WEIGHT_MEM_BUFFER_MANAGER_FLAG,
-                    tff::factory::ModuleKeyType(WEIGHT_MEM_BUFFER_MANAGER_FLAG)));
+            this->_mem_manager_ptr = std::make_shared<tff::core::runtime::LLMMemManager>();
             if (this->_mem_manager_ptr != nullptr) {
                 this->_mem_manager_ptr->init_device(this->_devices_map);
+            }
+            //
+            this->_weight_mem_manager_ptr = std::make_shared<tff::core::runtime::LLMMemManager>();
+            if (this->_weight_mem_manager_ptr != nullptr) {
+                this->_weight_mem_manager_ptr->init_device(this->_devices_map);
             }
             this->_llm_batch_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMBatchManager>(
                 tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
@@ -69,7 +71,9 @@ namespace tff::core::runtime {
         //
         bool init_graph();
         //
-        bool init_mem_manager() const;
+        bool init_io_graph();
+        //
+        bool init_mem_manager(const std::shared_ptr<graph::Graph> &graph_ptr, std::shared_ptr<LLMMemManager> &_mem_manager_ptr) const;
 
         //
         bool prefill();
@@ -101,6 +105,10 @@ namespace tff::core::runtime {
         bool load_tensor_data();
         //
         void bind_device(std::shared_ptr<layer::ModelLayerObject> &layer_obj, const int &total_layer_index);
+        //
+        void build_mem_offset(const std::shared_ptr<LLMMemManager> &_mem_manager_ptr,
+                              const std::shared_ptr<graph::Graph> &graph_ptr, std::unordered_map<std::string, std::unordered_map<int, int>> &
+                              mem_buffer_offset_map) const;
 
     public:
         std::string _name;
@@ -131,18 +139,20 @@ namespace tff::core::runtime {
             std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<tff::core::model::layer::ModelLayerObject> > > >
         _layer_map;
         //
-        std::shared_ptr<tff::core::graph::Graph> _graph_ptr;
+        std::shared_ptr<tff::core::graph::Graph> _infer_graph_ptr;
+        std::shared_ptr<tff::core::graph::Graph> _mem_graph_ptr;
 
     public:
         //std::shared_ptr<tff::schedule::HybridScheduler> _scheduler;
         //
-        std::shared_ptr<tff::core::memory::LLMKVCache> _kv_cache_ptr;
+        std::unordered_map<int, std::shared_ptr<tff::core::memory::LLMKVCache>> _kv_cache_ptr;
 
     public:
         //
         std::shared_ptr<tff::core::runtime::LLMBatchManager> _llm_batch_manager_ptr;
         //
         std::shared_ptr<tff::core::runtime::LLMMemManager> _mem_manager_ptr;
+        std::shared_ptr<tff::core::runtime::LLMMemManager> _weight_mem_manager_ptr;
         //
         std::shared_ptr<tff::core::runtime::LLMTaskFlowManager> _task_manager;
     };

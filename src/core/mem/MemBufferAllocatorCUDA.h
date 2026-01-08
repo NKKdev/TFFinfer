@@ -10,7 +10,7 @@
 namespace tff::core::memory {
     class MemBufferAllocatorCUDA : public tff::core::memory::MemBufferAllocatorBaseObject {
     public:
-        MemBufferAllocatorCUDA() = default;
+        MemBufferAllocatorCUDA(int device_id):MemBufferAllocatorBaseObject(device_id){};
 
         ~MemBufferAllocatorCUDA() override = default;
 

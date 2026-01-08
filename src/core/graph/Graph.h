@@ -69,6 +69,7 @@ namespace tff::core::graph {
         std::vector<std::shared_ptr<GraphNode>> _leafs;
         std::vector<std::shared_ptr<GraphNode>> _nodes;
         std::vector<std::shared_ptr<GraphNode>> _total_nodes;
+        std::unordered_map<std::shared_ptr<GraphNode>, int> _exec_time;
         std::unordered_map<std::shared_ptr<GraphNode>, size_t> _use_counts;
         std::unordered_set<std::shared_ptr<GraphNode>> _visited;
 

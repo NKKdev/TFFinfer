@@ -40,6 +40,12 @@ namespace tff::core::model {
                     tff::core::model::layer::ModelLayerObject> > > > &layer_map,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr) override;
 
+        void build_mem_graph(
+            std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::model::layer::ModelLayerObject> > > > &layer_map,
+            std::shared_ptr<tff::core::graph::Graph> &graph_ptr) override;
+
         std::shared_ptr<tff::core::graph::GraphNode> build_inputs(
             const std::unordered_map<memory::ModelTensorType, std::shared_ptr<layer::ModelLayerObject>> &layer_map);
 
@@ -118,6 +124,20 @@ namespace tff::core::model {
 
         std::shared_ptr<tff::core::graph::GraphNode> build_mul_node(
             std::shared_ptr<layer::ModelLayerObject> &layer, std::shared_ptr<GraphNode> &a_node);
+
+
+        //build mem graph;
+        //
+        std::shared_ptr<tff::core::graph::GraphNode> build_host_node(
+            std::shared_ptr<layer::ModelLayerObject> &layer, NodeType &input_node);
+
+        //
+        std::shared_ptr<tff::core::graph::GraphNode> build_device_node(
+            std::shared_ptr<layer::ModelLayerObject> &layer, NodeType &input_node, std::shared_ptr<GraphNode> &current_cpu_node);
+        //
+        NodeType  build_layer_node(memory::ModelTensorType tensor_type,
+            const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+            tff::core::model::layer::ModelLayerObject> > &layer_map,NodeType &input_node);
 
     protected:
         model::GraphContext _model_ctx;

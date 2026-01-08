@@ -12,9 +12,8 @@
 
 namespace tff::schedule {
     enum TaskType {
-        TFF_TASK_TYPE_CPU,
-        TFF_TASK_TYPE_GPU,
         TFF_TASK_TYPE_IO,
+        TFF_TASK_TYPE_INFER,
     };
 
     class HybridScheduler final : public tff::module::ModuleObject {
@@ -40,7 +39,7 @@ namespace tff::schedule {
 
     public:
         template<typename F, typename... Args>
-        tf::Task add_task(const std::string &name, F &&f, Args &&... args);
+        tf::Task add_task(const TaskType &type, const std::string &name, F &&f, Args &&... args);
 
 
         // template<typename F, typename... Args>
@@ -57,17 +56,17 @@ namespace tff::schedule {
         tf::Task add_subflow_task(tf::Taskflow &tf, const std::string &name, F &&f, Args &&... args);
 
         // 提交执行
-        void run();
+        void run(const TaskType &type);
 
-        void wait_until_completion();
+        void wait_until_completion(const TaskType &type);
 
-        tf::Taskflow &taskflow() { return _task_flow; }
+        tf::Taskflow &taskflow(TaskType &type) { return _task_flow[type]; }
 
     private:
 
-        tf::Executor _executor;
-        tf::Taskflow _task_flow;
-        tf::Future<void> _future;
+        std::unordered_map<TaskType, tf::Executor> _executor;
+        std::unordered_map<TaskType, tf::Taskflow> _task_flow;
+        std::unordered_map<TaskType, tf::Future<void>> _future;
         cudaStream_t _capture_stream = nullptr;
         cudaGraph_t _graph = nullptr;
         cudaGraphExec_t _graph_exec = nullptr;
@@ -80,12 +79,12 @@ namespace tff::schedule {
     };
 
     template<typename F, typename... Args>
-    tf::Task HybridScheduler::add_task(const std::string &name, F &&f, Args &&... args) {
+    tf::Task HybridScheduler::add_task(const TaskType &type, const std::string &name, F &&f, Args &&... args) {
         auto bound = [func = std::forward<F>(f),
                     tup = std::make_tuple(std::forward<Args>(args)...)]() mutable {
             std::apply(func, tup);
         };
-        return _task_flow.emplace(std::move(bound)).name(name);
+        return _task_flow[type].emplace(std::move(bound)).name(name);
     }
 
     // template<typename F, typename... Args>

@@ -60,7 +60,7 @@ namespace tff::core::graph {
         explicit GraphNode(const std::string &name = ""):_is_fused(false) {
             this->_node_metadata._name = name;
             this->_params_ptr = std::make_shared<tff::core::global::ParamBaseObject>();
-            this->_weight_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMMemManager>(
+            this->_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMMemManager>(
                 tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
                     WEIGHT_MEM_BUFFER_MANAGER_FLAG,
                     tff::factory::ModuleKeyType(WEIGHT_MEM_BUFFER_MANAGER_FLAG)));
@@ -82,13 +82,18 @@ namespace tff::core::graph {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
                 return nullptr;
             }
-            auto params_ptr = this->get_params();
+            if (this->_tensor->get_buffer() == nullptr) {
+                this->_tensor->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
+                    this->_tensor->get_external_memory_index()),
+                    this->_tensor->get_bytes());
+            }
 
+            auto params_ptr = this->get_params();
             params_ptr->set_param(params_ptr->get_param_count(),this->_inputs);
             params_ptr->set_param(params_ptr->get_param_count(),this->_tensor);
-            params_ptr->set_param(params_ptr->get_param_count(),this->_weight_mem_manager_ptr);
+            params_ptr->set_param(params_ptr->get_param_count(),this->_mem_manager_ptr);
 
-            auto callback = this->_devices[0]->get_op_func(this->_op_type, this->data_type());
+            auto callback = this->_devices.begin()->second->get_op_func(this->_op_type, this->data_type());
             return callback;
         };
     public:
@@ -261,16 +266,18 @@ namespace tff::core::graph {
         inline const std::shared_ptr<tff::core::memory::Tensor> &get_tensor() {
             return this->_tensor;
         }
-        inline void add_src_node(const std::shared_ptr<GraphNode> &src_node) {
-
+        inline std::shared_ptr<GraphNode> add_src_node(const std::shared_ptr<GraphNode> &src_node) {
+            if (src_node ==nullptr) {
+                return src_node;
+            }
             auto iter = std::find(this->_input_nodes.begin(), this->_input_nodes.end(), src_node);
             if (iter == this->_input_nodes.end()) {
                 for (auto &node:this->input_nodes()) {
                     if (node->name() == src_node->name()) {
-                        return;
+                        return src_node;
                     }
                 }
-                if (this->_devices.begin()->first != src_node->device().begin()->first) {//设备不一致，自动插入拷贝节点;
+                if (this->_devices.begin()->first != src_node->device().begin()->first && this->op_type() != TFF_OP_MEM_CPY) {//设备不一致，自动插入拷贝节点;
                     auto mem_cpy_node = ADD_NODE(TFF_OP_MEM_CPY);
                     mem_cpy_node->set_node_meta(NodeMetadata(src_node->name() + "_mem_cpy"));
                     mem_cpy_node->bind_devices(this->_devices);
@@ -284,12 +291,14 @@ namespace tff::core::graph {
 
                     this->_input_nodes.push_back(mem_cpy_node);
                     this->add_inputs(mem_cpy_node->get_tensor());
+                    return mem_cpy_node;
                 }else {
                     this->_input_nodes.push_back(src_node);
                     this->add_inputs(src_node->get_tensor());
+                    return src_node;
                 }
-
             }
+            return src_node;
         }
         //
         inline void add_inputs( const std::shared_ptr<core::memory::Tensor> &tensor) {
@@ -328,7 +337,7 @@ namespace tff::core::graph {
 
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> _devices;
         //
-        std::shared_ptr<tff::core::runtime::LLMMemManager> _weight_mem_manager_ptr;
+        std::shared_ptr<tff::core::runtime::LLMMemManager> _mem_manager_ptr;
 
 #ifndef _EXPLICIT_DAG
         //

@@ -10,7 +10,7 @@
 namespace tff::core::memory {
     class MemBufferAllocatorCPU :public tff::core::memory::MemBufferAllocatorBaseObject{
     public:
-        MemBufferAllocatorCPU() = default;
+        MemBufferAllocatorCPU(int device_id):MemBufferAllocatorBaseObject(device_id){};
 
         ~MemBufferAllocatorCPU() override = default;
 

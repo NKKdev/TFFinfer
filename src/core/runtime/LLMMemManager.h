@@ -9,6 +9,7 @@
 #include <mutex>
 #include <queue>
 #include <vector>
+#include <set>
 #include <algorithm>
 #include "mem/Memory.h"
 #include "log/Logger.h"
@@ -22,10 +23,19 @@ namespace tff::core::runtime {
     class LLMMemManager final : public tff::module::ModuleObject {
     public:
         explicit LLMMemManager(size_t alignment = 256)
-            : _alignment(alignment) {
+            : _alignment(alignment),_is_initialized(false) {
         }
 
-        ~LLMMemManager() = default;
+        ~LLMMemManager() {
+            auto iter = this->_mem_buffer_map.begin();
+            for (; iter != this->_mem_buffer_map.end(); ++iter) {
+                this->_devices_map[iter->first]->get_device_buffer_allocator(iter->first)->release(iter->second);
+            }
+            _current_offset.clear();
+            this->_free_set.clear();
+            this->_free_heap.clear();
+            this->_devices_map.clear();
+        };
 
     public:
         //
@@ -51,25 +61,40 @@ namespace tff::core::runtime {
         inline void *get_ptr_by_offset(const int &device_id, size_t offset) {
             return static_cast<char *>(this->_mem_buffer_map[device_id]) + offset;
         }
+        inline bool is_initialized() const {
+            return _is_initialized;
+        };
+
 
     private:
         struct MemoryBlock {
             size_t _offset;
+            size_t _size;
             int _free_time;
 
             bool operator>(const MemoryBlock &other) const {
                 return _free_time > other._free_time;
             }
         };
+        struct FreeBlock {
+            size_t offset;
+            size_t size;
+            bool operator<(const FreeBlock& other) const {
+                if (size != other.size) return size < other.size;
+                return offset < other.offset;
+            }
+        };
 
         const size_t _alignment;
-
+        bool _is_initialized;
         mutable std::mutex _mutex;
         std::unordered_map<int, void *> _mem_buffer_map;
         std::unordered_map<int, size_t> _current_offset;
+
         std::unordered_map<int, std::priority_queue<MemoryBlock, std::vector<MemoryBlock>, std::greater<> > >
         _free_heap;
-        std::unordered_map<int, std::vector<size_t> > _free_list;
+
+        std::unordered_map<int, std::multiset<FreeBlock>> _free_set;
 
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject> > _devices_map;
     };

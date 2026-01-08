@@ -446,6 +446,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("error: EmbeddingNode input_node size(expect 2)");
                 return nullptr;
             }
+
             // auto input_token_node = this->_input_nodes[0];
             // auto embd_weight_node = this->_input_nodes[1];
             //

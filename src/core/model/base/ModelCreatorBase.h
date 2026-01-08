@@ -15,6 +15,7 @@
 #include "model/base/ModelLoaderBase.h"
 
 namespace tff::core::model {
+    using NodeType = std::unordered_map<tff::core::graph::GraphNodeType, std::shared_ptr<graph::GraphNode> >;
     struct GraphContext {
 
         int _n_layer;
@@ -28,6 +29,7 @@ namespace tff::core::model {
         int _max_seq_len;
 
         bool _use_fp16;
+        bool _use_mmap;
         GraphContext &operator=(const GraphContext &) = default;
     };
     class ModelCreatorBase {
@@ -35,14 +37,14 @@ namespace tff::core::model {
         ModelCreatorBase() = default;
 
         virtual ~ModelCreatorBase() = default;
-
-    public:
-
-
-        using NodeType = std::unordered_map<tff::core::graph::GraphNodeType, std::shared_ptr<graph::GraphNode> >;
-
     public:
         virtual void build_graph(
+            std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
+                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+                    tff::core::model::layer::ModelLayerObject> > > > &layer_map,
+            std::shared_ptr<tff::core::graph::Graph> &graph_ptr) = 0;
+
+        virtual void build_mem_graph(
             std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
                 std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                     tff::core::model::layer::ModelLayerObject> > > > &layer_map,

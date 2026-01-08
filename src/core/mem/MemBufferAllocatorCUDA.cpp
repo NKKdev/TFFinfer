@@ -31,6 +31,7 @@ namespace tff::core::memory {
 
     void tff::core::memory::MemBufferAllocatorCUDA::memcpy(void *src_ptr, void *dest_ptr, size_t byte_size,
                                                            tff::core::memory::MemCpyKind _memcpy_kind) const {
+        CudaSafeCall(cudaSetDevice(this->_device_id));
         if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
         } else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
@@ -42,6 +43,7 @@ namespace tff::core::memory {
 
     void MemBufferAllocatorCUDA::memcpy_async(const void *src_ptr, void *dest_ptr, size_t byte_size,
                                               tff::core::memory::MemCpyKind _memcpy_kind) const {
+        CudaSafeCall(cudaSetDevice(this->_device_id));
         if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
             CudaSafeCall(cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
         } else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
@@ -52,6 +54,7 @@ namespace tff::core::memory {
     }
 
     void tff::core::memory::MemBufferAllocatorCUDA::memset_zero(void *ptr, size_t byte_size) {
+        CudaSafeCall(cudaSetDevice(this->_device_id));
         CudaSafeCall(cudaMemset(ptr, 0, byte_size));
     }
 }

@@ -11,8 +11,9 @@ namespace tff::core::runtime {
     REGISTER_MODULE_OBJECT(LLMTaskFlowManager, tff::module::ModuleObject, TASK_FLOW_MANAGER_FLAG,
                            tff::core::global::TaskFlowType::TFF_FLOW_LLM);
 
-    bool LLMTaskFlowManager::build_task_schedule(const bool is_fuse,
-                                                 const std::shared_ptr<tff::core::graph::Graph> &graph_ptr) const {
+    bool LLMTaskFlowManager::build_task_schedule(const tff::schedule::TaskType &type,
+        const std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+        bool is_fuse) const {
         if (!graph_ptr || !_task_scheduler) {
             return false;
         }
@@ -37,7 +38,7 @@ namespace tff::core::runtime {
             if (!params_ptr) {
                 continue;
             }
-            tf::Task task = _task_scheduler->add_task(node->name(), std::move(callable), params_ptr);
+            tf::Task task = _task_scheduler->add_task(type, node->name(), std::move(callable), params_ptr);
             node_to_task.emplace(node, std::move(task));
         }
 
