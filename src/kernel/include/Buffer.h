@@ -33,7 +33,7 @@ namespace tff::kernel {
             if (_access == base::BufferAccess::kWriteOnly) {
                 tff::log::Logger::error("Buffer: reading from a write-only buffer");
             }
-            this->_allocator->memcpy(*_buffer, host, size * sizeof(T), tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+            this->_allocator->memcopy(*_buffer, host, size * sizeof(T), tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST);
         }
 
         void WriteAsync(const size_t size, const T *host, const size_t offset = 0) {
@@ -49,7 +49,7 @@ namespace tff::kernel {
                 tff::log::Logger::error("Buffer: writing to a read-only buffer");
             }
 
-            this->_allocator->memcpy(host, *_buffer, size * sizeof(T), tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE);
+            this->_allocator->memcopy(host, *_buffer, size * sizeof(T), tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE);
         }
 
         // Copies the contents of this buffer into another device buffer
@@ -58,7 +58,7 @@ namespace tff::kernel {
         }
 
         void CopyTo(const size_t size, const Buffer<T> &destination) const {
-            this->_allocator->memcpy(*_buffer, destination(), size * sizeof(T), tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2DEVICE);
+            this->_allocator->memcopy(*_buffer, destination(), size * sizeof(T), tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2DEVICE);
         }
 
         // Accessor to the private data-member

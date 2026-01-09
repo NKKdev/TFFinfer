@@ -48,17 +48,16 @@ namespace tff::core::runtime {
         }
         this->_model_creator = creator;
         auto &cfg = this->_model_loader->get_model_config();
-        model::GraphContext ctx{};
-        ctx._n_embd_head = cfg._n_embd / cfg._n_head_arr[0];
-        ctx._max_seq_len = cfg._n_ctx;
-        ctx._n_embd_head_k = cfg._n_embd_head_k;
-        ctx._n_embd_head_v = cfg._n_embd_head_v;
-        ctx._n_head = cfg._n_head_arr[0];
-        ctx._n_head_kv = cfg._n_head_kv_arr[0];
-        ctx._n_layer = cfg._n_layer;
-        ctx._use_fp16 = cfg._use_f16;
-        ctx._use_mmap = cfg._use_mmap;
-        this->_model_creator->build_model_context(ctx);
+        this->_model_creator->_model_ctx._n_embd_head = cfg._n_embd / cfg._n_head_arr[0];
+        this->_model_creator->_model_ctx._max_seq_len = cfg._n_ctx;
+        this->_model_creator->_model_ctx._n_embd_head_k = cfg._n_embd_head_k;
+        this->_model_creator->_model_ctx._n_embd_head_v = cfg._n_embd_head_v;
+        this->_model_creator->_model_ctx._n_head = cfg._n_head_arr[0];
+        this->_model_creator->_model_ctx._n_head_kv = cfg._n_head_kv_arr[0];
+        this->_model_creator->_model_ctx._n_layer = cfg._n_layer;
+        this->_model_creator->_model_ctx._use_fp16 = cfg._use_f16;
+        this->_model_creator->_model_ctx._use_mmap = cfg._use_mmap;
+        this->_model_creator->_model_ctx._model_loader = this->_model_loader;
         return true;
     }
 
@@ -104,7 +103,7 @@ namespace tff::core::runtime {
         kv_cfg._max_tokens = this->_model_config._n_ctx;
         kv_cfg._use_f16 = this->_model_config._use_f16;
         kv_cfg._data_type = this->_model_config._kv_data_type;
-        const auto device = *this->_devices.begin();//优先构建设备优先级高的kv cache
+        const auto device = *this->_devices.begin(); //优先构建设备优先级高的kv cache
         if (!device) {
             tff::log::Logger::error("No valid device found in _devices.");
             return false;
@@ -205,14 +204,16 @@ namespace tff::core::runtime {
     }
 
     void LLMInferRuntime::build_mem_offset(const std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr,
-        const std::shared_ptr<graph::Graph> &graph_ptr,
-                                           std::unordered_map<std::string, std::unordered_map<int, int>> &mem_buffer_offset_map) const{
-
+                                           const std::shared_ptr<graph::Graph> &graph_ptr,
+                                           std::unordered_map<std::string, std::unordered_map<int, size_t> > &
+                                           mem_buffer_offset_map,
+                                           const MemoryType &type) const {
         for (auto &node: graph_ptr->total_nodes()) {
             auto current_device = *node->device().begin();
             auto [start, end] = graph_ptr->get_lifetime(node);
+            tff::log::Logger::info("node： %s start: %d, end: %d", node->name().c_str(), start, end);
             auto mem_offset = _mem_manager_ptr->allocate_memory(node->get_tensor()->get_bytes(),
-                                                                     start, end, current_device.first);
+                                                                start, end, current_device.first, type);
             node->get_tensor()->set_external_memory_index(mem_offset);
             auto device_type_flag = current_device.second->get_device_type_flag(current_device.first);
             auto iter = mem_buffer_offset_map.find(device_type_flag);
@@ -220,18 +221,20 @@ namespace tff::core::runtime {
                 auto devoce_iter = iter->second.find(current_device.first);
                 if (devoce_iter != iter->second.end()) {
                     devoce_iter->second = devoce_iter->second < mem_offset ? mem_offset : devoce_iter->second;
-                }else {
+                } else {
                     mem_buffer_offset_map[device_type_flag].insert(std::make_pair(current_device.first, mem_offset));
                 }
             } else {
-                std::unordered_map<int, int> device_mem_offset_map;
+                std::unordered_map<int, size_t> device_mem_offset_map;
                 device_mem_offset_map.insert(std::make_pair(current_device.first, mem_offset));
                 mem_buffer_offset_map.insert(std::make_pair(device_type_flag, device_mem_offset_map));
             }
         }
     }
+
     bool LLMInferRuntime::init_mem_manager(const std::shared_ptr<graph::Graph> &graph_ptr,
-        std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr) const {
+                                           std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr,
+                                           const MemoryType &type) const {
         if (graph_ptr == nullptr) {
             tff::log::Logger::error("model graph is invalid!!\n");
             return false;
@@ -240,15 +243,17 @@ namespace tff::core::runtime {
             tff::log::Logger::error("model memory manager is invalid!!\n");
             return false;
         }
-        std::unordered_map<std::string, std::unordered_map<int, int> > mem_buffer_offset_map;
-        this->build_mem_offset(_mem_manager_ptr, graph_ptr, mem_buffer_offset_map);
+        std::unordered_map<std::string, std::unordered_map<int, size_t> > mem_buffer_offset_map;
+        this->build_mem_offset(_mem_manager_ptr, graph_ptr, mem_buffer_offset_map, type);
 
         bool bRet = true;
         for (auto &mem_buffer_offset: mem_buffer_offset_map) {
             for (auto &mem_buffer: mem_buffer_offset.second) {
-                bRet &= _mem_manager_ptr->init(mem_buffer.first);
+                bRet &= _mem_manager_ptr->init(mem_buffer.first, type);
             }
         }
+
+        this->_model_creator->_model_ctx._mem_manager_ptr = _mem_manager_ptr;
         return bRet;
     }
 
@@ -258,18 +263,15 @@ namespace tff::core::runtime {
             this->build_output();
             if (!this->_infer_graph_ptr) {
                 this->init_graph();
-            }
-            if (!this->_mem_manager_ptr->is_initialized()) {
                 //init mem buffer;
-                if (!this->init_mem_manager(this->_infer_graph_ptr, this->_mem_manager_ptr)) {
+                if (!this->init_mem_manager(this->_infer_graph_ptr, this->_mem_manager_ptr, MemoryType::ACTIVATION)) {
                     tff::log::Logger::error("Failed to initialize memory manager.");
                     return false;
                 }
             }
-
             try {
                 this->_task_manager->build_task_schedule(tff::schedule::TaskType::TFF_TASK_TYPE_INFER,
-                    this->_infer_graph_ptr, this->_model_config._is_fuse_op);
+                                                         this->_infer_graph_ptr, this->_model_config._is_fuse_op);
                 this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_INFER);
             } catch (const std::exception &e) {
                 tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
@@ -454,6 +456,9 @@ namespace tff::core::runtime {
             layer->_type = layer_info.first;
             layer->_layer_name = get_layer_name(weight.first);
             layer->_tensor = weight.second._tensor_ptr;
+            layer->_model_file_index = weight.second._idx;
+            layer->_offset = weight.second._offs;
+            layer->_data_size = weight.second._alignment_size;
             this->bind_device(layer, total_layer_num);
 
             auto iter = this->_layer_map[layer_info.first].find(layer_index);
@@ -525,12 +530,10 @@ namespace tff::core::runtime {
 
     bool LLMInferRuntime::load_tensor_data() {
         this->init_io_graph();
-        if (!this->_weight_mem_manager_ptr->is_initialized()) {
-            //init mem buffer;
-            if (!this->init_mem_manager(this->_mem_graph_ptr, this->_weight_mem_manager_ptr)) {
-                tff::log::Logger::error("Failed to initialize memory manager.");
-                return false;
-            }
+
+        if (!this->init_mem_manager(this->_mem_graph_ptr, this->_mem_manager_ptr, MemoryType::WEIGHT)) {
+            tff::log::Logger::error("Failed to initialize memory manager.");
+            return false;
         }
 
         try {

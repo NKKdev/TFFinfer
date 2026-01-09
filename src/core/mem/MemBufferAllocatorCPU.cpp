@@ -14,10 +14,10 @@ namespace tff::core::memory {
         return malloc(byte_size);
     }
 
-    void tff::core::memory::MemBufferAllocatorCPU::memcpy(void *src_ptr, void *dest_ptr, size_t byte_size,
+    void tff::core::memory::MemBufferAllocatorCPU::memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,
                                                           tff::core::memory::MemCpyKind _memcpy_kind) const {
         try {
-            std::memcpy(dest_ptr, src_ptr,byte_size);
+            memcpy(dest_ptr, src_ptr,byte_size);
         }
         catch (std::exception& e) {
             tff::log::Logger::error("memcpy error: %s",e.what());

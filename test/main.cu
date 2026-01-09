@@ -5,7 +5,8 @@
 #include <iostream>
 #include "device/cuda/cudaInc.h"
 #include "runtime/LLMInferRuntime.h"
-static void rtrim(std::string& s) {
+
+static void rtrim(std::string &s) {
     s.erase(
         std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
             return !std::isspace(ch);
@@ -14,7 +15,7 @@ static void rtrim(std::string& s) {
     );
 }
 
-int main(int argc,char *argv[]) {
+int main(int argc, char *argv[]) {
     std::string model_config_file_path(argv[1]);
     std::string model_file(argv[2]);
     tff::core::runtime::LLMInferRuntime llm_runtime;
@@ -39,7 +40,7 @@ int main(int argc,char *argv[]) {
     std::string prompt1 = "What is your name";
     std::string prompt2 = "Hello my name is";
     std::vector<std::string> prompt_pre{prompt0, prompt1, prompt2};
-    std::vector<std::string> names{"","", "Wang Peng"};
+    std::vector<std::string> names{"", "", "Wang Peng"};
     std::vector<std::string> prompt_batches;
     prompt_batches.resize(max_batches);
     for (int i = 0; i < max_batches; i++) {
@@ -50,6 +51,6 @@ int main(int argc,char *argv[]) {
     const int n_predict = 256;
     llm_runtime.encode(prompt_batches);
     llm_runtime.prefill();
-    //llm_runtime.decode(n_predict, respone_str);
+    llm_runtime.decode(n_predict, respone_str);
     return 0;
 }

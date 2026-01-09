@@ -128,7 +128,6 @@ namespace tff::core::device::cpu {
         std::vector<int> device_list;
         get_device_id(device_list);
         for (size_t i = 0; i < device_list.size(); i++) {
-            CudaSafeCall(cudaSetDevice(device_list[i]));
             auto mem_buffer_allocator = std::make_shared<core::memory::MemBufferAllocatorCPU>(device_list[i]);
             this->_mem_buffer_allocators.insert(std::make_pair(device_list[i], mem_buffer_allocator));
         }

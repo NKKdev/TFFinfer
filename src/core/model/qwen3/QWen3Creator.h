@@ -133,25 +133,16 @@ namespace tff::core::model {
 
         //
         std::shared_ptr<tff::core::graph::GraphNode> build_device_node(
-            std::shared_ptr<layer::ModelLayerObject> &layer, NodeType &input_node, std::shared_ptr<GraphNode> &current_cpu_node);
+            std::shared_ptr<layer::ModelLayerObject> &layer, NodeType &input_node, std::shared_ptr<GraphNode> &current_cpu_node, bool
+            is_input = false);
         //
         NodeType  build_layer_node(memory::ModelTensorType tensor_type,
             const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-            tff::core::model::layer::ModelLayerObject> > &layer_map,NodeType &input_node);
+            tff::core::model::layer::ModelLayerObject> > &layer_map,NodeType &input_node, bool
+            is_input = false);
 
-    protected:
-        model::GraphContext _model_ctx;
 
-    public:
-        NodeType _current_mem_node;
-        bool _is_input_norm_w = true;
-        bool _is_input_norm_b = false;
-        bool _is_ffn_norm_w = true;
-        bool _is_ffn_norm_b = false;
-        bool _is_attn_norm_w = true;
-        bool _is_attn_norm_b = true;
-        bool _is_output_norm_w = true;
-        bool _is_output_norm_b = true;
+
     };
 }
 #endif //TFFINFER_LLAMACREATOR_H

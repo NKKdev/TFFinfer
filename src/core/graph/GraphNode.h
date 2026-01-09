@@ -76,7 +76,7 @@ namespace tff::core::graph {
         }
     public:
         //
-        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() {
+        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) {
             const auto dev = device();
             if (dev.empty()) {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
@@ -84,8 +84,9 @@ namespace tff::core::graph {
             }
             if (this->_tensor->get_buffer() == nullptr) {
                 this->_tensor->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
-                    this->_tensor->get_external_memory_index()),
+                    this->_tensor->get_external_memory_index(), type),
                     this->_tensor->get_bytes());
+                this->_tensor->set_allocator(this->device().begin()->second->get_device_buffer_allocator(this->device().begin()->first));
             }
 
             auto params_ptr = this->get_params();

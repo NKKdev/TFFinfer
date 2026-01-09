@@ -22,14 +22,21 @@ namespace tff::kernel {
             tff::log::Logger::error("memcpy kernel param is invalid!");
             return;
         }
-        // auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
-        // dst->set_buffer_data(mem_buffer_pair.second, dst->get_bytes(), mem_buffer_pair.first);
-        // dst->get_allocator()->memcpy(src->get_buffer()->ptr(), mem_buffer_pair.second,
-        // dst->get_bytes(), kind);
-        // //释放缓存;
-        // mem_buffer_manager_ptr->reset_cpu_mapped_memory(src->get_external_memory_index());
+        auto allocator = dst->get_allocator();
+        if (allocator == nullptr) {
+            tff::log::Logger::error("memcpy kernel param is invalid!");
+            return;
+        }
+        allocator->memcopy(src->get_buffer()->ptr(), dst->get_buffer()->ptr(), dst->get_bytes(), kind);
     }
-
+    static bool is_same_shape(std::array<int64_t, MAX_TENSOR_DIM> &shape1,std::array<int64_t, MAX_TENSOR_DIM> &shape2) {
+        for (int i = 0; i < shape1.size(); i++) {
+            if (shape1[i] != shape2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
     //
     template<typename T>
     void tff::kernel::MemCpy<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
@@ -38,23 +45,21 @@ namespace tff::kernel {
         const auto memcpy_kind = get_param_value<tff::core::memory::MemCpyKind>(1, para_ptr);
         auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             2, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             3, para_ptr);
         std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
 
-        if (input_tensors.size() != 1) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
-            return;
+        for (int i = 0; i < input_tensors.size(); i++) {
+            auto &input_tensor = input_tensors[i];
+            if (input_tensor->get_shape() != output_tensors->get_shape()) {
+                continue;
+            }
+            memcpy_kernel_cuda<T>(*input_tensors.begin(), output_tensors, mem_buffer_manager_ptr,
+                              memcpy_kind);
         }
-        if (output_tensors.size() != 1) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
-            return;
-        }
-        auto tmp = *input_tensors.begin();
-        memcpy_kernel_cuda<T>(*input_tensors.begin(), *output_tensors.begin(), mem_buffer_manager_ptr,
-                              tff::core::memory::MemCpyKind(memcpy_kind));
+
     }
     template<typename T>
     std::string tff::kernel::MemCpy<T>::get_op_name() {

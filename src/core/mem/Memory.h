@@ -104,10 +104,10 @@ namespace tff::core::memory {
             this->byte_size_ = _mem.byte_size_;
             if (this->device_type_ == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU
                 && _mem.device_type_ == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU) {
-                _mem._allocator->memcpy(_mem.ptr_, this->ptr_, this->byte_size_, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE);
+                _mem._allocator->memcopy(_mem.ptr_, this->ptr_, this->byte_size_, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE);
                 }else if (this->device_type_ == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU
                     && _mem.device_type_ == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU) {
-                    _mem._allocator->memcpy(_mem.ptr_, this->ptr_, this->byte_size_, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+                    _mem._allocator->memcopy(_mem.ptr_, this->ptr_, this->byte_size_, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST);
                 }
         }
     }

@@ -371,9 +371,9 @@ namespace tff::core::model {
         auto data_type = this->_model_ctx._use_fp16 ? memory::DataType::TFF_DATA_TYPE_F16 : memory::DataType::TFF_DATA_TYPE_F32;
         auto tensor = std::make_shared<memory::Tensor>(data_type,
                                                        std::array<int64_t, MAX_TENSOR_DIM>{
-                                                           v_node->get_tensor()->get_shape()[0],
-                                                           q_node->get_tensor()->get_shape()[2],
+                                                           q_node->get_tensor()->get_shape()[0],
                                                            q_node->get_tensor()->get_shape()[1],
+                                                           q_node->get_tensor()->get_shape()[2],
                                                            q_node->get_tensor()->get_shape()[3]
                                                        });
         flash_attn_node->set_tensor(tensor);

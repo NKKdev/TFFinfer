@@ -16,6 +16,11 @@
 #include "device/DeviceBaseObject.h"
 
 namespace tff::core::runtime {
+    enum class MemoryType {
+        WEIGHT,      // 持久权重内存，不可回收
+        ACTIVATION   // 临时激活内存，可复用
+    };
+
     inline size_t align_up(size_t size, size_t alignment) {
         return (size + alignment - 1) & ~(alignment - 1);
     }
@@ -23,12 +28,12 @@ namespace tff::core::runtime {
     class LLMMemManager final : public tff::module::ModuleObject {
     public:
         explicit LLMMemManager(size_t alignment = 256)
-            : _alignment(alignment),_is_initialized(false) {
+            : _alignment(alignment),_is_initialized(false),_buffer_byte_size(0) {
         }
 
         ~LLMMemManager() {
-            auto iter = this->_mem_buffer_map.begin();
-            for (; iter != this->_mem_buffer_map.end(); ++iter) {
+            auto iter = this->_mem_buffer_map.begin()->second.begin();
+            for (; iter != this->_mem_buffer_map.begin()->second.end(); ++iter) {
                 this->_devices_map[iter->first]->get_device_buffer_allocator(iter->first)->release(iter->second);
             }
             _current_offset.clear();
@@ -39,7 +44,7 @@ namespace tff::core::runtime {
 
     public:
         //
-        bool init(const int &device_id);
+        bool init(const int &device_id, const MemoryType &type);
 
         //
         inline void init_device(
@@ -47,22 +52,18 @@ namespace tff::core::runtime {
             this->_devices_map = _devices_map;
         }
 
-        int allocate_memory(size_t size, int start, int end, const int &device_id);
+        size_t allocate_memory(size_t size, int start, int end, const int &device_id, const MemoryType &type);
 
-        inline size_t get_total_gpu_memory_size(const int &device_id) {
+        inline size_t get_total_memory_size(const int &device_id, const MemoryType &type) {
             std::lock_guard<std::mutex> lock(_mutex);
-            return _current_offset[device_id];
+            return _current_offset[type][device_id];
         }
 
-        inline void bind_memory_pool(const int &device_id, void *base_ptr) {
-            this->_mem_buffer_map[device_id] = base_ptr;
+        inline void *get_ptr_by_offset(const int &device_id, size_t offset, const MemoryType &type) {
+            return static_cast<char *>(this->_mem_buffer_map[type][device_id]) + offset;
         }
-
-        inline void *get_ptr_by_offset(const int &device_id, size_t offset) {
-            return static_cast<char *>(this->_mem_buffer_map[device_id]) + offset;
-        }
-        inline bool is_initialized() const {
-            return _is_initialized;
+        inline bool is_initialized(const MemoryType &type) {
+            return _is_initialized[type];
         };
 
 
@@ -85,16 +86,17 @@ namespace tff::core::runtime {
             }
         };
 
-        const size_t _alignment;
-        bool _is_initialized;
+        size_t _alignment;
+        std::unordered_map<MemoryType, bool> _is_initialized;
+        double _buffer_byte_size;
         mutable std::mutex _mutex;
-        std::unordered_map<int, void *> _mem_buffer_map;
-        std::unordered_map<int, size_t> _current_offset;
+        std::unordered_map<MemoryType, std::unordered_map<int, void *>> _mem_buffer_map;
+        std::unordered_map<MemoryType, std::unordered_map<int, size_t>> _current_offset;
 
         std::unordered_map<int, std::priority_queue<MemoryBlock, std::vector<MemoryBlock>, std::greater<> > >
         _free_heap;
 
-        std::unordered_map<int, std::multiset<FreeBlock>> _free_set;
+        std::unordered_map<MemoryType, std::unordered_map<int, std::multiset<FreeBlock>>> _free_set;
 
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject> > _devices_map;
     };

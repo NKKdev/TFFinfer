@@ -30,6 +30,9 @@ namespace tff::core::model {
 
         bool _use_fp16;
         bool _use_mmap;
+
+        std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
+        std::shared_ptr<tff::core::runtime::LLMMemManager> _mem_manager_ptr;
         GraphContext &operator=(const GraphContext &) = default;
     };
     class ModelCreatorBase {
@@ -55,6 +58,8 @@ namespace tff::core::model {
 
         //
         virtual void build_model_context(const model::GraphContext &ctx) = 0;
+    public:
+        model::GraphContext _model_ctx;
     };
 }
 #endif //TFFINFER_MODELCREATORBASE_H

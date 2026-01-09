@@ -22,6 +22,11 @@ namespace tff::core::model::layer {
         ModelTensorLayerType _type;
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> _device_list;
         std::shared_ptr<tff::core::memory::Tensor> _tensor;
+
+        //
+        size_t _model_file_index;
+        size_t _offset;
+        double _data_size;
     };
 }
 

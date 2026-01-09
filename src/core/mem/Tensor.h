@@ -54,7 +54,7 @@ namespace tff::core::memory {
         }
         Tensor(const int n_dim = 4, const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
                std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
-               bool use_external = false,
+               bool use_external = true,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
@@ -74,7 +74,7 @@ namespace tff::core::memory {
         }
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
                std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
-               bool use_external = false,
+               bool use_external = true,
                std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
@@ -119,7 +119,7 @@ namespace tff::core::memory {
                 _buffer->allocate();
                 _is_allocated = true;
                 if (other._buffer && other._buffer->ptr() && _buffer->ptr()) {
-                    _allocator->memcpy(_buffer->ptr(), other._buffer->ptr(), total_bytes);
+                    _allocator->memcopy(_buffer->ptr(), other._buffer->ptr(), total_bytes);
                 }
             } else {
                 if (other._buffer) {
@@ -268,7 +268,7 @@ namespace tff::core::memory {
         }
 
         //
-        inline void set_buffer_data(void *data, const size_t &buffer_size, int mem_buffer_index = -1) {
+        inline void set_buffer_data(void *data, const size_t &buffer_size, size_t mem_buffer_index = -1) {
             std::lock_guard<std::mutex> lock(this->_mutex);
             if (this->_buffer != nullptr) {
                 tff::log::Logger::error("current tensor already has buffer!!");
@@ -280,11 +280,11 @@ namespace tff::core::memory {
         }
 
         //
-        inline int get_external_memory_index() const {
+        inline size_t get_external_memory_index() const {
             std::lock_guard<std::mutex> lock(this->_mutex);
             return _external_memory_index;
         }
-        inline void set_external_memory_index(const int &mem_offset) {
+        inline void set_external_memory_index(const size_t &mem_offset) {
             std::lock_guard<std::mutex> lock(this->_mutex);
             this->_external_memory_index = mem_offset;
         }
@@ -401,7 +401,7 @@ namespace tff::core::memory {
         int _priority = 0;
         bool _is_allocated;
         bool _use_external = false;
-        int _external_memory_index = -1;
+        size_t _external_memory_index = -1;
         size_t _n_dims{};
         tff::core::memory::DataType _data_type;
         tff::core::memory::ModelTensorType _tensor_type;

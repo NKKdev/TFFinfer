@@ -19,7 +19,7 @@ namespace tff::core::memory {
 
         [[nodiscard]] virtual void *allocate(size_t byte_size) const = 0;
 
-        virtual void memcpy(void *src_ptr, void *dest_ptr, size_t byte_size,
+        virtual void memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,
                             tff::core::memory::MemCpyKind _memcpy_kind = TFF_MEM_CPY_TYPE_NORMAL) const = 0;
         virtual void memcpy_async(const void* src_ptr, void* dest_ptr, size_t byte_size,
         tff::core::memory::MemCpyKind _memcpy_kind) const = 0;
