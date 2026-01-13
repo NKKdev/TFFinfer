@@ -906,7 +906,7 @@ void quant_q_8_0_gemm_nt_double_buffer(const int m, const int n, const int k, co
 #endif
 }
 
-int main232313(int argc, char *argv[]) {
+int main59898(int argc, char *argv[]) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     std::mt19937 mt(42);

@@ -42,14 +42,14 @@ if (NOT glog_FOUND)
     message(STATUS "Glog include directories: ${GLOG_INCLUDE_DIRS}")
 endif ()
 #cutlass
-#FetchContent_Declare(
-#        cutlass
-#        GIT_REPOSITORY https://gitee.com/git_mirror/cutlass.git
-#        GIT_TAG v3.7.0
-#)
-#FetchContent_MakeAvailable(cutlass)
-#get_target_property(cutlass_INCLUDE_DIRS CUTLASS INTERFACE_INCLUDE_DIRECTORIES)
-#message(STATUS "cutlass include directories: ${cutlass_INCLUDE_DIRS}")
+FetchContent_Declare(
+        cutlass
+        GIT_REPOSITORY https://gitee.com/git_mirror/cutlass.git
+        GIT_TAG v3.7.0
+)
+FetchContent_MakeAvailable(cutlass)
+get_target_property(cutlass_INCLUDE_DIRS CUTLASS INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "cutlass include directories: ${cutlass_INCLUDE_DIRS}")
 
 file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cu
@@ -75,7 +75,10 @@ add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         precompute_rope_tables.cu
         quant_q_8_0_gemm_reshape_half_warp_opt.cu
         quant_q_8_0_gemm_opt.cu
-        quant_q_8_0_gemm_swizzle.cu)
+        quant_q_8_0_gemm_swizzle.cu
+        flash_multi_attention_rope.cu
+        test.cu
+        flash_multi_attention_rope_opt.cu)
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE
 #        $<$<COMPILE_LANGUAGE:CUDA>:-O3>

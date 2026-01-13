@@ -1,6 +1,7 @@
 // //
-// // Created by nkk on 2025/12/13.
+// // Created by nkk on 2026/1/11.
 // //
+//
 // #include <vector>
 // #include <random>
 // #include "cublas_v2.h"
@@ -11,7 +12,8 @@
 // #include <math.h>
 // #include <cmath>
 // #include <cooperative_groups.h>
-// using T = half;
+// using T_KV = half;
+// using T_Q = float;
 // #if 0
 // constexpr int BYTES_PER_LOAD = 16; // 128-bit
 // constexpr int ELEMENTS_PER_LOAD = BYTES_PER_LOAD / sizeof(T);
@@ -26,17 +28,21 @@
 // constexpr int BLOCK_DIM_N = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_N;
 // constexpr int PAD_SIZE = 16; //BLOCK_DIM_K;
 // #else
+// constexpr int HIDDEN_DIM = 128;
 // constexpr int BYTES_PER_LOAD = 16; // 128-bit
-// constexpr int ELEMENTS_PER_LOAD = BYTES_PER_LOAD / sizeof(T);
-// constexpr int ACTUAL_ELEMENTS_PER_LOAD = ELEMENTS_PER_LOAD / 4;
+// constexpr int Q_ELEMENTS_PER_LOAD = BYTES_PER_LOAD / sizeof(T_Q);
+// constexpr int THREAD_PER_WARP_DIRECTION = HIDDEN_DIM / Q_ELEMENTS_PER_LOAD;
+// constexpr int KV_ELEMENTS_PER_LOAD = HIDDEN_DIM / THREAD_PER_WARP_DIRECTION;
 // constexpr int WARP_SIZE = 32;
 // constexpr int THREAD_BLOCK_SIZE = 256;
-// constexpr int BLOCK_DIM_K = 64;
-// constexpr int VEC_DIM_N = 2;
-// constexpr int VEC_DIM_K = 2;
-// constexpr int VEC_DIM_M = 8;
+// constexpr int WARP_PER_BLOCK = THREAD_BLOCK_SIZE / THREAD_PER_WARP_DIRECTION;
+// constexpr int BLOCK_DIM_K = HIDDEN_DIM;
 // constexpr int BLOCK_DIM_M = 64; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_M;
 // constexpr int BLOCK_DIM_N = 64; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_N;
+// constexpr int VEC_DIM_N = BLOCK_DIM_N / THREAD_PER_WARP_DIRECTION;
+// constexpr int VEC_DIM_K = BLOCK_DIM_K / THREAD_PER_WARP_DIRECTION;
+// constexpr int VEC_DIM_M = BLOCK_DIM_M / WARP_PER_BLOCK;
+//
 // constexpr int PAD_SIZE = 2; //BLOCK_DIM_K;
 // #endif
 //
@@ -45,7 +51,7 @@
 //
 // template<>
 // __device__ __forceinline__ void load_vec<float>(const float *addr, float *out, int count) {
-//     if (count >= 4 && reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
+//     if (count == 4 && reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
 //         float4 v = *reinterpret_cast<const float4 *>(addr);
 //         out[0] = v.x;
 //         out[1] = v.y;
@@ -86,45 +92,13 @@
 // }
 //
 // template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K,
-//     const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int PAD_SIZE>
-// __device__ __forceinline__ void load_tile_vec_t(const int ld, const int dim,
-//                                                 const int thread_x, const int warp_id,
-//                                                 const int start_m,
-//                                                 const int k,
-//                                                 const T *__restrict__ global_mem,
-//                                                 T *sm) {
-// #pragma unroll
-//     for (int j = 0; j < VEC_DIM_LD; ++j) {
-//         const int dim0_base = start_m + warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-//         for (int kk = 0; kk < VEC_DIM_K / ACTUAL_ELEMENTS_PER_LOAD; ++kk) {
-//             const int dim1 = k + thread_x * ACTUAL_ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
-//                              ACTUAL_ELEMENTS_PER_LOAD;
-//             T val[ACTUAL_ELEMENTS_PER_LOAD] = {0};
-//             if (dim0_base < dim) {
-//                 const int actual_load = min(ACTUAL_ELEMENTS_PER_LOAD, ld - dim1);
-//                 if (actual_load > 0) {
-//                     load_vec<T>(&global_mem[dim0_base * ld + dim1], val, actual_load);
-//                 }
-//             }
-//             int sm_col = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-//             int sm_row_base = thread_x * ACTUAL_ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
-//                               ACTUAL_ELEMENTS_PER_LOAD;
-// #pragma unroll
-//             for (int i = 0; i < ACTUAL_ELEMENTS_PER_LOAD; ++i) {
-//                 sm[sm_col + (sm_row_base + i) * (BLOCK_DIM_LD + PAD_SIZE)] = val[i];
-//             }
-//         }
-//     }
-// }
-//
-// template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K,
 //     const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int PAD_SIZE, const int ELEMENTS_PER_LOAD>
-// __device__ __forceinline__ void load_tile_vec_n(const int ld, const int dim,
-//                                                 const int thread_x, const int warp_id,
-//                                                 const int start_m,
-//                                                 const int k,
-//                                                 const T *__restrict__ global_mem,
-//                                                 T *sm) {
+// __device__ __forceinline__ void load_tile_vec_kv(const int ld, const int dim,
+//                                                  const int thread_x, const int warp_id,
+//                                                  const int start_m,
+//                                                  const int k,
+//                                                  const T *__restrict__ global_mem,
+//                                                  half *sm) {
 // #pragma unroll
 //     for (int j = 0; j < VEC_DIM_LD; ++j) {
 //         const int dim0_base = start_m + warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
@@ -138,135 +112,102 @@
 //                     load_vec<T>(&global_mem[dim0_base * ld + dim1], val, actual_load);
 //                 }
 //             }
-//             const int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-//             const int sm_col_base = thread_x * ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
-//                                     ELEMENTS_PER_LOAD;
+//             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+//             int sm_col = thread_x * ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
+//                          ELEMENTS_PER_LOAD;
 // #pragma unroll
 //             for (int i = 0; i < ELEMENTS_PER_LOAD; ++i) {
-//                 sm[sm_row * (BLOCK_DIM_K + PAD_SIZE) + (sm_col_base + i)] = val[i];
+//                 if (std::is_same_v<T, float>) {
+//                     sm[sm_row * (BLOCK_DIM_K + PAD_SIZE) + (sm_col + i)] = __float2half(val[i]);
+//                 } else if (std::is_same_v<T, half>) {
+//                     sm[sm_row * (BLOCK_DIM_K + PAD_SIZE) + (sm_col + i)] = val[i];
+//                 }
 //             }
 //         }
 //     }
 // }
 //
 //
-// template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int VEC_DIM_K,
-//     const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
-// __device__ __forceinline__ void compute_tile_attention_gemm(const int N, const int k_size, const int thread_x, const int warp_id,
-// const int start_m, const int start_n,
-//                                                             T *a_sm, T *b_sm, T *mask,
-//                                                             float *c_reg) {
-//     auto *q_sm_ptr = reinterpret_cast<half2 *>(a_sm);
-//     auto *k_sm_ptr = reinterpret_cast<half2 *>(b_sm);
-// #pragma unroll
-//     for (int kk = 0; kk < k_size; kk += 2) {
-//         half2 a_reg;
-// #pragma unroll
-//         for (int mm = 0; mm < VEC_DIM_M; mm++) {
-//             a_reg = q_sm_ptr[(kk / 2) + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K + PAD_SIZE) / 2];
-//             half2 b_reg;
-// #pragma unroll
-//             for (int nn = 0; nn < VEC_DIM_N; nn++) {
-//                 b_reg = k_sm_ptr[(kk / 2) + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K + PAD_SIZE) / 2];
-//
-//                 c_reg[mm * VEC_DIM_N + nn] += __half2float(__hadd(__hmul(a_reg.x, b_reg.x), __hmul(a_reg.y, b_reg.y)));
-//             }
-//         }
-//     }
-//
-// #pragma unroll
-//     for (int mm = 0; mm < VEC_DIM_M; mm++) {
-//         for (int nn = 0; nn < VEC_DIM_N; nn++) {
-//             const float mask_value = __ldg(&mask[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * N + start_n + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
-//             c_reg[mm * VEC_DIM_N + nn] += mask_value;
-//         }
-//     }
-// }
-//
-// template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
-//     const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
-// __device__ __forceinline__ void compute_tile_attention_gemm_with_rope_opt(
-//     const int k_size, const int thread_x, const int warp_id,
-//     const int start_m, const int start_n,
-//     T *a_sm, T *b_sm, float *cos_sin_sm,
-//     float *c_reg) {
-//     auto *q_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_m * BLOCK_DIM_K);
-//     auto *k_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_n * BLOCK_DIM_K);
-// #pragma unroll
-//     for (int kk = 0; kk < k_size; kk += 2) {
-//         float a_reg[2] = {0.0f};
-//         float2 a_cos_sin_coef;
-// #pragma unroll
-//         for (int mm = 0; mm < VEC_DIM_M; mm++) {
-//             a_cos_sin_coef = q_cos_sin_table_ptr[
-//                 kk / 2 + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K) / 2];
-//
-//             a_reg[0] = __half2float(
-//                 a_sm[(kk) * (BLOCK_DIM_M + PAD_SIZE) + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M]);
-//             a_reg[1] = __half2float(
-//                 a_sm[(kk + 1) * (BLOCK_DIM_M + PAD_SIZE) + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M]);
-//
-//
-//             float b_reg[2] = {0.0f};
-//             float2 b_cos_sin_coef;
-// #pragma unroll
-//             for (int nn = 0; nn < VEC_DIM_N; nn++) {
-//                 b_cos_sin_coef = k_cos_sin_table_ptr[
-//                     kk / 2 + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K) / 2];
-//
-//                 b_reg[0] = __half2float(
-//                     b_sm[(kk) * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
-//                 b_reg[1] = __half2float(
-//                     b_sm[(kk + 1) * (BLOCK_DIM_N + PAD_SIZE) + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
-//
-//                 c_reg[mm * VEC_DIM_N + nn] += (a_reg[0] * a_cos_sin_coef.x - a_reg[1] * a_cos_sin_coef.y) * (
-//                             b_reg[0] * b_cos_sin_coef.x - b_reg[1] * b_cos_sin_coef.y)
-//                         + (a_reg[0] * a_cos_sin_coef.y + a_reg[1] * a_cos_sin_coef.x) * (
-//                             b_reg[0] * b_cos_sin_coef.y + b_reg[1] * b_cos_sin_coef.x);
-//             }
-//         }
-//     }
-// }
-//
-// template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
-//     const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
-// __device__ __forceinline__ void compute_tile_attention_gemm_with_rope(const int N, const int k_size, const int thread_x,
+// template<typename T_Q, typename T_KV, const int VEC_DIM_M, const int VEC_DIM_N,
+//     const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE, const int
+//     ELEMENTS_PER_LOAD>
+// __device__ __forceinline__ void compute_tile_attention_gemm_with_rope(const int q_ld, const int N, const int k_size,
+//                                                                       const int thread_x,
 //                                                                       const int warp_id,
 //                                                                       const int start_m, const int start_n,
-//                                                                       T *a_sm, T *b_sm, float *cos_sin_sm, T *mask,
+//                                                                       const T_Q *q,
+//                                                                       half *b_sm,
+//                                                                       float *cos_sin_sm,
+//                                                                       T_KV *mask,
+//                                                                       const float scale,
 //                                                                       float *c_reg) {
 //     const auto *q_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_m * BLOCK_DIM_K);
 //     const auto *k_cos_sin_table_ptr = reinterpret_cast<float2 *>(cos_sin_sm + start_n * BLOCK_DIM_K);
-//     const auto *q_sm_ptr = reinterpret_cast<half2 *>(a_sm);
+//     const auto *q_ptr = reinterpret_cast<const float4 *>(q);
 //     const auto *k_sm_ptr = reinterpret_cast<half2 *>(b_sm);
-// #pragma unroll
-//     for (int kk = 0; kk < k_size; kk += 2) {
-//         float2 a_cos_sin_coef;
-//         half2 a_reg;
+// //#pragma unroll
+//     for (int kk = 0; kk < k_size; kk += ELEMENTS_PER_LOAD) {
+//         float2 a_cos_sin_coef[ELEMENTS_PER_LOAD / 2];
+//         float4 a_reg;
 // #pragma unroll
 //         for (int mm = 0; mm < VEC_DIM_M; mm++) {
-//             a_cos_sin_coef = q_cos_sin_table_ptr[
-//                 kk / 2 + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K) / 2];
+//             int q_index = (start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * q_ld / ELEMENTS_PER_LOAD + kk /
+//                           ELEMENTS_PER_LOAD;
+//             int q_cos_sin_table_index = kk / 2 + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (
+//                                             BLOCK_DIM_K) / 2;
+//             a_cos_sin_coef[0] = q_cos_sin_table_ptr[q_cos_sin_table_index];
+//             a_cos_sin_coef[1] = q_cos_sin_table_ptr[q_cos_sin_table_index + 1];
 //
-//             a_reg = q_sm_ptr[(kk / 2) + (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * (BLOCK_DIM_K + PAD_SIZE) / 2];
+//             a_reg = (q_ptr[q_index]);
 //
-//             half2 q_rot = complex_mul_half2(
-//                 a_reg,
-//                 make_half2(__float2half(a_cos_sin_coef.x), __float2half(a_cos_sin_coef.y)));
-//             float2 b_cos_sin_coef;
-//             half2 b_reg;
+//             float2 q_rot[ELEMENTS_PER_LOAD / 2];
+//             q_rot[0].x = a_reg.x * a_cos_sin_coef[0].x - a_reg.y * a_cos_sin_coef[0].y;
+//             q_rot[0].y = a_reg.x * a_cos_sin_coef[0].y + a_reg.y * a_cos_sin_coef[0].x;
+//             q_rot[1].x = a_reg.z * a_cos_sin_coef[1].x - a_reg.w * a_cos_sin_coef[1].y;
+//             q_rot[1].y = a_reg.z * a_cos_sin_coef[1].y + a_reg.w * a_cos_sin_coef[1].x;
+//
+//
+//             float2 b_cos_sin_coef[ELEMENTS_PER_LOAD / 2];
+//             float2 b_reg[ELEMENTS_PER_LOAD / 2];
 // #pragma unroll
 //             for (int nn = 0; nn < VEC_DIM_N; nn++) {
-//                 b_cos_sin_coef = k_cos_sin_table_ptr[
-//                     kk / 2 + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K) / 2];
+//                 int k_index = (kk / 2) + (thread_x + nn * BLOCK_DIM_N / (VEC_DIM_N)) * (
+//                                   BLOCK_DIM_K + PAD_SIZE) / 2;
+//                 int k_cos_sin_table_index = kk / 2 + (thread_x + nn * BLOCK_DIM_N / (VEC_DIM_N)) * (
+//                                                 BLOCK_DIM_K) / 2;
+//                 b_cos_sin_coef[0] = k_cos_sin_table_ptr[k_cos_sin_table_index];
+//                 b_cos_sin_coef[1] = k_cos_sin_table_ptr[k_cos_sin_table_index + 1];
 //
-//                 b_reg = k_sm_ptr[(kk / 2) + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_N + PAD_SIZE) / 2];
-//                 half2 k_rot = complex_mul_half2(
-//                     b_reg,
-//                     make_half2(__float2half(b_cos_sin_coef.x), __float2half(b_cos_sin_coef.y)));
+//                 b_reg[0] = __half22float2(k_sm_ptr[k_index]);
+//                 b_reg[1] = __half22float2(k_sm_ptr[k_index + 1]);
 //
+//                 float2 k_rot[ELEMENTS_PER_LOAD / 2];
+//                 k_rot[0].x = b_reg[0].x * b_cos_sin_coef[0].x - b_reg[0].y * b_cos_sin_coef[0].y;
+//                 k_rot[0].y = b_reg[0].x * b_cos_sin_coef[0].y + b_reg[0].y * b_cos_sin_coef[0].x;
+//                 k_rot[1].x = b_reg[1].x * b_cos_sin_coef[1].x - b_reg[1].y * b_cos_sin_coef[1].y;
+//                 k_rot[1].y = b_reg[1].x * b_cos_sin_coef[1].y + b_reg[1].y * b_cos_sin_coef[1].x;
 //
-//                 c_reg[mm * VEC_DIM_N + nn] += __half2float(__hadd(__hmul(q_rot.x, k_rot.x), __hmul(q_rot.y, k_rot.y)));
+//                 c_reg[mm * VEC_DIM_N + nn] += q_rot[0].x * k_rot[0].x + q_rot[0].y * k_rot[0].y;
+//                 c_reg[mm * VEC_DIM_N + nn] += q_rot[1].x * k_rot[1].x + q_rot[1].y * k_rot[1].y;
+//
+//                 // if (mm == 0 && nn == 0 && thread_x == 0 && warp_id == 1) {
+//                 //     printf("m: %d, n: %d, k: %d, \n"
+//                 //            "q_coef[0].x: %lf, q_coef[0].y: %lf, q_coef[1].x: %lf,q_coef[1].y: %lf,\n"
+//                 //            "k_coef[0].x: %lf, k_coef[0].y: %lf, k_coef[1].x: %lf,k_coef[1].y: %lf, \n"
+//                 //            "a_reg[0].x:%lf, a_reg[0].y:%lf,a_reg[1].x:%lf,a_reg[1].y:%lf,\n"
+//                 //            "b_reg[0].x:%lf, b_reg[0].y:%lf,b_reg[1].x:%lf,b_reg[1].y:%lf\n"
+//                 //            "q_rot[0].x:%lf, q_rot[0].y:%lf,q_rot[1].x:%lf,q_rot[1].y:%lf,\n"
+//                 //            "k_rot[0].x:%lf, k_rot[0].y:%lf,k_rot[1].x:%lf,k_rot[1].y:%lf\n"
+//                 //            "c_reg[mm * VEC_DIM_N + nn]:%lf \n",
+//                 //         start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M, start_n + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N,kk,
+//                 //         a_cos_sin_coef[0].x, a_cos_sin_coef[0].y, a_cos_sin_coef[1].x, a_cos_sin_coef[1].y,
+//                 //         b_cos_sin_coef[0].x, b_cos_sin_coef[0].y, b_cos_sin_coef[1].x, b_cos_sin_coef[1].y,
+//                 //         a_reg.x, a_reg.y, a_reg.z, a_reg.w,
+//                 //         b_reg[0].x, b_reg[0].y, b_reg[1].x, b_reg[1].y,
+//                 //         q_rot[0].x, q_rot[0].y, q_rot[1].x, q_rot[1].y,
+//                 //         k_rot[0].x, k_rot[0].y, k_rot[1].x, k_rot[1].y,
+//                 //         c_reg[mm * VEC_DIM_N + nn]);
+//                 // }
 //             }
 //         }
 //     }
@@ -275,18 +216,32 @@
 // #pragma unroll
 //     for (int mm = 0; mm < VEC_DIM_M; mm++) {
 //         for (int nn = 0; nn < VEC_DIM_N; nn++) {
-//             const float mask_value = __ldg(&mask[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * N + start_n + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N]);
+//             const float mask_value = __ldg(
+//                 &mask[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * N + start_n + thread_x + nn * BLOCK_DIM_N / (
+//                           VEC_DIM_N)]);
 //             c_reg[mm * VEC_DIM_N + nn] += mask_value;
+//             c_reg[mm * VEC_DIM_N + nn] *= scale;
+//             // if (warp_id == 0 && start_m == 64 && start_n == 64) {
+//             //     printf("thread_x: %d, warp_id: %d,"
+//             //            " m: %d, n: %d, "
+//             //            "c_reg[mm * VEC_DIM_N + nn]:%lf,"
+//             //            "mask_value: %lf \n",
+//             //            thread_x, warp_id,
+//             //            start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M,
+//             //            start_n + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N,
+//             //            c_reg[mm * VEC_DIM_N + nn],
+//             //            mask_value);
+//             // }
 //         }
 //     }
 // }
 //
-// template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int
-//     BLOCK_DIM_K, const int PAD_SIZE>
+// template<const int VEC_DIM_M, const int VEC_DIM_N, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int
+//     BLOCK_DIM_K, const int PAD_SIZE, const int ELEMENTS_PER_LOAD>
 // __device__ __forceinline__ void compute_softmax_pv(const int N, const int v_ld, const int start_m, const int start_n,
 //                                                    const int start_d,
 //                                                    const int thread_x, const int warp_id,
-//                                                    const float scale, float *g_max_value, float *g_sum_value, T *sm,
+//                                                    float *max_value, float *sum_value, half *sm,
 //                                                    float *c_reg,
 //                                                    float *output) {
 //     const int base_n = start_n + thread_x;
@@ -294,69 +249,121 @@
 //     auto *v_sm_ptr = reinterpret_cast<half2 *>(sm);
 // #pragma unroll
 //     for (int mm = 0; mm < VEC_DIM_M; mm++) {
-//         const float old_max = g_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
-//         const float old_sum = g_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M];
-//         float max_value = {-1e20f};
-//         float sum_value = {0.0f};
+//         const float old_max = max_value[mm];
+//         const float old_sum = sum_value[mm];
 //         float new_max_value = {-1e20f};
 //         float new_sum_value = {0.0f};
+//         float current_max_value = {-1e20f};
+//         float current_sum_value = {0.0f};
 //
 //         for (int nn = 0; nn < valid_n; nn++) {
-//             c_reg[mm * VEC_DIM_N + nn] *= scale;
-//             max_value = fmaxf(max_value, c_reg[mm * VEC_DIM_N + nn]);
+//             current_max_value = fmaxf(current_max_value, c_reg[mm * VEC_DIM_N + nn]);
 //         }
 // #pragma unroll
 //         for (int offset = 16; offset > 0; offset /= 2) {
-//             max_value = fmaxf(max_value, __shfl_xor_sync(0xffffffff, max_value, offset, 32));
+//             current_max_value = fmaxf(current_max_value, __shfl_xor_sync(0xffffffff, current_max_value, offset, 32));
 //         }
+//
 //         //
 //         for (int nn = 0; nn < valid_n; nn++) {
-//             c_reg[mm * VEC_DIM_N + nn] = expf(c_reg[mm * VEC_DIM_N + nn] - max_value);
-//             sum_value += c_reg[mm * VEC_DIM_N + nn];
+//             c_reg[mm * VEC_DIM_N + nn] = expf(c_reg[mm * VEC_DIM_N + nn] - max_value[mm]);
+//             current_sum_value += c_reg[mm * VEC_DIM_N + nn];
 //         }
 //
 // #pragma unroll
 //         for (int offset = 16; offset > 0; offset /= 2) {
-//             sum_value += __shfl_xor_sync(0xffffffff, sum_value, offset, 32);
+//             current_sum_value += __shfl_xor_sync(0xffffffff, current_sum_value, offset, 32);
 //         }
 //
-//         new_max_value = fmaxf(max_value, old_max);
-//         new_sum_value = sum_value * expf(max_value - new_max_value) + old_sum * expf(
+//         new_max_value = fmaxf(current_max_value, old_max);
+//         new_sum_value = current_sum_value * expf(current_max_value - new_max_value) + old_sum * expf(
 //                             old_max - new_max_value);
 //
-//         for (int kk = start_d; kk < BLOCK_DIM_K; kk += 2) {
-//             float acc[VEC_DIM_K] = {0.0f};
+//         for (int kk = start_d; kk < BLOCK_DIM_K; kk += ELEMENTS_PER_LOAD) {
+//             float acc[4] = {0.0f};
 //
 //             for (int nn = 0; nn < valid_n; nn++) {
-//                 float2 v_reg = __half22float2(
-//                     v_sm_ptr[kk / 2 + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (BLOCK_DIM_K + PAD_SIZE) / 2]);
-//                 acc[0] += v_reg.x * c_reg[mm * VEC_DIM_N + nn];
-//                 acc[1] += v_reg.y * c_reg[mm * VEC_DIM_N + nn];
+//                 int v_index = kk / 2 + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (
+//                                   BLOCK_DIM_K + PAD_SIZE) / 2;
+//                 float2 v_reg_0 = __half22float2(v_sm_ptr[v_index]);
+//                 float2 v_reg_1 = __half22float2(v_sm_ptr[v_index + 1]);
+//
+//                 acc[0] += v_reg_0.x * c_reg[mm * VEC_DIM_N + nn];
+//                 acc[1] += v_reg_0.y * c_reg[mm * VEC_DIM_N + nn];
+//
+//                 acc[2] += v_reg_1.x * c_reg[mm * VEC_DIM_N + nn];
+//                 acc[3] += v_reg_1.y * c_reg[mm * VEC_DIM_N + nn];
+//
+//                 // if (mm == 0 && thread_x == 0 && warp_id == 0&& start_m == 64 && start_n == 64) {
+//                 //     printf("m: %d, k: %d, "
+//                 //            "v_reg[0]: %lf, v_reg[1]: %lf, v_reg[2]: %lf, v_reg[3]: %lf,"
+//                 //            "acc[0]:%lf, acc[1]: %lf, acc[2]: %lf, acc[3]: %lf, log_exp: %lf\n",
+//                 //            start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M, kk,
+//                 //            v_reg_0.x, v_reg_0.y, v_reg_1.x, v_reg_1.y,
+//                 //            acc[0], acc[1], acc[2], acc[3],
+//                 //            c_reg[mm * VEC_DIM_N + nn]);
+//                 // }
 //             }
 // #pragma unroll
 //             for (int offset = 16; offset > 0; offset /= 2) {
 //                 acc[0] += __shfl_xor_sync(0xffffffff, acc[0], offset, 32);
-//             }
-// #pragma unroll
-//             for (int offset = 16; offset > 0; offset /= 2) {
 //                 acc[1] += __shfl_xor_sync(0xffffffff, acc[1], offset, 32);
+//                 acc[2] += __shfl_xor_sync(0xffffffff, acc[2], offset, 32);
+//                 acc[3] += __shfl_xor_sync(0xffffffff, acc[3], offset, 32);
 //             }
+//             int output_index = (start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk;
+//             // if (mm == 0 && thread_x == 0 && warp_id == 0 && start_m == 64 && start_n == 64) {
+//             //     printf("m: %d, k: %d, "
+//             //            "acc[0]:%lf, acc[1]: %lf, acc[2]: %lf, acc[3]: %lf,"
+//             //            "old_max: %lf, old_sum: %lf, "
+//             //            "current_max: %lf, current_sum: %lf,"
+//             //            "new_max: %lf, new_sum: %lf ,"
+//             //            "exp_old: %lf, exp_new: %lf, "
+//             //            "old_output[0]: %lf, old_output[1]: %lf,old_output[2]: %lf,old_output[3]: %lf, \n",
+//             //            start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M, kk,
+//             //            acc[0], acc[1], acc[2], acc[3],
+//             //            old_max, old_sum,
+//             //            max_value[mm], sum_value[mm],
+//             //            new_max_value, new_sum_value,
+//             //            expf(old_max - new_max_value), expf(max_value[mm] - new_max_value),
+//             //            output[output_index + 0], output[output_index + 1], output[output_index + 2],
+//             //            output[output_index + 3]);
+//             // }
 //
-//             output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] =
-//             (output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk] * old_sum * expf(
-//                  old_max - new_max_value) +
-//              acc[0] * expf(max_value - new_max_value)) / new_sum_value;
-//             output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk + 1] =
-//             (output[(start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld + kk + 1] * old_sum * expf(
-//                  old_max - new_max_value) +
-//              acc[1] * expf(max_value - new_max_value)) / new_sum_value;
+//             output[output_index + 0] = (output[output_index + 0] * old_sum * expf(old_max - new_max_value) +
+//                                         acc[0] * expf(current_max_value - new_max_value)) / new_sum_value;
+//
+//             output[output_index + 1] = (output[output_index + 1] * old_sum * expf(old_max - new_max_value) +
+//                                         acc[1] * expf(current_max_value - new_max_value)) / new_sum_value;
+//
+//             output[output_index + 2] = (output[output_index + 2] * old_sum * expf(old_max - new_max_value) +
+//                                         acc[2] * expf(current_max_value - new_max_value)) / new_sum_value;
+//
+//             output[output_index + 3] = (output[output_index + 3] * old_sum * expf(old_max - new_max_value) +
+//                                         acc[3] * expf(current_max_value - new_max_value)) / new_sum_value;
+//
+//             // if (mm == 0 && thread_x == 0 && warp_id == 0 && start_m == 64 && start_n == 64) {
+//             //     printf("m: %d, k: %d, "
+//             //            "acc[0]:%lf, acc[1]: %lf, acc[2]: %lf, acc[3]: %lf,"
+//             //            "old_max: %lf, old_sum: %lf, "
+//             //            "current_max: %lf, current_sum: %lf,"
+//             //            "new_max: %lf, new_sum: %lf ,"
+//             //            "new_output[0]: %lf, new_output[1]: %lf,new_output[2]: %lf,new_output[3]: %lf\n",
+//             //            start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M, kk,
+//             //            acc[0], acc[1], acc[2], acc[3],
+//             //            old_max, old_sum,
+//             //            max_value[mm], sum_value[mm],
+//             //            new_max_value, new_sum_value,
+//             //            output[output_index + 0], output[output_index + 1], output[output_index + 2],
+//             //            output[output_index + 3]);
+//             // }
 //         }
-//         g_max_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_max_value;
-//         g_sum_value[start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M] = new_sum_value;
+//         max_value[mm] = new_max_value;
+//         sum_value[mm] = new_sum_value;
 //     }
 // }
 //
-// template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
+// template<typename T_Q, typename T_KV, const int VEC_DIM_M, const int VEC_DIM_N,
 //     const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE,
 //     const int ELEMENTS_PER_LOAD,
 //     const int rope_flag>
@@ -364,13 +371,11 @@
 //                                 const int q_ld, const int k_ld, const int v_ld,
 //                                 const float scale,
 //                                 const int num_q_heads, const int num_kv_heads,
-//                                 const T *__restrict__ q_global,
-//                                 const T *__restrict__ k_global,
-//                                 const T *__restrict__ v_global,
-//                                 T *mask,
+//                                 const T_Q *__restrict__ q_global,
+//                                 const T_KV *__restrict__ k_global,
+//                                 const T_KV *__restrict__ v_global,
+//                                 T_KV *mask,
 //                                 float *__restrict__ cos_sin_table,
-//                                 float *__restrict__ max_value_global,
-//                                 float *__restrict__ sum_value_global,
 //                                 float *out_put) {
 //     const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
 //     const int ld_thread_block_n = BLOCK_DIM_K / VEC_DIM_K;
@@ -380,29 +385,34 @@
 //     const int block_x = blockIdx.x;
 //     const int start_m = block_x * BLOCK_DIM_M;
 //
-//     const T *q = q_global + (blockIdx.z * num_q_heads + blockIdx.y) * M * D;
+//     const T_Q *q = q_global + (blockIdx.z * num_q_heads) * M * D + blockIdx.y * D;
 //     const int kv_group_per_q = num_q_heads / num_kv_heads;
 //     const int kv_group_start_index = blockIdx.y / kv_group_per_q;
-//     const T *k = k_global + (blockIdx.z * num_kv_heads + kv_group_start_index) * N * D;
-//     const T *v = v_global + (blockIdx.z * num_kv_heads + kv_group_start_index) * N * D;
-//     float *output = out_put + (blockIdx.z * num_q_heads + blockIdx.y) * M * D;
-//     float *g_max_value = max_value_global + (blockIdx.z * num_q_heads + blockIdx.y) * M;
-//     float *g_sum_value = sum_value_global + (blockIdx.z * num_q_heads + blockIdx.y) * M;
+//     const T_KV *k = k_global + (blockIdx.z * num_kv_heads) * N * D + kv_group_start_index * D;
+//     const T_KV *v = v_global + (blockIdx.z * num_kv_heads) * N * D + kv_group_start_index * D;
+//     float *output = out_put + (blockIdx.z * num_q_heads) * M * D + blockIdx.y * D;
 //
-//
-//     constexpr int shared_mem_block_size = (BLOCK_DIM_K + PAD_SIZE) * (BLOCK_DIM_M);
-//     __shared__ T sm[shared_mem_block_size * 3]; //2 * kv + 1 * q;(k, v共享一块shared mem)
+//     constexpr int shared_mem_block_size = (BLOCK_DIM_K + PAD_SIZE) * (BLOCK_DIM_N);
+//     __shared__ half sm[shared_mem_block_size * 2]; //2 * kv;(k, v共享一块shared mem)
 //
 //     int flip_flag = 0;
-//     load_tile_vec_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
-//         q_ld, M, thread_x, warp_id, start_m, 0,
-//         q, &sm[shared_mem_block_size * 2]);
-//     load_tile_vec_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+//     load_tile_vec_kv<T_KV, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
 //         k_ld, N, thread_x, warp_id, 0, 0,
 //         k, &sm[(flip_flag) * shared_mem_block_size]);
+//
+//
+//     float max_value[VEC_DIM_M];
+//     float sum_value[VEC_DIM_M];
+// #pragma unroll
+//     for (int mm = 0; mm < VEC_DIM_M; mm++) {
+//         max_value[mm] = -1e20f;
+//         sum_value[mm] = 0.0f;
+//     }
+//
 //     __syncthreads();
 //
 //     const int n_stage = (N + BLOCK_DIM_N - 1) / BLOCK_DIM_N;
+//
 //
 //     for (int n = 0; n < n_stage; n++) {
 //         int n_start = n * BLOCK_DIM_N;
@@ -411,38 +421,32 @@
 //         }
 //         float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
 //
+//
 //         int d = 0;
 //         const int k_size = min(BLOCK_DIM_K, D - d);
-//         if (rope_flag == 1) {
-//             compute_tile_attention_gemm_with_rope<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K,
-//                 PAD_SIZE>(
-//                 N, k_size, thread_x, warp_id, start_m, n_start, &sm[shared_mem_block_size * 2],
-//                 &sm[(flip_flag) * shared_mem_block_size],
-//                 cos_sin_table, mask, c_reg);
-//         } else {
-//             compute_tile_attention_gemm<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K,
-//                 PAD_SIZE>(
-//                 N, k_size, thread_x, warp_id, start_m, n_start, &sm[shared_mem_block_size * 2],
-//                 &sm[(flip_flag) * shared_mem_block_size], mask,
-//                 c_reg);
-//         }
+//
+//         compute_tile_attention_gemm_with_rope<T_Q, T_KV, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K
+//             ,
+//             PAD_SIZE, ELEMENTS_PER_LOAD>(
+//             k_ld, N, k_size, thread_x, warp_id, start_m, n_start, q, &sm[(flip_flag) * shared_mem_block_size],
+//             cos_sin_table, mask, scale, c_reg);
 //
 //         const int next_n = (n + 1) * BLOCK_DIM_N;
 //         if (next_n < N) {
-//             load_tile_vec_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+//             load_tile_vec_kv<T_KV, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
 //                 k_ld, N, thread_x, warp_id, next_n, 0,
 //                 k, &sm[(1 - flip_flag) * shared_mem_block_size]);
 //         }
 //         __syncthreads();
 //
-//         load_tile_vec_n<T, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+//         load_tile_vec_kv<T_KV, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
 //             v_ld, N, thread_x, warp_id, n_start, d,
 //             v, &sm[(flip_flag) * shared_mem_block_size]);
 //         __syncthreads();
 //
-//         compute_softmax_pv<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
-//             N, v_ld, start_m, n_start, d, thread_x, warp_id, scale, g_max_value,
-//             g_sum_value, &sm[(flip_flag) * shared_mem_block_size], &c_reg[0], output);
+//         compute_softmax_pv<VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, ELEMENTS_PER_LOAD>(
+//             N, v_ld, start_m, n_start, d, thread_x, warp_id, &max_value[0],
+//             &sum_value[0], &sm[(flip_flag) * shared_mem_block_size], &c_reg[0], output);
 //         __syncthreads();
 //         flip_flag ^= 1;
 //     }
@@ -459,7 +463,7 @@
 //     }
 // }
 //
-// template<const int rope_flag>
+// template<typename T, const int rope_flag>
 // static void apply_rope_to_vec(
 //     const T *src,
 //     float *dst,
@@ -485,12 +489,14 @@
 //     //printf("\n");
 // }
 //
-// template<typename T, const int rope_flag>
+// template<typename T_Q, typename T_KV, const int rope_flag>
 // void flash_attention_cpu_single_head(
 //     int m, int n, int k,
-//     const T *q_mat,
-//     const T *k_mat,
-//     const T *v_mat,
+//     const int q_head, const int kv_head,
+//     const int q_head_index, const int kv_head_index,
+//     const T_Q *q_mat,
+//     const T_KV *k_mat,
+//     const T_KV *v_mat,
 //     float *out_ptr,
 //     const float *cos_ptr,
 //     const float *sin_ptr,
@@ -519,11 +525,13 @@
 //
 //             for (int im = 0; im < current_m; ++im) {
 //                 int i = m_start + im;
-//                 apply_rope_to_vec<rope_flag>(q_mat + i * k, q_rot.data(), k, i, cos_ptr, sin_ptr);
+//                 apply_rope_to_vec<T_Q, rope_flag>(q_mat + i * k * q_head + q_head_index * k, q_rot.data(), k, i,
+//                                                   cos_ptr, sin_ptr);
 //
 //                 for (int j_idx = 0; j_idx < current_n; ++j_idx) {
 //                     int j = n_start + j_idx;
-//                     apply_rope_to_vec<rope_flag>(k_mat + j * k, k_rot.data(), k, j, cos_ptr, sin_ptr);
+//                     apply_rope_to_vec<T_KV, rope_flag>(k_mat + j * k * kv_head + kv_head_index * k, k_rot.data(), k, j,
+//                                                        cos_ptr, sin_ptr);
 //
 //                     float mask_value = mask_ptr[i * n + j];
 //                     float dot = 0.0f;
@@ -556,6 +564,7 @@
 //             for (int im = 0; im < current_m; ++im) {
 //                 int i = m_start + im;
 //                 float old_max = running_max[im];
+//                 float old_sum = running_sum[im];
 //                 float new_max = std::max(old_max, local_max[im]);
 //                 float exp_old = ::expf(old_max - new_max);
 //                 float exp_local = ::expf(local_max[im] - new_max);
@@ -567,34 +576,35 @@
 //                         int j = n_start + j_idx;
 //                         acc += local_exps[im][j_idx] * to_float(v_mat[j * k + l]);
 //                     }
-//                     float corrected_acc = (exp_old * out_ptr[i * k + l] + acc * exp_local);
-//                     out_ptr[i * k + l] = corrected_acc;
+//                     float corrected_acc = (exp_old * out_ptr[i * k * q_head + q_head_index * k + l] * old_sum + acc *
+//                                            exp_local) / new_sum;
+//                     out_ptr[i * k * q_head + q_head_index * k + l] = corrected_acc;
 //                 }
 //
 //                 running_max[im] = new_max;
 //                 running_sum[im] = new_sum;
 //             }
 //         }
-//         for (int mm = 0; mm < current_m; ++mm) {
-//             int i = m_start + mm;
-//             if (running_sum[mm] != 0.0f) {
-//                 for (int l = 0; l < k; ++l) {
-//                     out_ptr[i * k + l] /= running_sum[mm];
-//                 }
-//             }
-//         }
+//         // for (int mm = 0; mm < current_m; ++mm) {
+//         //     int i = m_start + mm;
+//         //     if (running_sum[mm] != 0.0f) {
+//         //         for (int l = 0; l < k; ++l) {
+//         //             out_ptr[i * k * q_head + q_head_index * k + l] /= running_sum[mm];
+//         //         }
+//         //     }
+//         // }
 //     }
 // }
 //
-// template<typename T, const int rope_flag>
+// template<typename T_Q, typename T_KV, const int rope_flag>
 // std::vector<float> flash_attention_cpu_gqa(
 //     int batch,
 //     int m, int n, int head_dim,
 //     int num_q_heads,
 //     int num_kv_heads,
-//     const std::vector<T> &q_mat,
-//     const std::vector<T> &k_mat,
-//     const std::vector<T> &v_mat,
+//     const std::vector<T_Q> &q_mat,
+//     const std::vector<T_KV> &k_mat,
+//     const std::vector<T_KV> &v_mat,
 //     const std::vector<float> &cos_table,
 //     const std::vector<float> &sin_table,
 //     const std::vector<half> &mask,
@@ -618,16 +628,15 @@
 //     std::vector<float> output(batch * num_q_heads * m * head_dim);
 //
 //     for (int b = 0; b < batch; ++b) {
+//         const T_Q *q_ptr = q_mat.data() + ((b * num_q_heads) * m * head_dim);
+//         const T_KV *k_ptr = k_mat.data() + ((b * num_kv_heads) * n * head_dim);
+//         const T_KV *v_ptr = v_mat.data() + ((b * num_kv_heads) * n * head_dim);
+//         float *out_ptr = output.data() + ((b * num_q_heads) * m * head_dim);
+//
 //         for (int qh = 0; qh < num_q_heads; ++qh) {
 //             int kvh = qh / q_per_kv;
-//
-//             const T *q_ptr = q_mat.data() + ((b * num_q_heads + qh) * m * head_dim);
-//             const T *k_ptr = k_mat.data() + ((b * num_kv_heads + kvh) * n * head_dim);
-//             const T *v_ptr = v_mat.data() + ((b * num_kv_heads + kvh) * n * head_dim);
-//             float *out_ptr = output.data() + ((b * num_q_heads + qh) * m * head_dim);
-//
-//             flash_attention_cpu_single_head<T, rope_flag>(
-//                 m, n, head_dim,
+//             flash_attention_cpu_single_head<T_Q, T_KV, rope_flag>(
+//                 m, n, head_dim, num_q_heads, num_kv_heads, qh, kvh,
 //                 q_ptr, k_ptr, v_ptr,
 //                 out_ptr,
 //                 cos_table.data(),
@@ -641,7 +650,7 @@
 //     return output;
 // }
 //
-// std::vector<float> precompute_rope_tables(int max_seq_len, int dim, float base = 10000.0f) {
+// static std::vector<float> precompute_rope_tables(int max_seq_len, int dim, float base = 10000.0f) {
 //     std::vector<float> inv_freq(dim / 2);
 //     for (int i = 0; i < dim / 2; ++i) {
 //         inv_freq[i] = 1.0f / std::pow(base, float(2 * i) / dim);
@@ -659,34 +668,28 @@
 //
 // // 然后：
 //
-// template<typename T, const int rope_flag>
+// template<typename T_Q, typename T_KV, const int rope_flag>
 // void flash_attention(int batch,
 //                      int M, int N, int D,
 //                      int num_q_heads,
 //                      int num_kv_heads,
-//                      const std::vector<T> &q_mat,
-//                      const std::vector<T> &k_mat,
-//                      const std::vector<T> &v_mat,
+//                      const std::vector<T_Q> &q_mat,
+//                      const std::vector<T_KV> &k_mat,
+//                      const std::vector<T_KV> &v_mat,
 //                      const std::vector<float> &cos_table,
 //                      const std::vector<float> &sin_table,
 //                      const std::vector<half> &mask,
 //                      int block_size_m = 64,
 //                      int block_size_n = 64) {
-//     T *q_gpu = nullptr;
-//     cudaMalloc((void **) &q_gpu, sizeof(T) * batch * num_q_heads * M * D);
-//     cudaMemcpy(q_gpu, q_mat.data(), sizeof(T) * batch * num_q_heads * M * D, cudaMemcpyHostToDevice);
-//     T *k_gpu = nullptr;
-//     cudaMalloc((void **) &k_gpu, sizeof(T) * batch * num_kv_heads * N * D);
-//     cudaMemcpy(k_gpu, k_mat.data(), sizeof(T) * batch * num_kv_heads * N * D, cudaMemcpyHostToDevice);
-//     T *v_gpu = nullptr;
-//     cudaMalloc((void **) &v_gpu, sizeof(T) * batch * num_kv_heads * N * D);
-//     cudaMemcpy(v_gpu, v_mat.data(), sizeof(T) * batch * num_kv_heads * N * D, cudaMemcpyHostToDevice);
-//     float *max_value = nullptr;
-//     cudaMalloc((void **) &max_value, sizeof(float) * batch * num_q_heads * M);
-//     cudaMemset(max_value, -MAXFLOAT, sizeof(float) * M);
-//     float *sum_value = nullptr;
-//     cudaMalloc((void **) &sum_value, sizeof(float) * batch * num_q_heads * M);
-//     cudaMemset(sum_value, 0, sizeof(float) * batch * num_q_heads * M);
+//     T_Q *q_gpu = nullptr;
+//     cudaMalloc((void **) &q_gpu, sizeof(T_Q) * batch * num_q_heads * M * D);
+//     cudaMemcpy(q_gpu, q_mat.data(), sizeof(T_Q) * batch * num_q_heads * M * D, cudaMemcpyHostToDevice);
+//     T_KV *k_gpu = nullptr;
+//     cudaMalloc((void **) &k_gpu, sizeof(T_KV) * batch * num_kv_heads * N * D);
+//     cudaMemcpy(k_gpu, k_mat.data(), sizeof(T_KV) * batch * num_kv_heads * N * D, cudaMemcpyHostToDevice);
+//     T_KV *v_gpu = nullptr;
+//     cudaMalloc((void **) &v_gpu, sizeof(T_KV) * batch * num_kv_heads * N * D);
+//     cudaMemcpy(v_gpu, v_mat.data(), sizeof(T_KV) * batch * num_kv_heads * N * D, cudaMemcpyHostToDevice);
 //     std::vector<float> cos_sin_table(M * D);
 //     for (int m = 0; m < M; ++m) {
 //         for (int d = 0; d < D; d += 2) {
@@ -707,9 +710,9 @@
 //     cudaMalloc((void **) &cos_sin_table_gpu, sizeof(float) * M * D);
 //     cudaMemcpy(cos_sin_table_gpu, cos_sin_table.data(), sizeof(float) * M * D, cudaMemcpyHostToDevice);
 //
-//     T *mask_gpu = nullptr;
-//     cudaMalloc((void **) &mask_gpu, sizeof(T) * M * N);
-//     cudaMemcpy(mask_gpu, mask.data(), sizeof(T) * M * N, cudaMemcpyHostToDevice);
+//     T_KV *mask_gpu = nullptr;
+//     cudaMalloc((void **) &mask_gpu, sizeof(T_KV) * M * N);
+//     cudaMemcpy(mask_gpu, mask.data(), sizeof(T_KV) * M * N, cudaMemcpyHostToDevice);
 //
 //     float *output = nullptr;
 //     cudaMalloc((void **) &output, sizeof(float) * batch * num_q_heads * M * D);
@@ -726,8 +729,8 @@
 //     printf("grid x: %d, grid y: %d, grid z: %d \n", grid.x, grid.y, grid.z);
 //     printf("block x: %d, block y: %d\n", block.x, block.y);
 //
-//     flash_attention<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE,
-//                 ACTUAL_ELEMENTS_PER_LOAD, rope_flag><<<
+//     flash_attention<T_Q, T_KV, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE,
+//                 Q_ELEMENTS_PER_LOAD, rope_flag><<<
 //             grid
 //             , block>>>(
 //                 M, N, D,
@@ -736,7 +739,7 @@
 //                 num_q_heads,
 //                 num_kv_heads,
 //                 q_gpu, k_gpu, v_gpu, mask_gpu, cos_sin_table_gpu,
-//                 max_value, sum_value, output);
+//                 output);
 //     cudaDeviceSynchronize();
 //
 //     cudaEventRecord(stop);
@@ -751,8 +754,7 @@
 //     cudaFree(q_gpu);
 //     cudaFree(k_gpu);
 //     cudaFree(v_gpu);
-//     cudaFree(max_value);
-//     cudaFree(sum_value);
+//
 //     cudaFree(mask_gpu);
 //     cudaFree(output);
 //     cudaFree(cos_sin_table_gpu);
@@ -807,7 +809,7 @@
 //     //     printf("\n");
 //     // }
 //
-//     std::vector<float> cpu_result = flash_attention_cpu_gqa<T, rope_flag>(
+//     std::vector<float> cpu_result = flash_attention_cpu_gqa<T_Q, T_KV, rope_flag>(
 //         batch, M, N, D, num_q_heads, num_kv_heads, q_mat, k_mat,
 //         v_mat, cos_table, sin_table, mask);
 //     // printf("cpu_result: \n");
@@ -826,13 +828,14 @@
 //     // }
 //     for (int b = 0; b < batch; b++) {
 //         for (int q = 0; q < num_q_heads; q++) {
-//             float *cpu_result_single = cpu_result.data() + (b * num_q_heads + q) * M * D;
-//             float *gpu_result_single = output_cpu.data() + (b * num_q_heads + q) * M * D;
+//             float *cpu_result_single = cpu_result.data() + (b * num_q_heads) * M * D + q * D;
+//             float *gpu_result_single = output_cpu.data() + (b * num_q_heads) * M * D + q * D;
 //             for (int j = 0; j < M; ++j) {
 //                 for (int i = 0; i < D; ++i) {
 //                     float delta = cpu_result_single[j * D + i] - gpu_result_single[j * D + i];
 //                     if (fabs(delta) > 0.1f) {
-//                         printf("error : %f, m: %d, d: %d\n", delta, j, i);
+//                         printf("error : %f, m: %d, d: %d, cpu: %lf, gpu: %lf\n", delta, j, i,
+//                                cpu_result_single[j * D + i], gpu_result_single[j * D + i]);
 //                         return;
 //                     }
 //                 }
@@ -851,7 +854,7 @@
 //     }
 // }
 //
-// int main1231323(int argc, char *argv) {
+// int main424342(int argc, char *argv) {
 //     cudaDeviceProp device_prop{};
 //     cudaGetDeviceProperties(&device_prop, 0);
 //     printf("device prop sharedMemPerBlock:%d \n", device_prop.sharedMemPerBlock);
@@ -861,33 +864,36 @@
 //     std::mt19937 mt(42);
 //     std::uniform_real_distribution<double> dist(-4.0, 4.0);
 // #ifdef _DEBUG
-//     int dim = 512;
+//     int dim = 1024;
 //     int m = dim;
 //     int n = dim;
-//     int k = 64;
-//     int num_q_heads = 15;
-//     int num_kv_heads = 5;
-//     int batch = 2;
+//     int k = HIDDEN_DIM;
+//     int num_q_heads = 32;
+//     int num_kv_heads = 8;
+//     int batch = 1;
 //
 //
-//     std::vector<T> a_mat;
-//     a_mat.resize(batch * num_q_heads * m * k);
-//     std::vector<T> b_mat;
-//     b_mat.resize(batch * num_kv_heads * n * k);
-//     std::vector<T> c_mat;
-//     c_mat.resize(batch * num_kv_heads * n * k);
-//     std::vector<T> mask;
-//     mask.resize(batch * num_kv_heads * n * n);
-//     T neg_inf = __float2half(-INFINITY);  // 将 -inf 转为 half
+//     std::vector<T_Q> a_mat;
+//     a_mat.resize(batch * m * num_q_heads * k);
+//     std::vector<T_KV> b_mat;
+//     b_mat.resize(batch * n * num_kv_heads * k);
+//     std::vector<T_KV> c_mat;
+//     c_mat.resize(batch * n * num_kv_heads * k);
+//     std::vector<T_KV> mask;
+//     mask.resize(m * n);
+//     T_KV neg_inf = __float2half(-INFINITY); // 将 -inf 转为 half
 //     mask.assign(mask.size(), neg_inf);
-//     for (int i = 0;i < n; ++i) {
-//         for (int j = 0;j <= i; ++j) {
+//
+//     for (int i = 0; i < m; ++i) {
+//         for (int j = 0; j <= i; ++j) {
 //             mask[i * n + j] = 0;
 //         }
 //     }
-//     PopulateVector<T>(a_mat, mt, dist);
-//     PopulateVector<T>(b_mat, mt, dist);
-//     PopulateVector<T>(c_mat, mt, dist);
+//
+//
+//     PopulateVector<T_Q>(a_mat, mt, dist);
+//     PopulateVector<T_KV>(b_mat, mt, dist);
+//     PopulateVector<T_KV>(c_mat, mt, dist);
 //     auto angles = precompute_rope_tables(std::max(m, n), k);
 //     std::vector<float> cos_table(angles.size()), sin_table(angles.size());
 //     for (size_t i = 0; i < angles.size(); ++i) {
@@ -895,36 +901,40 @@
 //         sin_table[i] = std::sin(angles[i]);
 //     }
 //
-//     flash_attention<T, 1>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table, mask);
+//     flash_attention<T_Q, T_KV, 1>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table,
+//                                   mask);
 //
 // #else
-//     int dim = 512;
+//     int dim = 64;
 //     int m = dim;
 //     int n = dim;
-//     int k = 64;
-//     int num_q_heads = 15;
-//     int num_kv_heads = 5;
-//     int batch = 2;
+//     int k = HIDDEN_DIM;
+//     int num_q_heads = 1;
+//     int num_kv_heads = 1;
+//     int batch = 1;
 //
 //
-//     std::vector<T> a_mat;
-//     a_mat.resize(batch * num_q_heads * m * k);
-//     std::vector<T> b_mat;
-//     b_mat.resize(batch * num_kv_heads * n * k);
-//     std::vector<T> c_mat;
-//     c_mat.resize(batch * num_kv_heads * n * k);
-//     std::vector<T> mask;
-//     mask.resize(batch * num_kv_heads * n * n);
-//     T neg_inf = __float2half(-INFINITY);  // 将 -inf 转为 half
+//     std::vector<T_Q> a_mat;
+//     a_mat.resize(batch * m * num_q_heads * k);
+//     std::vector<T_KV> b_mat;
+//     b_mat.resize(batch * n * num_kv_heads * k);
+//     std::vector<T_KV> c_mat;
+//     c_mat.resize(batch * n * num_kv_heads * k);
+//     std::vector<T_KV> mask;
+//     mask.resize(m * n);
+//     T_KV neg_inf = __float2half(-INFINITY); // 将 -inf 转为 half
 //     mask.assign(mask.size(), neg_inf);
-//     for (int i = 0;i < n; ++i) {
-//         for (int j = 0;j <= i; ++j) {
+//
+//     for (int i = 0; i < m; ++i) {
+//         for (int j = 0; j <= i; ++j) {
 //             mask[i * n + j] = 0;
 //         }
 //     }
-//     PopulateVector<T>(a_mat, mt, dist);
-//     PopulateVector<T>(b_mat, mt, dist);
-//     PopulateVector<T>(c_mat, mt, dist);
+//
+//
+//     PopulateVector<T_Q>(a_mat, mt, dist);
+//     PopulateVector<T_KV>(b_mat, mt, dist);
+//     PopulateVector<T_KV>(c_mat, mt, dist);
 //     auto angles = precompute_rope_tables(std::max(m, n), k);
 //     std::vector<float> cos_table(angles.size()), sin_table(angles.size());
 //     for (size_t i = 0; i < angles.size(); ++i) {
@@ -932,7 +942,8 @@
 //         sin_table[i] = std::sin(angles[i]);
 //     }
 //
-//     flash_attention<T, 0>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table, mask);
+//     flash_attention<T_Q, T_KV, 1>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat, cos_table, sin_table,
+//                                   mask);
 // #endif
 //
 //

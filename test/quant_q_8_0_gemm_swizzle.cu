@@ -1579,7 +1579,7 @@ void quant_q_8_0_gemm_nt_double_buffer_vec(const int m, const int n, const int k
     printf("quant gemm sucess!\n");
 #endif
 }
-int main1223413(int argc, char *argv[]) {
+int main54646(int argc, char *argv[]) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     std::mt19937 mt(42);

@@ -423,7 +423,7 @@ static void quant_q_8_0_2d(const int m, const int n, std::vector<float> &src, st
     printf("2d success!!\n");
 }
 
-int main123456(int argc, char *argv[]) {
+int main123123333(int argc, char *argv[]) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     std::mt19937 mt(42);
