@@ -58,27 +58,7 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
 message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
 
-add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        rms_norm_kernel.cu
-        gemm_nt.cu
-        quant_8_0.cu
-        quant_q_8_0_gemm.cu
-        quant_q_8_0.cuh
-        gemm_half_scalar.cu
-        gemm_vec.cu
-        gemm_vec_vec.cu
-        flash_attention.cu
-        flash_attention_opt.cu
-        flash_attention_multi_head.cu
-        flash_attetntion_rope.cu
-        quant_q_8_0_gemm_reshape_half.cu
-        precompute_rope_tables.cu
-        quant_q_8_0_gemm_reshape_half_warp_opt.cu
-        quant_q_8_0_gemm_opt.cu
-        quant_q_8_0_gemm_swizzle.cu
-        flash_multi_attention_rope.cu
-        test.cu
-        flash_multi_attention_rope_opt.cu)
+add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE
 #        $<$<COMPILE_LANGUAGE:CUDA>:-O3>

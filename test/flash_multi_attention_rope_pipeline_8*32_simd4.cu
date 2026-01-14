@@ -1,5 +1,5 @@
 // //
-// // Created by nkk on 2026/1/12.
+// // Created by nkk on 2026/1/14.
 // //
 //
 // #include <vector>
@@ -12,6 +12,10 @@
 // #include <math.h>
 // #include <cmath>
 // #include <cooperative_groups.h>
+// #include <cuda_pipeline_primitives.h>
+// #include <cuda/pipeline>
+// #include <cuda/barrier>
+// #define _PTX
 // using T_KV = half;
 // using T_Q = float;
 // #if 0
@@ -28,18 +32,18 @@
 // constexpr int BLOCK_DIM_N = THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_N;
 // constexpr int PAD_SIZE = 16; //BLOCK_DIM_K;
 // #else
-// constexpr int B = 4;
-// constexpr int MBit = 1;
-// constexpr int S = 5;
+// constexpr int B = 5;
+// constexpr int MBit = 2;
+// constexpr int S = 3;
+// constexpr int HEAD_NUM_PER_BLOCK = 2;
 // constexpr int HIDDEN_DIM = 128;
-// constexpr int BYTES_PER_LOAD = 8; // 128-bit
-// constexpr int KV_ELEMENTS_PER_LOAD = BYTES_PER_LOAD / sizeof(half);
-// constexpr int THREAD_PER_WARP_DIRECTION = HIDDEN_DIM / KV_ELEMENTS_PER_LOAD;
-// constexpr int Q_ELEMENTS_PER_LOAD = HIDDEN_DIM / THREAD_PER_WARP_DIRECTION;
+// constexpr int BYTES_PER_LOAD = 16; // 128-bit
+// constexpr int THREAD_PER_WARP_DIRECTION = 32;
+// constexpr int ELEMENTS_PER_LOAD = BYTES_PER_LOAD / (sizeof(half));
 // constexpr int WARP_SIZE = 32;
 // constexpr int THREAD_BLOCK_SIZE = 256;
 // constexpr int WARP_PER_BLOCK = THREAD_BLOCK_SIZE / THREAD_PER_WARP_DIRECTION;
-// constexpr int BLOCK_DIM_K = HIDDEN_DIM;
+// constexpr int BLOCK_DIM_K = HIDDEN_DIM * HEAD_NUM_PER_BLOCK;
 // constexpr int BLOCK_DIM_M = 32; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_M;
 // constexpr int BLOCK_DIM_N = 32; //THREAD_BLOCK_SIZE / (BLOCK_DIM_K / VEC_DIM_K) * VEC_DIM_N;
 // constexpr int VEC_DIM_N = BLOCK_DIM_N / THREAD_PER_WARP_DIRECTION;
@@ -63,6 +67,9 @@
 // static __device__ __forceinline__ void cp_async_wait_all() {
 //     asm volatile("cp.async.wait_all;");
 // }
+// static  __device__ __forceinline__ void cp_async_commit() {
+//     asm volatile("cp.async.commit_group;");
+// }
 // template <int preload>
 // static __device__ __forceinline__ void cp_async_cg_16(const unsigned int dst, const void * src) {
 //     if (preload == 256) {
@@ -80,22 +87,70 @@
 //             : : "r"(dst), "l"(src));
 //     }
 // }
-// template<typename T1, typename T2, const int ELEMENTS_PER_LOAD>
-// __device__ __forceinline__ void load_vec(const T1 *addr, T2 *out);
-//
+// template<typename T1, typename T2>
+// __device__ __forceinline__ void load_vec(const T1 *addr, T2 *out, const int count);
 // template<>
-// __device__ __forceinline__ void load_vec<half, half2, 2>(const half *addr, half2 *out) {
+// __device__ __forceinline__ void load_vec<half, half2>(const half *addr, half2 *out, const int count) {
+//
 //     const half2 *h = reinterpret_cast<const half2 *>(addr);
 //     out[0] = h[0];
-//     out[1] = h[1];
-//     //cp_async_cg_4<64>((__cvta_generic_to_shared(out)), h);
 // }
 // template<>
-// __device__ __forceinline__ void load_vec<float, float2, 2>(const float *addr, float2 *out) {
-//     const float2 *h = reinterpret_cast<const float2 *>(addr);
-//     out[0] = h[0];
-//     out[1] = h[1];
-//     //cp_async_cg_4<64>((__cvta_generic_to_shared(out)), h);
+// __device__ __forceinline__ void load_vec<float, float2>(const float *addr, float2 *out, const int count) {
+//     if (count == 4) {
+//         const float2 *h = reinterpret_cast<const float2 *>(addr);
+//         out[0] = h[0];
+//         out[1] = h[1];
+//         out[2] = h[2];
+//         out[3] = h[3];
+//     }else {
+//         const float2 *h = reinterpret_cast<const float2 *>(addr);
+//         out[0] = h[0];
+//     }
+//
+// }
+// template<typename T1, typename T2>
+// __device__ __forceinline__ void load_vec_async(const T1 *addr, T2 *out);
+//
+// template<>
+// __device__ __forceinline__ void load_vec_async<half, half2>(const half *addr, half2 *out) {
+//     if (reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
+// #ifndef _PTX
+//         const half2 *h = reinterpret_cast<const half2 *>(addr);
+//         out[0] = h[0];
+// #else
+//         const unsigned int dst_addr = __cvta_generic_to_shared(out);
+//         //printf("dst_addr = %u\n", dst_addr);
+//         cp_async_cg_16<64>(dst_addr, addr);
+//         cp_async_commit();
+// #endif
+//     }
+// }
+// template<>
+// __device__ __forceinline__ void load_vec_async<float, float2>(const float *addr, float2 *out) {
+//     if (reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
+// #ifndef _PTX
+//         const float2 *h = reinterpret_cast<const float2 *>(addr);
+//         out[0] = h[0];
+// #else
+//         const unsigned int dst_addr = __cvta_generic_to_shared(out);
+//         cp_async_cg_16<64>(dst_addr, addr);
+//         cp_async_commit();
+// #endif
+//     }
+// }
+// template<>
+// __device__ __forceinline__ void load_vec_async<float, half2>(const float *addr, half2 *out) {
+//     if (reinterpret_cast<uintptr_t>(addr) % 16 == 0) {
+// #ifndef _PTX
+//         const float2 *h = reinterpret_cast<const float2 *>(addr);
+//         out[0] = __float22half2_rn(h[0]);
+// #else
+//         const unsigned int dst_addr = __cvta_generic_to_shared(out);
+//         cp_async_cg_16<64>(dst_addr, addr);
+//         cp_async_commit();
+// #endif
+//     }
 // }
 // __device__ __forceinline__ half2 complex_mul_half2(const half2 &a, const half2 &b) {
 //     half2 res;
@@ -110,7 +165,7 @@
 //                                                  const int thread_x, const int warp_id,
 //                                                  const int start_m,
 //                                                  const int k,
-//                                                  const T *__restrict__ global_mem,
+//                                                  T *__restrict__ global_mem,
 //                                                  const float *__restrict__ cos_sin_table,
 //                                                  half2 *sm) {
 // #pragma unroll
@@ -119,46 +174,53 @@
 //         for (int kk = 0; kk < VEC_DIM_K / ELEMENTS_PER_LOAD; ++kk) {
 //             const int dim1 = k + thread_x * ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
 //                              ELEMENTS_PER_LOAD;
-//             half2 val[ELEMENTS_PER_LOAD / 2];
+//
+//             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+//             int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2;
+//             int offset = sm_row * BLOCK_DIM_K / 2 + sm_col;
+//             int addr8 = swizzle<B, MBit, S>(offset);
+//             // if (start_m == 0 && j == 0) {
+//             //     printf("warp_id=%d, thread_x: %d, offset: %d, addr: %d \n", warp_id, thread_x, offset, addr8);
+//             // }
+//             //half2 val[4];
 //             if (dim0_base < dim) {
 //                 const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
 //                 if (actual_load > 0) {
-//                     load_vec<T, half2, ELEMENTS_PER_LOAD / 2>(&global_mem[dim0_base * ld + dim1], &val[0]);
+//                     load_vec_async<T, half2>(&global_mem[dim0_base * ld + dim1], &sm[offset]);
 //                 }
 //             }else {
 // #pragma unroll
 //                 for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                     val[i].x = {0.0f};
-//                     val[i].y = {0.0f};
+//                     int addr = swizzle<B, MBit, S>(offset + i);
+//                     sm[addr].x = 0;
+//                     sm[addr].y = 0;
 //                 }
 //             }
 //
 //             float2 cos_sin_table_val[ELEMENTS_PER_LOAD / 2];
 //             if (dim0_base < dim) {
-//                 const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
+//                 const int actual_load = min(ELEMENTS_PER_LOAD / 2, ld - dim1);
 //                 if (actual_load > 0) {
-//                     load_vec<float, float2, ELEMENTS_PER_LOAD / 2>(&cos_sin_table[dim0_base * ld + dim1], &cos_sin_table_val[0]);
+//                     load_vec<float, float2>(&cos_sin_table[dim0_base * ld + dim1], &cos_sin_table_val[0], actual_load);
 //                 }
 //             }else {
 // #pragma unroll
 //                 for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                     cos_sin_table_val[i].x = {0.0f};
-//                     cos_sin_table_val[i].y = {0.0f};
+//                     cos_sin_table_val[i].x = 0;
+//                     cos_sin_table_val[i].y = 0;
 //                 }
 //             }
+//             cp_async_wait_all();
 //
-//             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-//             int sm_col = thread_x + kk * (BLOCK_DIM_K / VEC_DIM_K);
+//             auto val_vec = reinterpret_cast<float4 *>(&sm[addr8]);
+//             auto val_vec_ptr = reinterpret_cast<half2 *>(val_vec);
+//             half2 rot_value[ELEMENTS_PER_LOAD / 2];
 // #pragma unroll
 //             for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                 int offset = sm_row * BLOCK_DIM_K / 2 + sm_col * ELEMENTS_PER_LOAD / 2 + i;
-//                 int addr = swizzle<B, MBit, S>(offset);
-//                 // if (j == 0 && kk == 0 && start_m == 0 && start_m == 0 && warp_id == 7) {
-//                 //     printf("i: %d, warp_id: %d, thread_x: %d, "
-//                 //        "row: %d, col: %d, swizzle addr: %d\n", i,warp_id, thread_x, sm_row, sm_col + i, addr);
-//                 // }
-//                 sm[addr] = complex_mul_half2((val[i]), __float22half2_rn(cos_sin_table_val[i]));;
+//                 half2 val = val_vec_ptr[i];
+//                 rot_value[i] = complex_mul_half2(val, __float22half2_rn(cos_sin_table_val[i]));
 //             }
+//             val_vec_ptr = reinterpret_cast<half2 *>(&rot_value[0]);
 //
 //         }
 //     }
@@ -177,27 +239,24 @@
 //         for (int kk = 0; kk < VEC_DIM_K / ELEMENTS_PER_LOAD; ++kk) {
 //             const int dim1 = k + thread_x * ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
 //                              ELEMENTS_PER_LOAD;
-//             half2 val[ELEMENTS_PER_LOAD / 2];
+//
+//             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+//             int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2;
+//             int offset = sm_row * BLOCK_DIM_K / 2 + sm_col;
+//             int addr = swizzle<B, MBit, S>(offset);
+//
+//             //half2 val[4];
 //             if (dim0_base < dim) {
 //                 const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
 //                 if (actual_load > 0) {
-//                     load_vec<T, half2, ELEMENTS_PER_LOAD / 2>(&global_mem[dim0_base * ld + dim1], &val[0]);
+//                     load_vec_async<T, half2>(&global_mem[dim0_base * ld + dim1], &sm[offset]);
 //                 }
 //             }else {
-//                 for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                     val[i].x = {0.0f};
-//                     val[i].y = {0.0f};
-//                 }
-//             }
-//
-//             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-//             int sm_col = thread_x + kk * (BLOCK_DIM_K / VEC_DIM_K);
 // #pragma unroll
-//             for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                 int offset = sm_row * BLOCK_DIM_K / 2 + sm_col * ELEMENTS_PER_LOAD / 2 + i;
-//                 int addr = swizzle<B, MBit, S>(offset);
-//
-//                 sm[addr] = val[i];
+//                 for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
+//                     sm[offset + i].x = 0;
+//                     sm[offset + i].y = 0;
+//                 }
 //             }
 //         }
 //     }
@@ -217,40 +276,51 @@
 //         for (int kk = 0; kk < VEC_DIM_K / ELEMENTS_PER_LOAD; ++kk) {
 //             const int dim1 = k + thread_x * ELEMENTS_PER_LOAD + kk * (BLOCK_DIM_K / VEC_DIM_K) *
 //                              ELEMENTS_PER_LOAD;
-//             float2 q_val[ELEMENTS_PER_LOAD / 2];
+//
+//             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+//             int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2;
+//             int offset = sm_row * BLOCK_DIM_K / 2 + sm_col;
+//             int addr8 = swizzle<B, MBit, S>(offset);
+//
+//             //float2 q_val[2];
 //             if (dim0_base < dim) {
 //                 const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
 //                 if (actual_load > 0) {
-//                     load_vec<T, float2, ELEMENTS_PER_LOAD / 2>(&q_global_mem[dim0_base * ld + dim1], &q_val[0]);
+//                     load_vec_async<T, half2>(&q_global_mem[dim0_base * ld + dim1], &sm[addr8]);
 //                 }
 //             }else {
+// #pragma unroll
 //                 for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                     q_val[i].x = {0.0f};
-//                     q_val[i].y = {0.0f};
+//                     int addr = swizzle<B, MBit, S>(offset + i);
+//                     sm[addr].x = 0;
+//                     sm[addr].y = 0;
 //                 }
 //             }
 //
 //             float2 cos_sin_table_val[ELEMENTS_PER_LOAD / 2];
 //             if (dim0_base < dim) {
-//                 const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
+//                 const int actual_load = min(ELEMENTS_PER_LOAD / 2, ld - dim1);
 //                 if (actual_load > 0) {
-//                     load_vec<T, float2, ELEMENTS_PER_LOAD / 2>(&cos_sin_table[dim0_base * ld + dim1], &cos_sin_table_val[0]);
+//                     load_vec<T, float2>(&cos_sin_table[dim0_base * ld + dim1], &cos_sin_table_val[0], actual_load);
 //                 }
 //             }else {
+// #pragma unroll
 //                 for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                     cos_sin_table_val[i].x = {0.0f};
-//                     cos_sin_table_val[i].y = {0.0f};
+//                     cos_sin_table_val[i].x = 0;
+//                     cos_sin_table_val[i].y = 0;
 //                 }
 //             }
+//             cp_async_wait_all();
 //
-//             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-//             int sm_col = thread_x + kk * (BLOCK_DIM_K / VEC_DIM_K);
+//             auto val_vec = reinterpret_cast<float4 *>(&sm[addr8]);
+//             auto val_vec_ptr = reinterpret_cast<half2 *>(val_vec);
+//             half2 rot_value[ELEMENTS_PER_LOAD / 2];
 // #pragma unroll
 //             for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
-//                 int offset = sm_row * BLOCK_DIM_K / 2 + sm_col * ELEMENTS_PER_LOAD / 2 + i;
-//                 int addr = swizzle<B, MBit, S>(offset);
-//                 sm[addr] = complex_mul_half2(__float22half2_rn(q_val[i]), __float22half2_rn(cos_sin_table_val[i]));
+//                 half2 val = val_vec_ptr[i];
+//                 rot_value[i] = complex_mul_half2(val, __float22half2_rn(cos_sin_table_val[i]));
 //             }
+//             val_vec_ptr = reinterpret_cast<half2 *>(&rot_value[0]);
 //         }
 //     }
 // }
@@ -267,59 +337,42 @@
 //                                                                       const float scale,
 //                                                                       float *c_reg) {
 //     //#pragma unroll
-//     for (int kk = 0; kk < k_size / 2; kk+=2) {
+//     for (int kk = 0; kk < k_size / 2; kk += ELEMENTS_PER_LOAD / 2) {
 //         const int stride = (BLOCK_DIM_K) / 2;
 // #pragma unroll
 //         for (int mm = 0; mm < VEC_DIM_M; mm++) {
 //             int m_row_base = (warp_id + mm * BLOCK_DIM_M / VEC_DIM_M);
 //             int col_base = kk;
-//             int q_index_0 = m_row_base * stride + col_base;
-//             int q_addr_0 = swizzle<B, MBit, S>(q_index_0);
-//             int q_index_1 = m_row_base * stride + col_base+ 1;
-//             int q_addr_1 = swizzle<B, MBit, S>(q_index_1);
+//             int q_index = m_row_base * stride + col_base;
+//             int q_addr = swizzle<B, MBit, S>(q_index);
 //
-//             float2 q_rot_0 = __half22float2(q_sm[q_addr_0]);
-//             float2 q_rot_1 = __half22float2(q_sm[q_addr_1]);
+//             float2 q_rot = __half22float2(q_sm[q_addr]);
 //
 // #pragma unroll
 //             for (int nn = 0; nn < VEC_DIM_N; nn++) {
 //                 int n_row_base = (thread_x + nn * BLOCK_DIM_N / (VEC_DIM_N));
-//                 int k_index_0 = col_base + n_row_base * stride;
-//                 int k_index_1 = k_index_0 + 1;
-//
-//                 int k_addr_0 = swizzle<B, MBit, S>(k_index_0);
-//                 int k_addr_1 = swizzle<B, MBit, S>(k_index_1);
-//                 // if (nn == 0 && mm == 0 && kk <= 1 && start_m == 0 && start_n == 0 && warp_id == 0) {
-//                 //     printf("kk: %d, warp_id: %d, thread_x: %d, "
-//                 //        "row: %d, col: %d, swizzle addr: %d\n",kk, warp_id, thread_x, n_row_base, col_base, k_addr_0);
-//                 // }
-//                 float2 k_rot_0 = __half22float2(b_sm[k_addr_0]);
-//                 float2 k_rot_1 = __half22float2(b_sm[k_addr_1]);
-//
+//                 int k_index = col_base + n_row_base * stride;
 //                 const float mask_value = __ldg(&mask[(start_m + m_row_base) * N + start_n + n_row_base]);
-//                 c_reg[mm * VEC_DIM_N + nn] += q_rot_0.x * k_rot_0.x + q_rot_0.y * k_rot_0.y +
-//                     q_rot_1.x * k_rot_1.x + q_rot_1.y * k_rot_1.y + mask_value;
+//                 int k_addr = swizzle<B, MBit, S>(k_index);
+//                 if (nn == 0 && mm == 0&& start_m == 0 && start_n == 0 && warp_id == 0) {
+//                     printf("warp_id: %d, thread_x: %d, kk: %d,"
+//                        "row: %d, col: %d, swizzle addr: %d\n", warp_id, thread_x, kk,n_row_base, col_base, k_addr);
+//                 }
+//                 float2 k_rot = __half22float2(b_sm[k_addr]);
+//                 c_reg[mm * VEC_DIM_N + nn] += q_rot.x * k_rot.x + q_rot.y * k_rot.y + mask_value;
 //                 c_reg[mm * VEC_DIM_N + nn] *= scale;
 //
-//                 // if (mm == 0 && nn == 0 && thread_x == 0 && warp_id == 1) {
+//                 // if (mm == 0 && nn == 0 && thread_x == 0 && warp_id == 0) {
 //                 //     printf("m: %d, n: %d, k: %d, \n"
-//                 //            "q_coef[0].x: %lf, q_coef[0].y: %lf, q_coef[1].x: %lf,q_coef[1].y: %lf,\n"
-//                 //            "k_coef[0].x: %lf, k_coef[0].y: %lf, k_coef[1].x: %lf,k_coef[1].y: %lf, \n"
-//                 //            "a_reg[0].x:%lf, a_reg[0].y:%lf,a_reg[1].x:%lf,a_reg[1].y:%lf,\n"
-//                 //            "b_reg[0].x:%lf, b_reg[0].y:%lf,b_reg[1].x:%lf,b_reg[1].y:%lf\n"
-//                 //            "q_rot[0].x:%lf, q_rot[0].y:%lf,q_rot[1].x:%lf,q_rot[1].y:%lf,\n"
-//                 //            "k_rot[0].x:%lf, k_rot[0].y:%lf,k_rot[1].x:%lf,k_rot[1].y:%lf\n"
+//                 //            "q_rot[0].x:%lf, q_rot[0].y:%lf\n"
+//                 //            "k_rot[0].x:%lf, k_rot[0].y:%lf\n"
 //                 //            "c_reg[mm * VEC_DIM_N + nn]:%lf \n",
 //                 //         start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M, start_n + thread_x + nn * BLOCK_DIM_N / VEC_DIM_N,kk,
-//                 //         a_cos_sin_coef[0].x, a_cos_sin_coef[0].y, a_cos_sin_coef[1].x, a_cos_sin_coef[1].y,
-//                 //         b_cos_sin_coef[0].x, b_cos_sin_coef[0].y, b_cos_sin_coef[1].x, b_cos_sin_coef[1].y,
-//                 //         a_reg.x, a_reg.y, a_reg.z, a_reg.w,
-//                 //         b_reg[0].x, b_reg[0].y, b_reg[1].x, b_reg[1].y,
-//                 //         q_rot[0].x, q_rot[0].y, q_rot[1].x, q_rot[1].y,
-//                 //         k_rot[0].x, k_rot[0].y, k_rot[1].x, k_rot[1].y,
+//                 //         q_rot.x, q_rot.y,
+//                 //         k_rot.x, k_rot.y,
 //                 //         c_reg[mm * VEC_DIM_N + nn]);
 //                 // }
-//
+//                 //
 //                 // if (warp_id == 0 && start_m == 64 && start_n == 64) {
 //                 //     printf("thread_x: %d, warp_id: %d,"
 //                 //            " m: %d, n: %d, "
@@ -347,7 +400,6 @@
 //     float2 *output_ptr = reinterpret_cast<float2 *>(output);
 //     const int base_n = start_n + thread_x;
 //     const int valid_n = min(VEC_DIM_N, (N - base_n + 31) / 32);
-//     const int stride = (BLOCK_DIM_K) / 2;
 // #pragma unroll
 //     for (int mm = 0; mm < VEC_DIM_M; mm++) {
 //         const float old_max = max_value[mm];
@@ -380,46 +432,32 @@
 //         new_sum_value = current_sum_value * expf(current_max_value - new_max_value) + old_sum * expf(
 //                             old_max - new_max_value);
 //
-//         for (int kk = start_d; kk < BLOCK_DIM_K / 2; kk += 2) {
-//             float2 acc[ELEMENTS_PER_LOAD / 2];
+//         for (int kk = start_d; kk < BLOCK_DIM_K / 2; kk++) {
+//             float2 acc;
 //
 //             for (int nn = 0; nn < valid_n; nn++) {
-//                 int n_row_base = (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N);
-//                 int col_base = kk;
-//                 int v_index_0 = col_base + n_row_base * stride;
-//                 int v_index_1 = v_index_0 + 1;
-//                 int addr_0 = swizzle<B, MBit, S>(v_index_0);
-//                 int addr_1 = swizzle<B, MBit, S>(v_index_1);
-//                 float2 v_reg_0 = __half22float2(sm[addr_0]);
-//                 float2 v_reg_1 = __half22float2(sm[addr_1]);
+//                 int v_index = kk + (thread_x + nn * BLOCK_DIM_N / VEC_DIM_N) * (
+//                                   BLOCK_DIM_K) / 2;
+//                 int addr = swizzle<B, MBit, S>(v_index);
+//                 float2 v_reg_0 = __half22float2(sm[addr]);
 //
-//                 acc[0].x += v_reg_0.x * c_reg[mm * VEC_DIM_N + nn];
-//                 acc[0].y += v_reg_0.y * c_reg[mm * VEC_DIM_N + nn];
-//                 acc[1].x += v_reg_1.x * c_reg[mm * VEC_DIM_N + nn];
-//                 acc[1].y += v_reg_1.y * c_reg[mm * VEC_DIM_N + nn];
+//                 acc.x += v_reg_0.x * c_reg[mm * VEC_DIM_N + nn];
+//                 acc.y += v_reg_0.y * c_reg[mm * VEC_DIM_N + nn];
 //
 //             }
 // #pragma unroll
 //             for (int offset = 16; offset > 0; offset /= 2) {
-//                 acc[0].x += __shfl_xor_sync(0xffffffff, acc[0].x, offset, 32);
-//                 acc[0].y += __shfl_xor_sync(0xffffffff, acc[0].y, offset, 32);
-//                 acc[1].x += __shfl_xor_sync(0xffffffff, acc[1].x, offset, 32);
-//                 acc[1].y += __shfl_xor_sync(0xffffffff, acc[1].y, offset, 32);
+//                 acc.x += __shfl_xor_sync(0xffffffff, acc.x, offset, 32);
+//                 acc.y += __shfl_xor_sync(0xffffffff, acc.y, offset, 32);
 //             }
 //             int output_index = (start_m + warp_id + mm * BLOCK_DIM_M / VEC_DIM_M) * v_ld / 2 + kk;
 //
 //
 //             output_ptr[output_index].x = (output_ptr[output_index].x * old_sum * expf(old_max - new_max_value) +
-//                                         acc[0].x * expf(current_max_value - new_max_value)) / new_sum_value;
+//                                         acc.x * expf(current_max_value - new_max_value)) / new_sum_value;
 //
 //             output_ptr[output_index].y = (output_ptr[output_index].y * old_sum * expf(old_max - new_max_value) +
-//                                         acc[0].y * expf(current_max_value - new_max_value)) / new_sum_value;
-//
-//             output_ptr[output_index + 1].x = (output_ptr[output_index + 1].x * old_sum * expf(old_max - new_max_value) +
-//                                         acc[1].x * expf(current_max_value - new_max_value)) / new_sum_value;
-//
-//             output_ptr[output_index + 1].y = (output_ptr[output_index + 1].y * old_sum * expf(old_max - new_max_value) +
-//                                         acc[1].y * expf(current_max_value - new_max_value)) / new_sum_value;
+//                                         acc.y * expf(current_max_value - new_max_value)) / new_sum_value;
 //         }
 //         max_value[mm] = new_max_value;
 //         sum_value[mm] = new_sum_value;
@@ -429,13 +467,13 @@
 // template<typename T_Q, typename T_KV, const int VEC_DIM_M, const int VEC_DIM_N,
 //     const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K,
 //     const int ELEMENTS_PER_LOAD,
-//     const int rope_flag, const int B, const int MBit, const int S>
+//     const int rope_flag, const int B, const int MBit, const int S, const int HEAD_NUM_PER_BLOCK>
 // __global__ void flash_attention(const int M, const int N, const int D,
 //                                 const int q_ld, const int k_ld, const int v_ld,
 //                                 const float scale,
 //                                 const int num_q_heads, const int num_kv_heads,
 //                                 const T_Q *__restrict__ q_global,
-//                                 const T_KV *__restrict__ k_global,
+//                                 T_KV *__restrict__ k_global,
 //                                 const T_KV *__restrict__ v_global,
 //                                 T_KV *mask,
 //                                 float *__restrict__ cos_sin_table,
@@ -448,12 +486,12 @@
 //     const int block_x = blockIdx.x;
 //     const int start_m = block_x * BLOCK_DIM_M;
 //
-//     const T_Q *q_ptr = q_global + (blockIdx.z * num_q_heads) * M * D + blockIdx.y * D;
+//     const T_Q *q_ptr = q_global + (blockIdx.z * num_q_heads) * M * D + blockIdx.y * D * HEAD_NUM_PER_BLOCK;
 //     const int kv_group_per_q = num_q_heads / num_kv_heads;
 //     const int kv_group_start_index = blockIdx.y / kv_group_per_q;
-//     const T_KV *k_ptr = k_global + (blockIdx.z * num_kv_heads) * N * D + kv_group_start_index * D;
+//     T_KV *k_ptr = k_global + (blockIdx.z * num_kv_heads) * N * D + kv_group_start_index * D;
 //     const T_KV *v_ptr = v_global + (blockIdx.z * num_kv_heads) * N * D + kv_group_start_index * D;
-//     float *output = out_put + (blockIdx.z * num_q_heads) * M * D + blockIdx.y * D;
+//     float *output = out_put + (blockIdx.z * num_q_heads) * M * D + blockIdx.y * D * HEAD_NUM_PER_BLOCK;
 //
 //     constexpr int shared_mem_block_size = (BLOCK_DIM_K) / 2 * (BLOCK_DIM_N);
 //     __shared__ half2 sm[shared_mem_block_size * 2]; //2 * kv;(k, v共享一块shared mem)
@@ -477,7 +515,8 @@
 //         sum_value[mm] = 0.0f;
 //     }
 //
-//     __syncthreads();
+//     //__syncthreads();
+//     __syncwarp();
 //
 //     const int n_stage = (N + BLOCK_DIM_N - 1) / BLOCK_DIM_N;
 //
@@ -491,7 +530,7 @@
 //
 //         int d = 0;
 //         const int k_size = min(BLOCK_DIM_K, D - d);
-//         //cp_async_wait_all();
+//         cp_async_wait_all();
 //         compute_tile_attention_gemm_with_rope<T_KV, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, ELEMENTS_PER_LOAD, B, MBit, S>(
 //            N, k_size, thread_x, warp_id, start_m, n_start, q_sm, &sm[(flip_flag) * shared_mem_block_size],
 //             mask, scale, c_reg);
@@ -502,17 +541,23 @@
 //                 k_ld, N, thread_x, warp_id, next_n, 0,
 //                 k_ptr, cos_sin_table, &sm[(1 - flip_flag) * shared_mem_block_size]);
 //         }
-//         __syncthreads();
+//
+//         __syncwarp();
+//         //__syncthreads();
 //
 //         load_tile_vec_v<T_KV, VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, ELEMENTS_PER_LOAD, B, MBit, S>(
 //             v_ld, N, thread_x, warp_id, n_start, d,
 //             v_ptr, &sm[(flip_flag) * shared_mem_block_size]);
-//         __syncthreads();
+//
+//         __syncwarp();
+//         //__syncthreads();
+//         cp_async_wait_all();
 //
 //         compute_softmax_pv<VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, ELEMENTS_PER_LOAD, B, MBit, S>(
 //             N, v_ld, start_m, n_start, d, thread_x, warp_id, &max_value[0],
 //             &sum_value[0], &sm[(flip_flag) * shared_mem_block_size], &c_reg[0], output);
-//         __syncthreads();
+//         __syncwarp();
+//         //__syncthreads();
 //         flip_flag ^= 1;
 //     }
 // }
@@ -789,13 +834,13 @@
 //     cudaEventRecord(start);
 //
 //
-//     dim3 grid((M + BLOCK_DIM_M - 1) / BLOCK_DIM_M, num_q_heads, batch);
+//     dim3 grid((M + BLOCK_DIM_M - 1) / BLOCK_DIM_M, num_q_heads / HEAD_NUM_PER_BLOCK, batch);
 //     dim3 block(256);
 //     printf("grid x: %d, grid y: %d, grid z: %d \n", grid.x, grid.y, grid.z);
 //     printf("block x: %d, block y: %d\n", block.x, block.y);
 //
 //     flash_attention<T_Q, T_KV, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K,
-//                 Q_ELEMENTS_PER_LOAD, rope_flag, B, MBit , S><<<
+//                 ELEMENTS_PER_LOAD, rope_flag, B, MBit , S, HEAD_NUM_PER_BLOCK><<<
 //             grid
 //             , block>>>(
 //                 M, N, D,
@@ -919,7 +964,7 @@
 //     }
 // }
 //
-// int main1232323(int argc, char *argv) {
+// int main12313443(int argc, char *argv) {
 //     cudaDeviceProp device_prop{};
 //     cudaGetDeviceProperties(&device_prop, 0);
 //     printf("device prop sharedMemPerBlock:%d \n", device_prop.sharedMemPerBlock);
@@ -933,7 +978,7 @@
 //     int m = dim;
 //     int n = dim;
 //     int k = HIDDEN_DIM;
-//     int num_q_heads = 1;
+//     int num_q_heads = 2;
 //     int num_kv_heads = 1;
 //     int batch = 1;
 //
