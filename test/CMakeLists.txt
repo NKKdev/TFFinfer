@@ -58,7 +58,8 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
 message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
 
-add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
+add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
+        flash_attention_rope_8*32_scalar.cu)
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE
 #        $<$<COMPILE_LANGUAGE:CUDA>:-O3>
