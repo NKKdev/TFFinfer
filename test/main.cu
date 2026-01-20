@@ -15,7 +15,7 @@ static void rtrim(std::string &s) {
     );
 }
 
-int main123123(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
     std::string model_config_file_path(argv[1]);
     std::string model_file(argv[2]);
     tff::core::runtime::LLMInferRuntime llm_runtime;
@@ -25,6 +25,8 @@ int main123123(int argc, char *argv[]) {
     cfg._use_f16 = true;
     cfg._is_fuse_op = true;
     cfg._kv_data_type = tff::core::memory::DataType::TFF_DATA_TYPE_F16;
+    cfg._rope_freq_base = 1000000;
+    cfg._rope_freq_scale = 1;
     const int max_batches = 1;
     llm_runtime.load_model_config(model_config_file_path, cfg);
     std::vector<std::string> model_files;

@@ -28,6 +28,9 @@ namespace tff::core::model {
         int _n_tokens;
         int _max_seq_len;
 
+        float _rope_freq_base;
+        float _rope_freq_scale;
+
         bool _use_fp16;
         bool _use_mmap;
 

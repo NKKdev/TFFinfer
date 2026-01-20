@@ -13,8 +13,9 @@ namespace tff::core::model {
                            tff::core::model::to_string(tff::core::model::ModelFileFormat::TFF_MODEL_FORMAT_GGUF));
 
     tff::core::model::ModelLoadResult tff::core::model::GGUFLoader::load_from_file(
-        const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
-        bool bRet = this->load(model_files_name, use_mmap, check_tensors);
+        const std::vector<std::string> &model_files_name, const tff::core::model::ModelConfig &params) {
+        this->_model_config = params;
+        bool bRet = this->load(model_files_name, params);
         if (bRet) {
             return ModelLoadResult::SUCCESS;
         } else {
@@ -45,13 +46,14 @@ namespace tff::core::model {
     }
 
 
-    bool GGUFLoader::load(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) {
+    bool GGUFLoader::load(const std::vector<std::string> &model_files_name,
+        const tff::core::model::ModelConfig &params) {
         bool bRet = true;
         for (size_t i = 0; i < model_files_name.size(); i++) {
             const std::string &model_file_name = model_files_name[i];
             this->_files_loader.insert(std::make_pair(i, std::make_shared<FileLoader>(model_file_name.c_str(), "rb")));
             const auto &it = this->_files_loader.find(i);
-            if (use_mmap) {
+            if (params._use_mmap) {
                 auto cpu_device_size = tff::core::device::get_device_size("CPU");
                 bool is_numa = cpu_device_size > 1 ? true : false;
                 _files_mmap.insert(
@@ -64,6 +66,7 @@ namespace tff::core::model {
             bRet &= this->load_kv_meta(i, it->second, _model_ctx);
             bRet &= this->load_model_config(it->second, _model_ctx);
             bRet &= this->load_tensor_info(i, it->second, _model_ctx);
+
 
             if (!bRet) {
                 return bRet;
@@ -328,7 +331,7 @@ namespace tff::core::model {
             std::string pattern(pattern_str);
 
             if (matches_pattern(raw_name, pattern)) {
-                return tensor_type;
+                 return tensor_type;
             }
         }
         return tff::core::memory::ModelTensorType::LLM_TENSOR_TYPE_UNKNOWN;

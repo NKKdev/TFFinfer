@@ -51,11 +51,11 @@ namespace tff::kernel {
     template<typename T>
     static void rms_norm_kernel_cuda(const float &eps,
                                      std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
-                                     std::vector<std::shared_ptr<tff::core::memory::Tensor> > &dst,
+                                     std::shared_ptr<tff::core::memory::Tensor> &dst,
                                      std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
         auto &input_tensor = *src.begin();
         auto &weight_tensor = *src.rbegin();
-        auto &output_tensor = *dst.begin();
+        auto &output_tensor = dst;
         auto &src_shape = input_tensor->get_shape();
         const int src_dim0 = src_shape[0]; //D
         const int src_dim1 = src_shape[1]; //S
@@ -100,18 +100,18 @@ namespace tff::kernel {
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), RMSNorm<T>::get_op_name().c_str());
         auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             1, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
         std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(3, para_ptr);
 
-        if (input_tensors.size() != 2) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
+        if (input_tensors.empty()) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
-        if (output_tensors.size() != 1) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
+        if (output_tensors == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
         //

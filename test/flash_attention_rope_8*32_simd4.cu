@@ -305,7 +305,7 @@ __device__ __forceinline__ void rope_q(const int ld, const int dim,
 template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K,
     const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int ELEMENTS_PER_LOAD, const int B, const int MBit, const int
     S, const int PAD_SIZE>
-__device__ __forceinline__ void load_tile(const int ld, const int dim,
+__device__ __forceinline__ void load_tile_q(const int ld, const int dim,
                                           const int thread_x, const int warp_id,
                                           const int start_m,
                                           const int k,
@@ -395,6 +395,7 @@ __device__ __forceinline__ void load_tile_kv(const int ld, const int dim,
     }
 }
 
+
 template<typename T_KV, const int VEC_DIM_M, const int VEC_DIM_N,
     const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int HIDDEN_DIM,
     const int HEAD_NUM_PER_BLOCK, const int B, const int MBit, const int S,
@@ -415,6 +416,7 @@ __device__ __forceinline__ void compute_tile_attention_gemm(const int N, const i
     for (int head_index = 0; head_index < HEAD_NUM_PER_BLOCK; head_index++) {
         for (int kk = head_index * HIDDEN_DIM / 2; kk < (head_index + 1) * HIDDEN_DIM / 2; kk++) {
             const int stride = (BLOCK_DIM_K / 2 + PAD_SIZE_Q);
+
 #pragma unroll
             for (int mm = 0; mm < VEC_DIM_M; mm++) {
                 int m_row_base = (warp_id + mm * m_stride);
@@ -431,14 +433,16 @@ __device__ __forceinline__ void compute_tile_attention_gemm(const int N, const i
                 for (int nn = 0; nn < VEC_DIM_N; nn++) {
                     int n_row_base = (thread_x + nn * n_stride);
                     int k_index = col_base % (HIDDEN_DIM / 2) + n_row_base * (HIDDEN_DIM / 2 + PAD_SIZE_KV);
-                    const float mask_value = __ldg(&mask[(start_m + m_row_base) * N + start_n + n_row_base]);
+
 #ifdef _SWIZZLE
                     int k_addr = swizzle<B, MBit, S>(k_index);
 #else
                     int k_addr = k_index;
 #endif
-
                     float2 k_rot = __half22float2(b_sm[k_addr]);
+
+                    const float mask_value = __ldg(&mask[(start_m + m_row_base) * N + start_n + n_row_base]);
+
                     c_reg[mm * reg_stride + nn + head_index * VEC_DIM_N] += fmaf(q_rot.x, k_rot.x,fmaf(q_rot.y, k_rot.y,
                            mask_value));
 
@@ -469,7 +473,6 @@ __device__ __forceinline__ void compute_softmax_pv(const int N, const int v_ld, 
 
 #pragma unroll
     for (int head_index = 0; head_index < HEAD_NUM_PER_BLOCK; head_index++) {
-
 #pragma unroll
         for (int mm = 0; mm < VEC_DIM_M; mm++) {
             const float old_max = max_value[mm * HEAD_NUM_PER_BLOCK + head_index];
@@ -515,7 +518,7 @@ __device__ __forceinline__ void compute_softmax_pv(const int N, const int v_ld, 
                 acc.y = 0;
                 for (int nn = 0; nn < valid_n; nn++) {
                     const int n_row_base = (thread_x + nn * n_stride);
-                    int index = kk % (HIDDEN_DIM / 2) + n_row_base * (HIDDEN_DIM / 2 + PAD_SIZE_KV);
+                    int index = kk % (HIDDEN_DIM / 2) + n_row_base * (HIDDEN_DIM / 2 + PAD_SIZE_KV) ;
 #ifdef _SWIZZLE
                     int addr = swizzle<B, MBit, S>(index);
 #else
@@ -660,7 +663,7 @@ __global__ void flash_attention(const int M, const int N, const int D,
         kv_stride, N, thread_x, warp_id, 0, 0,
         k_ptr, &sm[(flip_flag) * shared_mem_block_size]);
 
-    load_tile<T_Q, VEC_DIM_M, VEC_DIM_K_Q, BLOCK_DIM_M, BLOCK_DIM_K_Q, ELEMENTS_PER_LOAD, B, MBit, S, PAD_SIZE_Q>(
+    load_tile_q<T_Q, VEC_DIM_M, VEC_DIM_K_Q, BLOCK_DIM_M, BLOCK_DIM_K_Q, ELEMENTS_PER_LOAD, B, MBit, S, PAD_SIZE_Q>(
         q_stride, M, thread_x, warp_id, start_m, 0,
         q_ptr, &q_sm[0]);
 
@@ -1163,7 +1166,7 @@ void PopulateVector(std::vector<T> &vector, std::mt19937 &mt, std::uniform_real_
     }
 }
 
-int main(int argc, char *argv) {
+int main598666(int argc, char *argv) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     printf("device prop sharedMemPerBlock:%d \n", device_prop.sharedMemPerBlock);
@@ -1253,7 +1256,7 @@ int main(int argc, char *argv) {
         sin_table[i] = std::sin(angles[i]);
     }
 
-    flash_attention_double_buffer_k<T_Q, T_KV, 1>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat,
+    flash_attention_double_buffer_k<T_Q, T_KV, 0>(batch, m, n, k, num_q_heads, num_kv_heads, a_mat, b_mat, c_mat,
                                                   cos_table, sin_table,
                                                   mask);
 #endif

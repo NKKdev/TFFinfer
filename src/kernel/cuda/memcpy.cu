@@ -14,17 +14,10 @@ namespace tff::kernel {
         const std::shared_ptr<tff::core::memory::Tensor> &dst,
         std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr,
         tff::core::memory::MemCpyKind kind) {
-        if (src == nullptr || dst == nullptr) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
-            return;
-        }
-        if (src->get_buffer() == nullptr) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
-            return;
-        }
+
         auto allocator = dst->get_allocator();
         if (allocator == nullptr) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
+            tff::log::Logger::error("kernel (%s) allocator is invalid!");
             return;
         }
         allocator->memcopy(src->get_buffer()->ptr(), dst->get_buffer()->ptr(), dst->get_bytes(), kind);
@@ -51,10 +44,19 @@ namespace tff::kernel {
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
 
+
         for (int i = 0; i < input_tensors.size(); i++) {
             auto &input_tensor = input_tensors[i];
             if (input_tensor->get_shape() != output_tensors->get_shape()) {
                 continue;
+            }
+            if (input_tensor == nullptr || output_tensors == nullptr) {
+                tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+                return;
+            }
+            if (input_tensor->get_buffer() == nullptr) {
+                tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+                return;
             }
             memcpy_kernel_cuda<T>(*input_tensors.begin(), output_tensors, mem_buffer_manager_ptr,
                               memcpy_kind);

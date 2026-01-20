@@ -20,7 +20,7 @@ namespace tff::core::runtime {
             tff::utils::get_file_ext(model_files_path[0]));
 
         this->_model_loader = model_detector->create_loader();
-        this->_model_loader->load_from_file(model_files_path, params._use_mmap, params._check_tensors);
+        this->_model_loader->load_from_file(model_files_path, params);
         this->build_model_creator();
         this->_vocabulary_ptr = std::make_unique<tff::core::model::LLMLLaMaVocabulary>();
 
@@ -57,6 +57,8 @@ namespace tff::core::runtime {
         this->_model_creator->_model_ctx._n_layer = cfg._n_layer;
         this->_model_creator->_model_ctx._use_fp16 = cfg._use_f16;
         this->_model_creator->_model_ctx._use_mmap = cfg._use_mmap;
+        this->_model_creator->_model_ctx._rope_freq_base = cfg._rope_freq_base;
+        this->_model_creator->_model_ctx._rope_freq_scale = cfg._rope_freq_scale;
         this->_model_creator->_model_ctx._model_loader = this->_model_loader;
         return true;
     }

@@ -61,6 +61,7 @@ message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         flash_attention_rope_8*32_scalar.cu
         flash_attention_rope_8*32_simd4.cu
+        flash_attention_rope_8*32_simd4_k_t.cu
 )
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE

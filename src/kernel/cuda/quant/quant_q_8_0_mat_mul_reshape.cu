@@ -228,7 +228,7 @@ namespace tff::kernel {
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), QuantQ8MatMulReshape<T>::get_op_name().c_str());
         auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             1, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
         std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
@@ -238,7 +238,7 @@ namespace tff::kernel {
             tff::log::Logger::error("memcpy kernel param is invalid!");
             return;
         }
-        if (output_tensors.size() != 1) {
+        if (output_tensors == nullptr) {
             tff::log::Logger::error("memcpy kernel param is invalid!");
             return;
         }
@@ -252,22 +252,14 @@ namespace tff::kernel {
             tff::log::Logger::error("x tensor is null!");
             return;
         }
-        auto output = output_tensors.at(0);
-        if (output->get_buffer() == nullptr) {
-            // auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
-            // if (mem_buffer_pair.second == nullptr) {
-            //     tff::log::Logger::error("there is no GPU memory!");
-            //     return;
-            // }
-            // output->set_buffer_data(mem_buffer_pair.second, output->get_bytes(), mem_buffer_pair.first);
-        }
+
         const int K = weight_tensor->get_shape()[0];
         const int M = weight_tensor->get_shape()[1];
         const int B = weight_tensor->get_shape()[2];//todo impl batches
         const int N = x_tensor->get_shape()[1];
         //
         quant_q_8_0_matmul<T>(tff::core::quant::Q_8_0::BLOCK_SIZE, M, N, K,weight_tensor->get_buffer()->ptr(),
-            x_tensor->get_buffer()->ptr(), static_cast<T*>(output->get_buffer()->ptr()));
+            x_tensor->get_buffer()->ptr(), static_cast<T*>(output_tensors->get_buffer()->ptr()));
 
         //mem_buffer_manager_ptr->reset_gpu_memory(weight_tensor->get_external_memory_index());
         //mem_buffer_manager_ptr->reset_gpu_memory(x_tensor->get_external_memory_index());

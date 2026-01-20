@@ -67,19 +67,21 @@ namespace tff::kernel {
     void tff::kernel::PreRopeTable<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), PreRopeTable<T>::get_op_name().c_str());
-        auto max_seq_len = get_param_value<int>(1, para_ptr);
-        auto dim = get_param_value<int>(2, para_ptr);
+        auto max_seq_len = get_param_value<const uint32_t>(1, para_ptr);
+        auto dim = get_param_value<const uint32_t>(2, para_ptr);
         auto base = get_param_value<float>(3, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
-            5, para_ptr);
+        auto scale = get_param_value<float>(4, para_ptr);//todo 支持rope_scale；
+        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>>>(5, para_ptr);
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            6, para_ptr);
         auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMMemManager> >(3, para_ptr);
-        if (output_tensors.size() != 1) {
+                tff::core::runtime::LLMMemManager> >(7, para_ptr);
+        if (output_tensors == nullptr) {
             tff::log::Logger::error("Output tensor size mismatch");
             return;
         }
-        precompute_rope_table<T>(max_seq_len, dim, base, output_tensors.at(0), mem_buffer_manager_ptr);
+        precompute_rope_table<T>(max_seq_len, dim, base, output_tensors, mem_buffer_manager_ptr);
     }
 
     template<typename T>

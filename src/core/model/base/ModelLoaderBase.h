@@ -29,7 +29,8 @@ namespace tff::core::model {
         ModelLoaderBase() = default;
         ~ModelLoaderBase() override = default;
 
-        virtual ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap, bool check_tensors) = 0;
+        virtual ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name,
+            const tff::core::model::ModelConfig &params) = 0;
 
         virtual std::shared_ptr<tff::core::model::ModelContext> get_model_ctx() = 0;
 

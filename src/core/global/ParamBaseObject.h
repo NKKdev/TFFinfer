@@ -47,7 +47,8 @@ namespace tff::core::global {
 
     public:
         template<typename T>
-        void set_param(size_t index, T &&value) {
+        void set_param(T &&value) {
+            const int index = this->get_param_count();
             if (index >= MAX_PARAMS) {
                 tff::log::Logger::error("Parameter index out of range");
                 return;
@@ -92,7 +93,7 @@ namespace tff::core::global {
         }
 
         //
-        inline size_t get_param_count() const {
+        inline int get_param_count() const {
             return _use_para_count;
         }
 

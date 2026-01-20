@@ -21,11 +21,20 @@ namespace tff::core::model {
 
         const auto input_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT);
+        if (input_layer_iter == layer_map.end()) {
+            return;
+        }
         const auto repeating_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+        if (repeating_layer_iter == layer_map.end()) {
+            return;
+        }
         //
         const auto output_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT);
+        if (output_layer_iter == layer_map.end()) {
+            return;
+        }
 
         auto input_node = build_inputs(input_layer_iter->second.begin()->second);
 
@@ -120,11 +129,13 @@ namespace tff::core::model {
             rope_table_node->set_node_meta(meta_rope_node);
             auto para_ptr = rope_table_node->get_params();
             auto max_seq_len = this->_model_ctx._max_seq_len;
-            auto embedding_dim = this->_model_ctx._n_rot;
-            para_ptr->set_param<const uint32_t>(para_ptr->get_param_count(),
-                                                static_cast<const unsigned &&>(max_seq_len));
-            para_ptr->set_param<const uint32_t>(para_ptr->get_param_count(),
-                                                static_cast<const unsigned &&>(embedding_dim));
+            auto embedding_dim = this->_model_ctx._n_embd_head;
+            auto rope_base = this->_model_ctx._rope_freq_base;
+            auto rope_scale = this->_model_ctx._rope_freq_scale;
+            para_ptr->set_param<const uint32_t>(static_cast<const unsigned &&>(max_seq_len));
+            para_ptr->set_param<const uint32_t>(static_cast<const unsigned &&>(embedding_dim));
+            para_ptr->set_param<float>(std::move(rope_base));
+            para_ptr->set_param<float>(std::move(rope_scale));
 
 
             auto dev_gpu = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
@@ -149,7 +160,13 @@ namespace tff::core::model {
         auto devices = a_node->devices();
         out_put_node->bind_devices(devices);
         out_put_node->add_src_node(a_node);
-        out_put_node->add_inputs(layer->_tensor);
+
+        auto weight_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_REF);
+        const tff::core::graph::NodeMetadata meta_w_node{layer->_layer_name + "_w_ref"};
+        weight_node->set_node_meta(meta_w_node);
+        weight_node->bind_devices(layer->_device_list);
+        weight_node->set_tensor(layer->_tensor);
+        out_put_node->add_src_node(weight_node);
 
         auto tensor = std::make_shared<memory::Tensor>(a_node->get_tensor());
         out_put_node->set_tensor(tensor);
@@ -174,7 +191,7 @@ namespace tff::core::model {
                 break;
         }
         auto a_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_REF);
-        a_node->set_node_meta(NodeMetadata(layer->_layer_name + "_w"));
+        a_node->set_node_meta(NodeMetadata(layer->_layer_name + "_w_ref"));
         a_node->bind_devices(layer->_device_list);
         a_node->set_tensor(layer->_tensor);
 
@@ -186,11 +203,21 @@ namespace tff::core::model {
         std::array<int64_t, MAX_TENSOR_DIM> shape = {
             layer->_tensor->get_shape()[1], b_node->get_tensor()->get_shape()[1], 1, 1
         };
-
+        auto result_data_type = memory::DataType::TFF_DATA_TYPE_F32;
+        switch (op_type) {
+            case tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL:
+                result_data_type = memory::DataType::TFF_DATA_TYPE_F32;
+                break;
+            case tff::core::graph::TffOpType::TFF_OP_MUL_MAT:
+            default:
+                result_data_type = memory::DataType::TFF_DATA_TYPE_F32;
+                break;
+        }
         result->set_tensor(std::make_shared<tff::core::memory::Tensor>(layer->_tensor->get_shape().size(),
-                                                                  memory::DataType::TFF_DATA_TYPE_F32, shape));
-        result->add_inputs(layer->_tensor);
+                                                                  result_data_type, shape));
+
         result->add_src_node(b_node);
+        result->add_src_node(a_node);
 
         return result;
     }

@@ -649,11 +649,11 @@ namespace tff::kernel {
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
 
         if (input_tensors.size() != 2) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
         if (output_tensors.size() != 1) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
         //

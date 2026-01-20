@@ -21,8 +21,8 @@ namespace tff::core::model {
 
     public:
         //
-        ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name, bool use_mmap,
-                                       bool check_tensors) override;
+        ModelLoadResult load_from_file(const std::vector<std::string> &model_files_name,
+            const tff::core::model::ModelConfig &params) override;
 
         ModelLoadResult convert_to_gguf(const std::string &output_path) override {
             return ModelLoadResult::UNSUPPORTED_ARCH;
@@ -47,8 +47,7 @@ namespace tff::core::model {
 
     protected:
         bool load(const std::vector<std::string> &model_files_name,
-                  bool use_mmap,
-                  bool check_tensors);
+                  const tff::core::model::ModelConfig &params);
 
         //
         [[nodiscard]] bool check_file(const std::shared_ptr<FileLoader> &file_loader) const;
@@ -120,6 +119,7 @@ namespace tff::core::model {
         inline std::shared_ptr<tff::core::model::ModelContext> get_model_ctx() {
             return this->_model_ctx;
         };
+
         //
         tff::core::memory::ModelTensorType get_model_tensor_type(const std::string &tensor_name) const;
 
@@ -147,8 +147,6 @@ namespace tff::core::model {
         //
         std::shared_ptr<tff::core::model::ModelContext> _model_ctx;
     };
-
-
 }
 
 

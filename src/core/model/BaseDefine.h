@@ -117,6 +117,9 @@ X(TFF_MODEL_ARCH_GEMMA,   "gemma")
         uint32_t _n_expert = 0;
         uint32_t _n_expert_used = 0;
 
+        float _rope_freq_base;
+        float _rope_freq_scale;
+
         //
         std::vector<uint32_t> _n_head_arr;
         std::vector<uint32_t> _n_head_kv_arr;

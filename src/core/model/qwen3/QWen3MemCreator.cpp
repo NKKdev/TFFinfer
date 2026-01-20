@@ -15,11 +15,20 @@ namespace tff::core::model {
 
         const auto input_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT);
+        if (input_layer_iter == layer_map.end()) {
+            return;
+        }
         const auto repeating_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING);
+        if (repeating_layer_iter == layer_map.end()) {
+            return;
+        }
         //
         const auto output_layer_iter = layer_map.find(
             tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT);
+        if (output_layer_iter == layer_map.end()) {
+            return;
+        }
 
         NodeType input_node;
         input_node = build_layer_node(memory::ModelTensorType::LLM_TENSOR_TOKEN_EMBD,
@@ -87,10 +96,10 @@ namespace tff::core::model {
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> devices = {{device_ids[0], device}};
         current_map2cpu_node->bind_devices(devices);
         auto params = current_map2cpu_node->get_params();
-        params->set_param<size_t>(params->get_param_count(), std::move(layer->_model_file_index));
-        params->set_param<size_t>(params->get_param_count(), std::move(layer->_offset));
-        params->set_param<double>(params->get_param_count(), std::move(layer->_data_size));
-        params->set_param(params->get_param_count(), this->_model_ctx._model_loader);
+        params->set_param<size_t>(std::move(layer->_model_file_index));
+        params->set_param<size_t>(std::move(layer->_offset));
+        params->set_param<double>(std::move(layer->_data_size));
+        params->set_param(this->_model_ctx._model_loader);
         current_map2cpu_node->add_src_node(input_node[tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU]);
         current_map2cpu_node->set_tensor(layer->_tensor);
         return current_map2cpu_node;
@@ -122,7 +131,7 @@ namespace tff::core::model {
         auto src_type = device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU;
         auto dst_type = device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU;
         auto params = current_cpu2gpu_node->get_params();
-        params->set_param(params->get_param_count(), make_cpy_kind(src_type, dst_type));
+        params->set_param(make_cpy_kind(src_type, dst_type));
 
         current_cpu2gpu_node->add_src_node(current_cpu_node);
         auto tensor = std::make_shared<memory::Tensor>(layer->_tensor);

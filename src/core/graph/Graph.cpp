@@ -20,7 +20,9 @@ namespace tff::core::graph {
         if (_visited.find(node) != _visited.end()) {
             return;
         }
-
+        if (node->op_type() == TFF_OP_MEM_REF) {
+            return;
+        }
         _visited.insert(node);
         _use_counts[node] = 0;
 

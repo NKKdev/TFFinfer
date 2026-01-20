@@ -16,83 +16,85 @@
 #include "Logger.h"
 
 namespace tff::factory {
-        class DEEP_TFF_API FunctionFactory : public std::enable_shared_from_this<FunctionFactory> {
-        public:
-            static std::shared_ptr<FunctionFactory> instance() {
-                static std::shared_ptr<FunctionFactory> s_instance = create_instance();
-                return s_instance;
-            }
+    class DEEP_TFF_API FunctionFactory : public std::enable_shared_from_this<FunctionFactory> {
+    public:
+        static std::shared_ptr<FunctionFactory> instance() {
+            static std::shared_ptr<FunctionFactory> s_instance = create_instance();
+            return s_instance;
+        }
 
-        public:
-            template<typename Func>
-            void register_callback(const std::string& flag, const std::string& key, Func&& func) {
-                std::lock_guard<std::mutex> lock(_mutex);
-                _functions[flag][key] = std::function(func);
-            }
+    public:
+        template<typename Func>
+        void register_callback(const std::string &flag, const std::string &key, Func &&func) {
+            std::lock_guard<std::mutex> lock(_mutex);
+            _functions[flag][key] = std::function(func);
+        }
 
-            // 获取回调（需知道类型）
-            template<typename Func>
-            std::function<Func> get_callback(const std::string& flag, const std::string& key) {
-                std::lock_guard<std::mutex> lock(_mutex);
-                auto it = _functions.find(flag);
-                if (it == _functions.end()) {
-                    tff::log::Logger::error("Flag not found");
-                    return nullptr;
+        // 获取回调（需知道类型）
+        template<typename Func>
+        std::function<Func> get_callback(const std::string &flag, const std::string &key) {
+            std::lock_guard<std::mutex> lock(_mutex);
+            auto it = _functions.find(flag);
+            if (it == _functions.end()) {
+                tff::log::Logger::error("Flag not found");
+                return nullptr;
+            }
+            auto it2 = it->second.find(key);
+            if (it2 == it->second.end()) {
+                tff::log::Logger::error("callback type: %s key type: %s Callback not found", flag.c_str(), key.c_str());
+                return nullptr;
+            }
+            return std::any_cast<std::function<Func> >(it2->second);
+        }
+
+        // 判断是否存在
+        bool has_callback(const std::string &flag, const std::string &key) {
+            std::lock_guard<std::mutex> lock(_mutex);
+            auto it = _functions.find(flag);
+            if (it == _functions.end()) return false;
+            return it->second.find(key) != it->second.end();
+        }
+
+        //
+        template<typename... Args>
+        void invoke(const std::string &flag, const std::string &key, Args &&... args) {
+            std::lock_guard<std::mutex> lock(_mutex);
+            auto it = _functions.find(flag);
+            if (it == _functions.end()) tff::log::Logger::error("Flag not found");
+            auto it2 = it->second.find(key);
+            if (it2 == it->second.end()) tff::log::Logger::error("Callback not found");
+
+            // 直接调用
+            std::any_cast<std::function<void(Args...)> >(it2->second)(std::forward<Args>(args)...);
+        }
+
+    private:
+        FunctionFactory() = default;
+
+        static std::shared_ptr<FunctionFactory> create_instance() {
+            struct Constructor {
+                std::shared_ptr<FunctionFactory> operator()() {
+                    return std::shared_ptr<FunctionFactory>(new FunctionFactory());
                 }
-                auto it2 = it->second.find(key);
-                if (it2 == it->second.end()) {
-                    tff::log::Logger::error("Callback not found");
-                    return nullptr;
-                }
-                return std::any_cast<std::function<Func>>(it2->second);
-            }
+            };
+            return Constructor()();
+        }
 
-            // 判断是否存在
-            bool has_callback(const std::string& flag, const std::string& key) {
-                std::lock_guard<std::mutex> lock(_mutex);
-                auto it = _functions.find(flag);
-                if (it == _functions.end()) return false;
-                return it->second.find(key) != it->second.end();
-            }
-            //
-            template<typename... Args>
-            void invoke(const std::string& flag, const std::string& key, Args&&... args) {
-                std::lock_guard<std::mutex> lock(_mutex);
-                auto it = _functions.find(flag);
-                if (it == _functions.end()) tff::log::Logger::error("Flag not found");
-                auto it2 = it->second.find(key);
-                if (it2 == it->second.end()) tff::log::Logger::error("Callback not found");
+    private:
+        // 删除拷贝和移动构造
+        FunctionFactory(const FunctionFactory &) = delete;
 
-                // 直接调用
-                std::any_cast<std::function<void(Args...)>>(it2->second)(std::forward<Args>(args)...);
-            }
+        FunctionFactory(FunctionFactory &&) = delete;
 
-        private:
-            FunctionFactory() = default;
-            static std::shared_ptr<FunctionFactory> create_instance() {
-                struct Constructor {
-                    std::shared_ptr<FunctionFactory> operator()() {
-                        return std::shared_ptr<FunctionFactory>(new FunctionFactory());
-                    }
-                };
-                return Constructor()();
-            }
+        FunctionFactory &operator=(const FunctionFactory &) = delete;
 
-        private:
-            // 删除拷贝和移动构造
-            FunctionFactory(const FunctionFactory &) = delete;
+        FunctionFactory &operator=(FunctionFactory &&) = delete;
 
-            FunctionFactory(FunctionFactory &&) = delete;
+    private:
+        // 三层结构：类型 -> group -> key -> function
+        std::unordered_map<std::string, std::unordered_map<std::string, std::any> > _functions;
 
-            FunctionFactory &operator=(const FunctionFactory &) = delete;
-
-            FunctionFactory &operator=(FunctionFactory &&) = delete;
-
-        private:
-            // 三层结构：类型 -> group -> key -> function
-            std::unordered_map<std::string,std::unordered_map<std::string,std::any>> _functions;
-
-            mutable std::mutex _mutex; // 保证线程安全
-        };
+        mutable std::mutex _mutex; // 保证线程安全
+    };
 } // namespace TFF
 #endif // DEEP_TFF_FUNCTIONFACTORY_H

@@ -82,6 +82,9 @@ namespace tff::core::graph {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
                 return nullptr;
             }
+            for (auto &input : this->_input_nodes) {
+                this->add_inputs(input->get_tensor());
+            }
             if (this->_tensor->get_buffer() == nullptr) {
                 this->_tensor->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
                     this->_tensor->get_external_memory_index(), type),
@@ -90,9 +93,9 @@ namespace tff::core::graph {
             }
 
             auto params_ptr = this->get_params();
-            params_ptr->set_param(params_ptr->get_param_count(),this->_inputs);
-            params_ptr->set_param(params_ptr->get_param_count(),this->_tensor);
-            params_ptr->set_param(params_ptr->get_param_count(),this->_mem_manager_ptr);
+            params_ptr->set_param(this->_inputs);
+            params_ptr->set_param(this->_tensor);
+            params_ptr->set_param(this->_mem_manager_ptr);
 
             auto callback = this->_devices.begin()->second->get_op_func(this->_op_type, this->data_type());
             return callback;
@@ -220,7 +223,7 @@ namespace tff::core::graph {
         //
         inline void set_node_meta(const NodeMetadata &meta) {
             this->_node_metadata = meta;
-            this->_params_ptr->set_param(0, _node_metadata._name);
+            this->_params_ptr->set_param(_node_metadata._name);
         };
 
         inline bool is_input_node() const {
@@ -287,15 +290,15 @@ namespace tff::core::graph {
                     auto params = mem_cpy_node->get_params();
                     auto src_type = src_node->device().begin()->second->get_device_type(src_node->device().begin()->first);
                     auto dst_type = this->_devices.begin()->second->get_device_type(src_node->device().begin()->first);
-                    params->set_param(params->get_param_count(), make_cpy_kind(src_type, dst_type));
+                    params->set_param(make_cpy_kind(src_type, dst_type));
                     mem_cpy_node->add_src_node(src_node);
 
                     this->_input_nodes.push_back(mem_cpy_node);
-                    this->add_inputs(mem_cpy_node->get_tensor());
+                    //this->add_inputs(mem_cpy_node->get_tensor());
                     return mem_cpy_node;
                 }else {
                     this->_input_nodes.push_back(src_node);
-                    this->add_inputs(src_node->get_tensor());
+                    //this->add_inputs(src_node->get_tensor());
                     return src_node;
                 }
             }

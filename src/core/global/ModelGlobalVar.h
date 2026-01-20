@@ -1770,8 +1770,8 @@ namespace tff::core::global {
     static const std::unordered_map<tff::core::graph::TffOpType, std::vector<tff::core::graph::TffOpType> >
     TFF_OP_FUSE_MODEL = {
         {
-            tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT,
-            {tff::core::graph::TffOpType::TFF_OP_ROPE, tff::core::graph::TffOpType::TFF_OP_ROPE}
+            tff::core::graph::TffOpType::TFF_OP_ROPE,
+            {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT}
         }, //flash attention与rope算子融合
         {tff::core::graph::TffOpType::TFF_OP_RMS_NORM, {graph::TffOpType::TFF_OP_MUL, graph::TffOpType::TFF_OP_ADD}},
         {tff::core::graph::TffOpType::TFF_OP_RMS_NORM, {graph::TffOpType::TFF_OP_MUL}},

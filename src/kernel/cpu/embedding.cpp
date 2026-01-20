@@ -53,7 +53,7 @@ namespace tff::kernel {
                 int32_t token_id = batch_token->at<int32_t>(j);
                 tff::log::Logger::info("embedding token id=%d", token_id);
                 auto quant_data_ptr = (const void *)((char *)token_embed_buffer->ptr() + token_id * token_embed->get_strides()[1]);
-                auto float_data_ptr = (float *)((char *)output_tensor_buffer+ i * shape_dim + j);
+                auto float_data_ptr = (float *)((char *)output_tensor->get_buffer()->ptr()+ i * shape_dim + j);
                 if (float_data_ptr && quant_data_ptr) {
                     dequantize_callback(quant_data_ptr, float_data_ptr, token_embed->get_shape()[0]);
                 }

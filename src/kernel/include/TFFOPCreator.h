@@ -13,9 +13,10 @@
 namespace tff::kernel {
     template<typename T>
     static T get_param_value(const int &index, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        const auto &name = para_ptr->get_param<std::string>(0);
         auto opt = para_ptr->get_param<T>(index);
         if (!opt.has_value()) {
-            tff::log::Logger::error("Failed to get param[%d]", index);
+            tff::log::Logger::error("op(%s) Failed to get param[%d]",std::string(name.value()).c_str(), index);
             return T{};
         }
         return opt.value();
