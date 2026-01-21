@@ -60,6 +60,7 @@ namespace tff::core::runtime {
         this->_model_creator->_model_ctx._rope_freq_base = cfg._rope_freq_base;
         this->_model_creator->_model_ctx._rope_freq_scale = cfg._rope_freq_scale;
         this->_model_creator->_model_ctx._model_loader = this->_model_loader;
+        this->_model_creator->_model_ctx._f_norm_rms_eps = cfg._f_norm_rms_eps;
         return true;
     }
 

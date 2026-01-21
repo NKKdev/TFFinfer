@@ -640,7 +640,8 @@ namespace tff::kernel {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), XGemm<T>::get_op_name().c_str());
         auto trans_type = get_param_value<tff::core::graph::MatMulTransType>(1, para_ptr);
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
+            core::memory::Tensor::TensorCompare> >(
             2, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             3, para_ptr);
@@ -656,8 +657,12 @@ namespace tff::kernel {
             tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
+        std::vector<std::shared_ptr<core::memory::Tensor>> inputs;
+        for (auto &input_tensor : input_tensors) {
+            inputs.push_back(input_tensor);
+        }
         //
-        gemm_kernel_cuda<T>(trans_type, input_tensors, output_tensors, mem_buffer_manager_ptr);
+        gemm_kernel_cuda<T>(trans_type, inputs, output_tensors, mem_buffer_manager_ptr);
     }
     template<typename T>
     std::string tff::kernel::XGemm<T>::get_op_name() {

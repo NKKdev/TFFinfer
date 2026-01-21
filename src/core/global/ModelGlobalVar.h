@@ -1764,14 +1764,15 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8_RESHAPE, "dequantize_q8_reshape"},
         //
         {tff::core::graph::TffOpType::TFF_OP_PRE_ROPE_TABLE, "pre_rope_table"},
+        {tff::core::graph::TffOpType::TFF_OP_ATTN_MASK, "attn_mask"},
     };
 
     //op fuse model
     static const std::unordered_map<tff::core::graph::TffOpType, std::vector<tff::core::graph::TffOpType> >
     TFF_OP_FUSE_MODEL = {
         {
-            tff::core::graph::TffOpType::TFF_OP_ROPE,
-            {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT}
+            tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT,
+            {tff::core::graph::TffOpType::TFF_OP_ROPE}
         }, //flash attention与rope算子融合
         {tff::core::graph::TffOpType::TFF_OP_RMS_NORM, {graph::TffOpType::TFF_OP_MUL, graph::TffOpType::TFF_OP_ADD}},
         {tff::core::graph::TffOpType::TFF_OP_RMS_NORM, {graph::TffOpType::TFF_OP_MUL}},

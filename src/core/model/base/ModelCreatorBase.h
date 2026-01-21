@@ -31,6 +31,8 @@ namespace tff::core::model {
         float _rope_freq_base;
         float _rope_freq_scale;
 
+        float _f_norm_rms_eps;
+
         bool _use_fp16;
         bool _use_mmap;
 

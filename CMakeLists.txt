@@ -156,6 +156,8 @@ add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/core/model/layer/ModelLayer.h
         src/core/model/qwen3/QWen3MemCreator.cpp
         src/kernel/cuda/mem_ref.cu
+        src/kernel/cuda/unary.cu
+        src/kernel/cuda/mask_op.cu
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

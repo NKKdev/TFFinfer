@@ -267,7 +267,7 @@ namespace tff::kernel {
 
     template<typename T>
     std::string tff::kernel::QuantQ8MatMulReshape<T>::get_op_name() {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL);
+        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL_RESHAPE);
         if (it == core::global::TFF_OP_TYPE_MAP.end()) {
             tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
             return "";

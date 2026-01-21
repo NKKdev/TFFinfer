@@ -82,9 +82,7 @@ namespace tff::core::graph {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
                 return nullptr;
             }
-            for (auto &input : this->_input_nodes) {
-                this->add_inputs(input->get_tensor());
-            }
+
             if (this->_tensor->get_buffer() == nullptr) {
                 this->_tensor->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
                     this->_tensor->get_external_memory_index(), type),
@@ -93,10 +91,12 @@ namespace tff::core::graph {
             }
 
             auto params_ptr = this->get_params();
-            params_ptr->set_param(this->_inputs);
+            //params_ptr->set_param(this->_inputs);
             params_ptr->set_param(this->_tensor);
             params_ptr->set_param(this->_mem_manager_ptr);
-
+            if (this->op_type() == TFF_OP_MEM_REF) {
+                return nullptr;
+            }
             auto callback = this->_devices.begin()->second->get_op_func(this->_op_type, this->data_type());
             return callback;
         };
@@ -304,9 +304,12 @@ namespace tff::core::graph {
             }
             return src_node;
         }
+        inline void add_output_node(const std::shared_ptr<GraphNode> &node) {
+            this->_output_nodes.push_back(node);
+        }
         //
         inline void add_inputs( const std::shared_ptr<core::memory::Tensor> &tensor) {
-            this->_inputs.push_back(tensor);
+            this->_inputs.insert(tensor);
         }
         inline void remove_src_node(const std::shared_ptr<GraphNode> &src_node) {
             std::vector<std::shared_ptr<GraphNode>>::iterator iter = this->_input_nodes.begin();
@@ -320,6 +323,9 @@ namespace tff::core::graph {
         }
         inline std::vector<std::shared_ptr<GraphNode>> input_nodes() const {
             return this->_input_nodes;
+        }
+        inline std::vector<std::shared_ptr<GraphNode>> output_nodes() const {
+            return this->_output_nodes;
         }
     protected:
         NodeMetadata _node_metadata;
@@ -346,7 +352,8 @@ namespace tff::core::graph {
 #ifndef _EXPLICIT_DAG
         //
         std::vector<std::shared_ptr<GraphNode>> _input_nodes;
-        std::vector<std::shared_ptr<memory::Tensor>> _inputs;
+        std::vector<std::shared_ptr<GraphNode>> _output_nodes;
+        std::set<std::shared_ptr<memory::Tensor>, memory::Tensor::TensorCompare> _inputs;
         std::shared_ptr<tff::core::memory::Tensor> _tensor;
 #else
     public:

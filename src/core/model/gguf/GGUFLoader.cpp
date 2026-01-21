@@ -275,6 +275,9 @@ namespace tff::core::model {
         LOAD_KEY_VALUES(ctx, ModelContext::BasicType, uint32_t,
                         tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV,
                         this->_model_config._n_head_kv_arr);
+        LOAD_KEY_VALUE(ctx, ModelContext::BasicType, float,
+                        tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_LAYERNORM_RMS_EPS,
+                        this->_model_config._f_norm_rms_eps);
 
         return true;
     }

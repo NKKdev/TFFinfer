@@ -36,7 +36,8 @@ namespace tff::kernel {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), MemCpy<T>::get_op_name().c_str());
         const auto memcpy_kind = get_param_value<tff::core::memory::MemCpyKind>(1, para_ptr);
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
+            core::memory::Tensor::TensorCompare> >(
             2, para_ptr);
         auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             3, para_ptr);
@@ -44,9 +45,8 @@ namespace tff::kernel {
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
 
-
-        for (int i = 0; i < input_tensors.size(); i++) {
-            auto &input_tensor = input_tensors[i];
+        std::vector<std::shared_ptr<core::memory::Tensor>> inputs;
+        for (auto &input_tensor : input_tensors) {
             if (input_tensor->get_shape() != output_tensors->get_shape()) {
                 continue;
             }

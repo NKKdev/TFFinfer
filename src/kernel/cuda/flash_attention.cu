@@ -704,6 +704,7 @@ namespace tff::kernel {
             M, q_stride, start_m, warp_id, thread_x, out_sm, output);
     }
 
+
     template<typename T, const int ROPE_FLAG>
     void flash_attention_128(const int max_ctx, const int batch, const int M, const int N, const int D,
                              const int q_ld, const int k_ld, const int v_ld,
@@ -712,7 +713,7 @@ namespace tff::kernel {
                              const T *q_gpu,
                              const T *k_gpu,
                              const T *v_gpu,
-                             const T *mask,
+                             T *mask,
                              float *cos_sin_table,
                              float *out_put) {
         if (std::is_same_v<T, half>) {
@@ -736,7 +737,7 @@ namespace tff::kernel {
                         <<<grid,
                         block>>>(
                             M, N, D, max_ctx, D, D, D,
-                            (1.0f / std::sqrt(static_cast<float>(D))),
+                            scale,
                             q_gpu, k_gpu, v_gpu, mask, cos_sin_table, out_put);
             }
         } else if (std::is_same_v<T, float>) {
@@ -749,35 +750,33 @@ namespace tff::kernel {
     void tff::kernel::FlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), FlashAttn<T>::get_op_name().c_str());
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
-            1, para_ptr);
-        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+        auto max_ctx = get_param_value<const int>(1, para_ptr);
+        auto q_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             2, para_ptr);
-        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
+        auto k_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            3, para_ptr);
+        auto v_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            4, para_ptr);
+        auto rope_table = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            5, para_ptr);
+        auto mask_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            6, para_ptr);
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            7, para_ptr);
+        auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMMemManager> >(3, para_ptr);
-        auto rope_flag = get_param_value<const int>(4, para_ptr);
-        if (rope_flag == 1) {
-            if (input_tensors.size() != 4) {
-                tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
-                return;
-            }
-        } else {
-            if (input_tensors.size() != 3) {
-                tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
-                return;
-            }
-        }
-        auto max_ctx = get_param_value<const int>(5, para_ptr);
+                tff::core::runtime::LLMMemManager> >(8, para_ptr);
 
-        if (output_tensors == nullptr) {
+        if (q_tensor== nullptr || k_tensor == nullptr || v_tensor == nullptr || output_tensors == nullptr
+            || rope_table == nullptr || mask_tensor == nullptr || mem_buffer_manager_ptr == nullptr) {
             tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
-        auto q_tensor = input_tensors.at(0);
-        auto k_tensor = input_tensors.at(1);
-        auto v_tensor = input_tensors.at(2);
-        auto mask_tensor = input_tensors.at(3);
+        if (q_tensor->get_buffer() == nullptr || k_tensor->get_buffer() == nullptr || v_tensor->get_buffer() == nullptr ||
+            rope_table->get_buffer() == nullptr || mask_tensor->get_buffer() == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
         auto &output = output_tensors;
         const int num_q_heads = q_tensor->get_shape()[2];
         const int num_kv_heads = k_tensor->get_shape()[2];
@@ -788,8 +787,8 @@ namespace tff::kernel {
         const float scale = 1.0f / std::sqrt(static_cast<float>(D));
         switch (D) {
             case 128: {
-                auto *cos_sin_table = static_cast<float *>(input_tensors.at(3)->get_buffer()->ptr());
-                if (rope_flag == 1) {
+                auto *cos_sin_table = static_cast<float *>(rope_table->get_buffer()->ptr());
+                if (rope_table != nullptr) {
                     flash_attention_128<T, 1>(max_ctx, B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
                                               static_cast<T *>(q_tensor->get_buffer()->ptr()),
                                               static_cast<T *>(k_tensor->get_buffer()->ptr()),

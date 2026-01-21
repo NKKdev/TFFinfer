@@ -32,10 +32,10 @@ namespace tff::core::model {
 
         NodeType input_node;
         input_node = build_layer_node(memory::ModelTensorType::LLM_TENSOR_TOKEN_EMBD,
-            input_layer_iter->second.begin()->second, input_node, true);
+                                      input_layer_iter->second.begin()->second, input_node, true);
 
         if (input_layer_iter != layer_map.end() && !input_layer_iter->second.empty() &&
-           repeating_layer_iter != layer_map.end() && !repeating_layer_iter->second.empty()) {
+            repeating_layer_iter != layer_map.end() && !repeating_layer_iter->second.empty()) {
             //
             if (repeating_layer_iter != layer_map.end() && repeating_layer_iter->second.size() > 1) {
                 const auto &repeating_layer_map = repeating_layer_iter->second;
@@ -44,40 +44,42 @@ namespace tff::core::model {
                     auto &layer_map = repeating_layer_map.find(layer_id)->second;
                     //
                     auto attn_norm_node = build_layer_node(memory::ModelTensorType::LLM_TENSOR_ATTN_NORM,
-                                                     layer_map, input_node);
+                                                           layer_map, input_node);
 
                     auto attn_q_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q,
-                                                          layer_map, attn_norm_node);
+                                                        layer_map, attn_norm_node);
                     auto attn_k_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K,
-                                                      layer_map, attn_q_node);
+                                                        layer_map, attn_q_node);
                     auto attn_v_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V,
-                                                      layer_map, attn_k_node);
+                                                        layer_map, attn_k_node);
 
                     auto attn_q_norm_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q_NORM,
-                                                      layer_map, attn_v_node);
+                                                             layer_map, attn_v_node);
                     auto attn_k_norm_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K_NORM,
-                                                     layer_map, attn_q_norm_node);
+                                                             layer_map, attn_q_norm_node);
+
+                    auto attn_output_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_OUT,
+                                                             layer_map, attn_k_norm_node);
 
                     auto attn_ffn_norm_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_FFN_NORM,
-                                                    layer_map, attn_k_norm_node);
+                                                               layer_map, attn_output_node);
 
                     auto attn_ffn_up_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_FFN_UP,
-                                                    layer_map, attn_ffn_norm_node);
+                                                             layer_map, attn_ffn_norm_node);
 
                     auto attn_ffn_gate_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_FFN_GATE,
-                                                    layer_map, attn_ffn_up_node);
+                                                               layer_map, attn_ffn_up_node);
 
                     auto attn_ffn_down_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_FFN_DOWN,
-                                                    layer_map, attn_ffn_gate_node);
+                                                               layer_map, attn_ffn_gate_node);
                     input_node = attn_ffn_down_node;
-
                 }
             }
         }
         auto output_norm_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_OUTPUT_NORM,
-                                                   output_layer_iter->second.begin()->second, input_node);
+                                                 output_layer_iter->second.begin()->second, input_node);
         auto output_node = build_layer_node(tff::core::memory::ModelTensorType::LLM_TENSOR_OUTPUT,
-                                                   output_layer_iter->second.begin()->second, output_norm_node);
+                                            output_layer_iter->second.begin()->second, output_norm_node);
 
         graph_ptr->build_graph(output_node.find(GraphNodeType::TFF_GRAPH_NODE_CPU2GPU)->second);
     }
@@ -93,7 +95,9 @@ namespace tff::core::model {
             DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
         std::vector<int> device_ids;
         device->get_device_id(device_ids);
-        std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> devices = {{device_ids[0], device}};
+        std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject> > devices = {
+            {device_ids[0], device}
+        };
         current_map2cpu_node->bind_devices(devices);
         auto params = current_map2cpu_node->get_params();
         params->set_param<size_t>(std::move(layer->_model_file_index));
@@ -113,13 +117,15 @@ namespace tff::core::model {
         current_cpu2gpu_node->set_node_meta(NodeMetadata{layer->_layer_name + "_cpu2gpu"});
         if (!is_input) {
             current_cpu2gpu_node->bind_devices(layer->_device_list);
-        }else {
+        } else {
             auto device = tff::factory::ModuleFactory::instance()->create_shared<
-            tff::core::device::DeviceBaseObject>(
-            DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
+                tff::core::device::DeviceBaseObject>(
+                DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
             std::vector<int> device_ids;
             device->get_device_id(device_ids);
-            std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> devices = {{device_ids[0], device}};
+            std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject> > devices = {
+                {device_ids[0], device}
+            };
             current_cpu2gpu_node->bind_devices(devices);
         }
 
@@ -137,20 +143,22 @@ namespace tff::core::model {
         auto tensor = std::make_shared<memory::Tensor>(layer->_tensor);
         current_cpu2gpu_node->set_tensor(tensor);
         return current_cpu2gpu_node;
-
     }
 
     NodeType QWen3Creator::build_layer_node(memory::ModelTensorType tensor_type,
-        const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-        tff::core::model::layer::ModelLayerObject> > &layer_map, NodeType &input_node, bool
-        is_input) {
+                                            const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr
+                                                <
+                                                    tff::core::model::layer::ModelLayerObject> > &layer_map,
+                                            NodeType &input_node, bool
+                                            is_input) {
         auto layer = layer_map.find(tensor_type)->second;
         if (layer == nullptr) {
             return NodeType();
         }
         NodeType out_put_node;
         out_put_node[TFF_GRAPH_NODE_MAP2CPU] = build_host_node(layer, input_node);
-        out_put_node[TFF_GRAPH_NODE_CPU2GPU] = build_device_node(layer, input_node, out_put_node[TFF_GRAPH_NODE_MAP2CPU], is_input);
+        out_put_node[TFF_GRAPH_NODE_CPU2GPU] = build_device_node(layer, input_node,
+                                                                 out_put_node[TFF_GRAPH_NODE_MAP2CPU], is_input);
 
         return out_put_node;
     }

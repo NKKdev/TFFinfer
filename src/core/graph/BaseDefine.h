@@ -114,11 +114,23 @@ namespace tff::core::graph {
         TFF_OP_QUANTIZE_Q8,
         TFF_OP_QUANTIZE_Q8_RESHAPE,
         TFF_OP_QUANTIZE_Q8_MATMUL,
+        TFF_OP_QUANTIZE_Q8_MATMUL_RESHAPE,
         TFF_OP_DEQUANTIZE_Q8,
         TFF_OP_DEQUANTIZE_Q8_RESHAPE,
         //
         TFF_OP_PRE_ROPE_TABLE,
+        TFF_OP_ATTN_MASK,
         TFF_OP_COUNT,
+    };
+    enum TFFMaskType {
+        TFF_MASK_TYPE_UNKNOWN = 0,
+        TFF_MASK_TYPE_CAUSAL = 1,
+    };
+    enum TFFUnaryType {
+        TFF_UNARY_TYPE_UNKNOWN,
+        TFF_UNARY_TYPE_SILU,
+        TFF_UNARY_TYPE_RELU,
+        TFF_UNARY_TYPE_COUNT,
     };
     enum MatMulTransType {
         TFF_NT = 0,

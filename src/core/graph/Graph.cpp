@@ -20,15 +20,17 @@ namespace tff::core::graph {
         if (_visited.find(node) != _visited.end()) {
             return;
         }
-        if (node->op_type() == TFF_OP_MEM_REF) {
-            return;
-        }
+        // if (node->op_type() == TFF_OP_MEM_REF) {
+        //     return;
+        // }
+
         _visited.insert(node);
         _use_counts[node] = 0;
 
         for (auto &input : node->_input_nodes) {
             if (input != nullptr) {
                 visit(input);
+                input->add_output_node(node);
                 _use_counts[input]++;
             }
         }

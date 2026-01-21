@@ -408,40 +408,28 @@ namespace tff::kernel {
     void tff::kernel::QuantQ8MatMul<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), QuantQ8MatMul<T>::get_op_name().c_str());
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto weight_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             1, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto x_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
-        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            3, para_ptr);
+        auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
-                tff::core::runtime::LLMMemManager> >(3, para_ptr);
+                tff::core::runtime::LLMMemManager> >(4, para_ptr);
 
-        if (input_tensors.size() != 2) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
+        if (weight_tensor == nullptr || x_tensor == nullptr || output_tensors == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
-        if (output_tensors.size() != 1) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
-            return;
-        }
-        auto weight_tensor = input_tensors.at(0);
+
         if (weight_tensor->get_buffer() == nullptr) {
             tff::log::Logger::error("weight tensor is null!");
             return;
         }
-        auto x_tensor = input_tensors.at(1);
         if (x_tensor->get_buffer() == nullptr) {
             tff::log::Logger::error("x tensor is null!");
             return;
-        }
-        auto output = output_tensors.at(0);
-        if (output->get_buffer() == nullptr) {
-            // auto mem_buffer_pair = mem_buffer_manager_ptr->get_gpu_memory();
-            // if (mem_buffer_pair.second == nullptr) {
-            //     tff::log::Logger::error("there is no GPU memory!");
-            //     return;
-            // }
-            // output->set_buffer_data(mem_buffer_pair.second, output->get_bytes(), mem_buffer_pair.first);
         }
         const int K = weight_tensor->get_shape()[0];
         const int M = weight_tensor->get_shape()[1];
@@ -450,7 +438,7 @@ namespace tff::kernel {
 
         //
         quant_q_8_0_matmul<T>(M, N, K, weight_tensor->get_buffer()->ptr(),
-                              x_tensor->get_buffer()->ptr(), static_cast<T *>(output->get_buffer()->ptr()));
+                              x_tensor->get_buffer()->ptr(), static_cast<T *>(output_tensors->get_buffer()->ptr()));
 
         // mem_buffer_manager_ptr->reset_gpu_memory(weight_tensor->get_external_memory_index());
         // mem_buffer_manager_ptr->reset_gpu_memory(x_tensor->get_external_memory_index());// todo 需要区分全部加载权重和边推理边加载权重

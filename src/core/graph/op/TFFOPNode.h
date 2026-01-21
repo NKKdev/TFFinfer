@@ -34,7 +34,18 @@ namespace tff::core::graph::op {
                 return nullptr;
             }
 
-
+            std::shared_ptr<core::memory::Tensor> _weight;
+            std::shared_ptr<core::memory::Tensor> x;
+            for (auto &input : this->input_nodes()) {
+                if (input->op_type() == TFF_OP_MEM_REF) {
+                    _weight = input->get_tensor();
+                }else {
+                    x = input->get_tensor();
+                }
+            }
+            auto params = this->get_params();
+            params->set_param(_weight);
+            params->set_param(x);
             auto callback = GraphNode::forward(type);
             return callback;
         }
@@ -61,11 +72,19 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("MatMulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            // if (this->_prev_nodes.size() != 2) {
-            //     tff::log::Logger::error("MatMulNode previous node count is wrong!!");
-            //     return nullptr;
-            // }
 
+            std::shared_ptr<core::memory::Tensor> _weight;
+            std::shared_ptr<core::memory::Tensor> x;
+            for (auto &input : this->input_nodes()) {
+                if (input->op_type() == TFF_OP_MEM_REF) {
+                    _weight = input->get_tensor();
+                }else {
+                    x = input->get_tensor();
+                }
+            }
+            auto params = this->get_params();
+            params->set_param(_weight);
+            params->set_param(x);
             auto callback = GraphNode::forward(type);
             return callback;
         }
@@ -131,14 +150,32 @@ namespace tff::core::graph::op {
         }
 
         ~RMSNormNode() override = default;
-
+    public:
+        std::shared_ptr<core::memory::Tensor> _weight;// 可选;
+        std::shared_ptr<core::memory::Tensor> _bias;// 可选;
+        std::shared_ptr<core::memory::Tensor> _x;
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
             if (this->_op_type != TFF_OP_RMS_NORM) {
                 tff::log::Logger::error("RMSNormNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
+            if (this->input_nodes().size() != 2) {
+                tff::log::Logger::error("node (%s) params is invalid!!");
+                return nullptr;
+            }
+            std::shared_ptr<core::memory::Tensor> weight;
+            std::shared_ptr<core::memory::Tensor> x;
+            for (auto &input : this->input_nodes()) {
+                if (input->op_type() == TFF_OP_MEM_REF) {
+                    weight = input->get_tensor();
+                }else {
+                    x = input->get_tensor();
+                }
+            }
+            auto params = this->get_params();
+            params->set_param(weight);
+            params->set_param(x);
             auto callback = GraphNode::forward(type);
             return callback;
         }
@@ -270,7 +307,7 @@ namespace tff::core::graph::op {
 
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
             if (this->_op_type != TFF_OP_MUL) {
-                tff::log::Logger::error("MulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                tff::log::Logger::error("MulNode op type(expect TFF_OP_MUL) is wrong!!");
                 return nullptr;
             }
 
@@ -314,6 +351,11 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("ReshapeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
+            for (auto &input : this->input_nodes()) {
+                this->add_inputs(input->get_tensor());
+            }
+            auto params_ptr = this->get_params();
+            params_ptr->set_param(this->_inputs);
             auto callback = GraphNode::forward(type);
             return callback;
         }
@@ -398,7 +440,11 @@ namespace tff::core::graph::op {
             //         this->_params_ptr->get_param_count());
             //     return nullptr;
             // }
-
+            for (auto &input : this->input_nodes()) {
+                this->add_inputs(input->get_tensor());
+            }
+            auto params_ptr = this->get_params();
+            params_ptr->set_param(this->_inputs);
             auto callback = GraphNode::forward(type);
             return callback;
         }
@@ -422,6 +468,11 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("MemCpyNode param count is less than 2");
                 return nullptr;
             }
+            for (auto &input : this->input_nodes()) {
+                this->add_inputs(input->get_tensor());
+            }
+            auto params_ptr = this->get_params();
+            params_ptr->set_param(this->_inputs);
 
             auto callback = GraphNode::forward(type);
             return callback;
@@ -434,6 +485,7 @@ namespace tff::core::graph::op {
         explicit EmbeddingNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_EMBEDDING); }
 
         ~EmbeddingNode() override = default;
+    public:
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
@@ -446,14 +498,19 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("error: EmbeddingNode input_node size(expect 2)");
                 return nullptr;
             }
-
-            // auto input_token_node = this->_input_nodes[0];
-            // auto embd_weight_node = this->_input_nodes[1];
-            //
-            // std::array<int64_t, MAX_TENSOR_DIM> shape = {embd_weight_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[1], 1, 1};
-            // auto tensor = std::make_shared<tff::core::memory::Tensor>(MAX_TENSOR_DIM, memory::DataType::TFF_DATA_TYPE_F32, shape,
-            //     false, this->device().begin()->second->get_device_buffer_allocator());
-            // this->set_tensor(tensor);
+            std::shared_ptr<core::memory::Tensor> _embedding_weight;
+            std::shared_ptr<core::memory::Tensor> _input_token;
+            for (auto &input : this->_input_nodes) {
+                if (input->get_tensor()->get_tensor_type() == tff::core::memory::ModelTensorType::LLM_TENSOR_TOKEN_EMBD) {
+                    _embedding_weight = input->get_tensor();
+                }
+                if (input->get_tensor()->get_tensor_type() == tff::core::memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN) {
+                    _input_token = input->get_tensor();
+                }
+            }
+            auto params_ptr = this->get_params();
+            params_ptr->set_param(_embedding_weight);
+            params_ptr->set_param(_input_token);
             auto callback = GraphNode::forward(type);
             return callback;
         }
@@ -493,7 +550,47 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("FlashAttnNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
+            std::shared_ptr<core::memory::Tensor> q;
+            std::shared_ptr<core::memory::Tensor> k;
+            std::shared_ptr<core::memory::Tensor> v;
+            std::shared_ptr<core::memory::Tensor> rope_table;
+            std::shared_ptr<core::memory::Tensor> mask;
+            for (auto &input : this->_input_nodes) {
+                auto tensor_type = input->get_tensor()->get_tensor_type();
+                if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q) {
+                    q = input->get_tensor();
+                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
+                    k = input->get_tensor();
+                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
+                    v = input->get_tensor();
+                }
+                if (input->op_type() == TFF_OP_PRE_ROPE_TABLE) {
+                    rope_table = input->get_tensor();
+                }
+                if (input->op_type() == TFF_OP_ATTN_MASK) {
+                    mask = input->get_tensor();
+                }
+            }
+            //
+            // if (rope_table->get_buffer() == nullptr) {
+            //     rope_table->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
+            //         this->_tensor->get_external_memory_index(), type),
+            //         this->_tensor->get_bytes());
+            //     rope_table->set_allocator(this->device().begin()->second->get_device_buffer_allocator(this->device().begin()->first));
+            // }
+            // if (mask->get_buffer() == nullptr) {
+            //     mask->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
+            //         this->_tensor->get_external_memory_index(), type),
+            //         this->_tensor->get_bytes());
+            //     mask->set_allocator(this->device().begin()->second->get_device_buffer_allocator(this->device().begin()->first));
+            // }
 
+            auto params = this->get_params();
+            params->set_param(q);
+            params->set_param(k);
+            params->set_param(v);
+            params->set_param(rope_table);
+            params->set_param(mask);
             auto callback = GraphNode::forward(type);
             return callback;
         }
@@ -515,6 +612,55 @@ namespace tff::core::graph::op {
             auto callback = GraphNode::forward(type);
             return callback;
         }
+    };
+    //
+    class UnaryOPNode final : public tff::core::graph::GraphNode {
+        public:
+        explicit UnaryOPNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_UNARY);
+        }
+        ~UnaryOPNode() override = default;
+    public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+            if (this->_op_type != TFF_OP_UNARY) {
+                tff::log::Logger::error("UnaryOPNode op type(expect TFF_OP_UNARY) is wrong!!");
+                return nullptr;
+            }
+            std::shared_ptr<core::memory::Tensor> ffn_up_x;
+            std::shared_ptr<core::memory::Tensor> ffn_gate_x;
+            for (auto &input : this->_input_nodes) {
+                if (input->get_tensor()->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_FFN_UP) {
+                    ffn_up_x = input->get_tensor();
+                }
+                if (input->get_tensor()->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_FFN_GATE) {
+                    ffn_gate_x = input->get_tensor();
+                }
+            }
+            auto params = this->get_params();
+            params->set_param(ffn_gate_x);
+            params->set_param(ffn_up_x);
+            auto callback = GraphNode::forward(type);
+            return callback;
+        }
+
+    };
+    //
+    class MaskOPNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit MaskOPNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_ATTN_MASK);
+        }
+        ~MaskOPNode() override = default;
+    public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+            if (this->_op_type != TFF_OP_ATTN_MASK) {
+                tff::log::Logger::error("MaskOPNode op type(expect TFF_OP_ATTN_MASK) is wrong!!");
+                return nullptr;
+            }
+            auto callback = GraphNode::forward(type);
+            return callback;
+        }
+
     };
 }
 

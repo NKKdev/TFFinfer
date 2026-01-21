@@ -120,6 +120,8 @@ X(TFF_MODEL_ARCH_GEMMA,   "gemma")
         float _rope_freq_base;
         float _rope_freq_scale;
 
+        float _f_norm_rms_eps;
+
         //
         std::vector<uint32_t> _n_head_arr;
         std::vector<uint32_t> _n_head_kv_arr;

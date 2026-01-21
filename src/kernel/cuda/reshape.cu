@@ -23,11 +23,13 @@ namespace tff::kernel {
         return name;
     }
     template class tff::kernel::Reshape<float>;
+    template class tff::kernel::Reshape<half>;
     template class tff::kernel::Reshape<double>;
     template class tff::kernel::Reshape<int32_t>;
     template class tff::kernel::Reshape<int64_t>;
     template class tff::kernel::Reshape<Q8_0>;
     REGISTER_OP_OBJECT(Reshape, float);
+    REGISTER_OP_OBJECT(Reshape, half);
     REGISTER_OP_OBJECT(Reshape, double);
     REGISTER_OP_OBJECT(Reshape, int32_t);
     REGISTER_OP_OBJECT(Reshape, int64_t);

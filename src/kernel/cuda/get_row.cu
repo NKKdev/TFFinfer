@@ -25,7 +25,8 @@ namespace tff::kernel {
     void tff::kernel::GetRow<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), GetRow<T>::get_op_name().c_str());
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
+            core::memory::Tensor::TensorCompare> >(
             1, para_ptr);
         auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             2, para_ptr);

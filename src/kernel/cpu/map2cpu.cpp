@@ -54,7 +54,8 @@ namespace tff::kernel {
         const auto offset = get_param_value<size_t>(2, para_ptr);
         const auto data_size = get_param_value<double>(3, para_ptr);
         const auto model_loader_ptr = get_param_value<std::shared_ptr<tff::core::model::ModelLoaderBase> >(4, para_ptr);
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>> >(
+        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
+            core::memory::Tensor::TensorCompare> >(
             5, para_ptr);
         auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             6, para_ptr);
@@ -62,7 +63,11 @@ namespace tff::kernel {
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(7, para_ptr);
 
-        mem_map2cpu_kernel_cpu<T>(model_file_index, offset, data_size, model_loader_ptr, input_tensors, output_tensors,
+        std::vector<std::shared_ptr<core::memory::Tensor>> inputs;
+        for (auto &input_tensor : input_tensors) {
+            inputs.push_back(input_tensor);
+        }
+        mem_map2cpu_kernel_cpu<T>(model_file_index, offset, data_size, model_loader_ptr, inputs, output_tensors,
                                   mem_buffer_manager_ptr);
     }
     template<typename T>

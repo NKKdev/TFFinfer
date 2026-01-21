@@ -90,7 +90,7 @@ namespace tff::core::model {
             std::shared_ptr<GraphNode> &b_node, bool inplace = false);
 
         std::shared_ptr<tff::core::graph::GraphNode> build_rope_node(
-            std::shared_ptr<GraphNode> &input_node);
+            std::shared_ptr<GraphNode> &input_node, std::shared_ptr<GraphNode> &rope_table_node);
 
         std::shared_ptr<tff::core::graph::GraphNode> build_ffn_inp(
             std::shared_ptr<GraphNode> &input_node,
@@ -119,6 +119,10 @@ namespace tff::core::model {
                 tff::core::model::layer::ModelLayerObject> > &layer_map,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
             std::shared_ptr<tff::core::graph::GraphNode> &input_node);
+
+        std::shared_ptr<tff::core::graph::GraphNode> build_unary_op(
+            std::shared_ptr<tff::core::graph::GraphNode> &up_node,
+            std::shared_ptr<tff::core::graph::GraphNode> &gate_node);
 
         std::shared_ptr<tff::core::graph::GraphNode> build_rope_table_node();
 

@@ -16,7 +16,7 @@ namespace tff::kernel {
         const auto &name = para_ptr->get_param<std::string>(0);
         auto opt = para_ptr->get_param<T>(index);
         if (!opt.has_value()) {
-            tff::log::Logger::error("op(%s) Failed to get param[%d]",std::string(name.value()).c_str(), index);
+            tff::log::Logger::error("op(%s) Failed to get param[%d]", std::string(name.value()).c_str(), index);
             return T{};
         }
         return opt.value();
@@ -177,6 +177,22 @@ namespace tff::kernel {
 
     template<typename T>
     class PreRopeTable : public base::OPCreatorBase<PreRopeTable<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
+
+    template<typename T>
+    class UnaryOP : public base::OPCreatorBase<UnaryOP<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
+    //
+    template<typename T>
+    class MaskOP : public base::OPCreatorBase<MaskOP<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
