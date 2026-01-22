@@ -81,6 +81,7 @@ namespace tff::core::graph {
 
         TFF_OP_FLASH_ATTN_EXT,
         TFF_OP_FLASH_ATTN_BACK,
+        TFF_OP_FLASH_ATTN_PAGED,
         TFF_OP_SSM_CONV,
         TFF_OP_SSM_SCAN,
         TFF_OP_WIN_PART,

@@ -595,6 +595,53 @@ namespace tff::core::graph::op {
             return callback;
         }
     };
+        //
+    class PagedFlashAttnNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit PagedFlashAttnNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_FLASH_ATTN_PAGED);
+        }
+
+        ~PagedFlashAttnNode() override = default;
+
+    public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+            if (this->_op_type != TFF_OP_FLASH_ATTN_PAGED) {
+                tff::log::Logger::error("PagedFlashAttnNode op type(expect TFF_OP_FLASH_ATTN_PAGED) is wrong!!");
+                return nullptr;
+            }
+            std::shared_ptr<core::memory::Tensor> q;
+            std::shared_ptr<core::memory::Tensor> k;
+            std::shared_ptr<core::memory::Tensor> v;
+            std::shared_ptr<core::memory::Tensor> rope_table;
+            std::shared_ptr<core::memory::Tensor> mask;
+            for (auto &input : this->_input_nodes) {
+                auto tensor_type = input->get_tensor()->get_tensor_type();
+                if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q) {
+                    q = input->get_tensor();
+                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
+                    k = input->get_tensor();
+                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
+                    v = input->get_tensor();
+                }
+                if (input->op_type() == TFF_OP_PRE_ROPE_TABLE) {
+                    rope_table = input->get_tensor();
+                }
+                if (input->op_type() == TFF_OP_ATTN_MASK) {
+                    mask = input->get_tensor();
+                }
+            }
+
+            auto params = this->get_params();
+            params->set_param(q);
+            params->set_param(k);
+            params->set_param(v);
+            params->set_param(rope_table);
+            params->set_param(mask);
+            auto callback = GraphNode::forward(type);
+            return callback;
+        }
+    };
     //
     class PreRopeTableNode final : public tff::core::graph::GraphNode {
     public:
@@ -662,6 +709,44 @@ namespace tff::core::graph::op {
         }
 
     };
+    //
+    class GetOfRowsOPNode final : public tff::core::graph::GraphNode {
+        public:
+        explicit GetOfRowsOPNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_GET_ROWS);
+        }
+        ~GetOfRowsOPNode() override = default;
+        public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+            if (this->_op_type != TFF_OP_GET_ROWS) {
+                tff::log::Logger::error("GetOfRowsOPNode op type (expect TFF_OP_GET_ROWS) is wrong");
+                return nullptr;
+            }
+
+            auto callback = GraphNode::forward(type);
+            return callback;
+        }
+    };
+    //
+    class SetOfRowsOPNode final : public tff::core::graph::GraphNode {
+        public:
+        explicit SetOfRowsOPNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_SET_ROWS);
+        }
+        ~SetOfRowsOPNode() override = default;
+        public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+            if (this->_op_type != TFF_OP_SET_ROWS) {
+                tff::log::Logger::error("SetOfRowsOPNode op type (expect TFF_OP_SET_ROWS) is wrong");
+                return nullptr;
+            }
+
+
+            auto callback = GraphNode::forward(type);
+            return callback;
+        }
+    };
+
 }
 
 

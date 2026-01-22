@@ -122,6 +122,7 @@ namespace tff::core::model {
 
         graph_ptr->build_graph(out_put_node);
     }
+
     //
     std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_rope_table_node() {
         auto rope_table_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_PRE_ROPE_TABLE);
@@ -145,10 +146,11 @@ namespace tff::core::model {
 
             std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject> > devices = {{0, dev_gpu}};
             rope_table_node->bind_devices(devices);
-            rope_table_node->set_tensor(std::make_shared<tff::core::memory::Tensor>(4, memory::DataType::TFF_DATA_TYPE_F32,
-                                                                      std::array<int64_t, MAX_TENSOR_DIM>{
-                                                                          embedding_dim, max_seq_len, 1, 1
-                                                                      }));
+            rope_table_node->set_tensor(std::make_shared<tff::core::memory::Tensor>(
+                4, memory::DataType::TFF_DATA_TYPE_F32,
+                std::array<int64_t, MAX_TENSOR_DIM>{
+                    embedding_dim, max_seq_len, 1, 1
+                }));
         }
         return rope_table_node;
     }
@@ -216,7 +218,7 @@ namespace tff::core::model {
                 break;
         }
         result->set_tensor(std::make_shared<tff::core::memory::Tensor>(layer->_tensor->get_shape().size(),
-                                                                  result_data_type, shape));
+                                                                       result_data_type, shape));
         result->get_tensor()->set_tensor_type(layer->_tensor->get_tensor_type());
 
         result->add_src_node(b_node);
@@ -258,7 +260,8 @@ namespace tff::core::model {
 
         auto &inp_tensor = input_node->get_tensor();
         rms_norm_node->set_tensor(std::make_shared<memory::Tensor>(inp_tensor->get_shape().size(),
-                                                       inp_tensor->get_data_type(), inp_tensor->get_shape()));
+                                                                   inp_tensor->get_data_type(),
+                                                                   inp_tensor->get_shape()));
         rms_norm_node->get_tensor()->set_tensor_type(inp_tensor->get_tensor_type());
 
         if (layer != nullptr) {
@@ -309,7 +312,7 @@ namespace tff::core::model {
         this->_model_ctx._n_tokens = input_token_layer->_tensor->get_shape()[0];
 
         auto input_token_node = ADD_NODE(TFF_OP_MEM_REF);
-        input_token_node->set_node_meta(NodeMetadata{true, false,input_token_layer->_layer_name});
+        input_token_node->set_node_meta(NodeMetadata{true, false, input_token_layer->_layer_name});
         input_token_node->bind_devices(input_token_layer->_device_list);
         input_token_node->set_tensor(input_token_layer->_tensor);
 
@@ -322,7 +325,8 @@ namespace tff::core::model {
         embedding_node->add_src_node(input_token_node);
 
         std::array<int64_t, MAX_TENSOR_DIM> shape = {
-            embd_weight_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[1], 1
+            embd_weight_node->get_tensor()->get_shape()[0], input_token_node->get_tensor()->get_shape()[0],
+            input_token_node->get_tensor()->get_shape()[1], 1
         };
         embedding_node->set_tensor(std::make_shared<tff::core::memory::Tensor>(
             MAX_TENSOR_DIM, memory::DataType::TFF_DATA_TYPE_F32, shape));
@@ -375,7 +379,6 @@ namespace tff::core::model {
         const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
             tff::core::model::layer::ModelLayerObject> > &layer_map,
         std::shared_ptr<tff::core::graph::GraphNode> &input_node) {
-
         auto attn_layer = layer_map.find(
                     tensor_type)->
                 second;
@@ -393,14 +396,18 @@ namespace tff::core::model {
         std::shared_ptr<tff::core::graph::GraphNode> &v_node) {
         auto layer = layer_map.find(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_OUT)->second;
 
-        auto data_type = this->_model_ctx._use_fp16 ? memory::DataType::TFF_DATA_TYPE_F16 : memory::DataType::TFF_DATA_TYPE_F32;
+        auto data_type = this->_model_ctx._use_fp16
+                             ? memory::DataType::TFF_DATA_TYPE_F16
+                             : memory::DataType::TFF_DATA_TYPE_F32;
 
         auto attn_mask_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_ATTN_MASK);
         tff::core::graph::NodeMetadata meta_attn_mask{layer->_layer_name + "_attn_mask"};
         attn_mask_node->set_node_meta(meta_attn_mask);
         attn_mask_node->bind_devices(layer->_device_list);
         attn_mask_node->get_params()->set_param<const int>(core::graph::TFFMaskType::TFF_MASK_TYPE_CAUSAL);
-        std::array<int64_t, MAX_TENSOR_DIM> shapes = {q_node->get_tensor()->get_shape()[2], q_node->get_tensor()->get_shape()[2],1,1};
+        std::array<int64_t, MAX_TENSOR_DIM> shapes = {
+            q_node->get_tensor()->get_shape()[2], q_node->get_tensor()->get_shape()[2], 1, 1
+        };
         auto mask_tensor = std::make_shared<memory::Tensor>(data_type, shapes);
         attn_mask_node->set_tensor(mask_tensor);
 
@@ -485,8 +492,10 @@ namespace tff::core::model {
 
         return build_ffn_down(layer_map, graph_ptr, unary_op_node);
     }
+
     //
-    std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_unary_op(std::shared_ptr<tff::core::graph::GraphNode> &up_node,
+    std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_unary_op(
+        std::shared_ptr<tff::core::graph::GraphNode> &up_node,
         std::shared_ptr<tff::core::graph::GraphNode> &gate_node) {
         auto unary_op_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_UNARY);
         auto devices = up_node->devices();
@@ -499,7 +508,23 @@ namespace tff::core::model {
         unary_op_node->get_params()->set_param<const int>(tff::core::graph::TFFUnaryType::TFF_UNARY_TYPE_SILU);
 
         return unary_op_node;
+    }
 
+    //
+    std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_kv_cache_store_node(
+        const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
+            tff::core::model::layer::ModelLayerObject> > &layer_map,
+        const int &layer_id,
+        tff::core::memory::ModelTensorType tensor_type,
+        const std::shared_ptr<GraphNode> &node) {
+        auto input_token_layer = layer_map.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN)->second;
 
+        auto cache_store_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_SET_ROWS);
+        cache_store_node->set_node_meta({"cache_store_node"});
+        auto device = node->devices();
+        cache_store_node->bind_devices(device);
+        cache_store_node->add_src_node(node);
+
+        return cache_store_node;
     }
 }

@@ -13,16 +13,27 @@ namespace tff::kernel {
         const std::shared_ptr<tff::core::memory::Tensor> &src,
         const std::shared_ptr<tff::core::memory::Tensor> &dst,
         std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr,
-        tff::core::memory::MemCpyKind kind) {
-
+        tff::core::memory::MemCpyKind kind,
+        std::shared_ptr<core::device::DeviceStream> &stream,
+        std::shared_ptr<core::device::DeviceEvent> &event,
+        std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
         auto allocator = dst->get_allocator();
         if (allocator == nullptr) {
             tff::log::Logger::error("kernel (%s) allocator is invalid!");
             return;
         }
-        allocator->memcopy(src->get_buffer()->ptr(), dst->get_buffer()->ptr(), dst->get_bytes(), kind);
+        for (auto &wait_event : wait_event_list) {
+            if (wait_event == nullptr) {
+                continue;
+            }
+            stream->wait_event(wait_event->get_native_event());
+        }
+        allocator->memcpy_async(src->get_buffer()->ptr(), dst->get_buffer()->ptr(), dst->get_bytes(), kind,
+                                stream->get_native_stream());
     }
-    static bool is_same_shape(std::array<int64_t, MAX_TENSOR_DIM> &shape1,std::array<int64_t, MAX_TENSOR_DIM> &shape2) {
+
+    static bool is_same_shape(std::array<int64_t, MAX_TENSOR_DIM> &shape1,
+                              std::array<int64_t, MAX_TENSOR_DIM> &shape2) {
         for (int i = 0; i < shape1.size(); i++) {
             if (shape1[i] != shape2[i]) {
                 return false;
@@ -30,6 +41,7 @@ namespace tff::kernel {
         }
         return true;
     }
+
     //
     template<typename T>
     void tff::kernel::MemCpy<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
@@ -39,14 +51,21 @@ namespace tff::kernel {
         auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
             core::memory::Tensor::TensorCompare> >(
             2, para_ptr);
-        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             3, para_ptr);
         std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
+        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream> >(5, para_ptr);
+        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent> >(6, para_ptr);
+        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(7, para_ptr);
+        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
 
-        std::vector<std::shared_ptr<core::memory::Tensor>> inputs;
-        for (auto &input_tensor : input_tensors) {
+        std::vector<std::shared_ptr<core::memory::Tensor> > inputs;
+        for (auto &input_tensor: input_tensors) {
             if (input_tensor->get_shape() != output_tensors->get_shape()) {
                 continue;
             }
@@ -59,10 +78,10 @@ namespace tff::kernel {
                 return;
             }
             memcpy_kernel_cuda<T>(*input_tensors.begin(), output_tensors, mem_buffer_manager_ptr,
-                              memcpy_kind);
+                                  memcpy_kind, stream, event, event_list);
         }
-
     }
+
     template<typename T>
     std::string tff::kernel::MemCpy<T>::get_op_name() {
         auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MEM_CPY);
@@ -74,6 +93,7 @@ namespace tff::kernel {
         name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();;
         return name;
     }
+
     template class tff::kernel::MemCpy<float>;
     template class tff::kernel::MemCpy<double>;
     template class tff::kernel::MemCpy<int32_t>;
@@ -86,5 +106,6 @@ namespace tff::kernel {
     REGISTER_OP_OBJECT(MemCpy, int32_t);
 
     REGISTER_OP_OBJECT(MemCpy, int64_t);
+
     REGISTER_OP_OBJECT(MemCpy, Q8_0);
 }

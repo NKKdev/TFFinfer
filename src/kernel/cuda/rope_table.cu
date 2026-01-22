@@ -6,7 +6,6 @@
 #include "kernel/include/kernel_util.h"
 
 namespace tff::kernel {
-
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int BLOCK_DIM_M, const int BLOCK_DIM_N>
     __global__ void precompute_rope_table(const int max_seq_len, const int dim, const float log_base,
                                           T *out_table) {
@@ -38,11 +37,14 @@ namespace tff::kernel {
             }
         }
     }
+
     template<typename T>
     void precompute_rope_table(const int max_seq_len, const int dim, const float base,
-        std::shared_ptr<tff::core::memory::Tensor> &out_table,
-        std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
-
+                               std::shared_ptr<tff::core::memory::Tensor> &out_table,
+                               std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr,
+                               std::shared_ptr<core::device::DeviceStream> &stream,
+                               std::shared_ptr<core::device::DeviceEvent> &event,
+                               std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
         constexpr int BLOCK_DIM_M = 64;
         constexpr int BLOCK_DIM_N = 32;
         constexpr int VEC_DIM_M = 8;
@@ -52,9 +54,15 @@ namespace tff::kernel {
         dim3 block(THREAD_BLOCK_DIM, 1);
 
         float log_base = std::log(base);
-        precompute_rope_table<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N><<<grid, block>>>(max_seq_len, dim,
-            log_base, static_cast<T *>(out_table->get_buffer()->ptr()));
+        for (auto &wait_event : wait_event_list) {
+            stream->wait_event(wait_event->get_native_event());
+        }
+        precompute_rope_table<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N><<<grid, block, 0, static_cast<
+            cudaStream_t>(stream->get_native_stream())>>>(max_seq_len, dim,
+                                                          log_base, static_cast<T *>(out_table->get_buffer()->ptr()));
+        event->record(stream);
     }
+
     template<typename T>
     void tff::kernel::PreRopeTable<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
@@ -62,18 +70,25 @@ namespace tff::kernel {
         auto max_seq_len = get_param_value<const uint32_t>(1, para_ptr);
         auto dim = get_param_value<const uint32_t>(2, para_ptr);
         auto base = get_param_value<float>(3, para_ptr);
-        auto scale = get_param_value<float>(4, para_ptr);//todo 支持rope_scale；
-        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto scale = get_param_value<float>(4, para_ptr); //todo 支持rope_scale；
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             5, para_ptr);
         auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(6, para_ptr);
+        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream> >(7, para_ptr);
+        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent> >(8, para_ptr);
+        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(9, para_ptr);
+        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
         if (output_tensors == nullptr) {
             tff::log::Logger::error("Output tensor size mismatch");
             return;
         }
 
-        precompute_rope_table<T>(max_seq_len, dim, base, output_tensors, mem_buffer_manager_ptr);
+        precompute_rope_table<T>(max_seq_len, dim, base, output_tensors, mem_buffer_manager_ptr, stream, event, event_list);
     }
 
     template<typename T>
@@ -87,6 +102,7 @@ namespace tff::kernel {
         name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();;
         return name;
     }
+
     template class tff::kernel::PreRopeTable<float>;
     REGISTER_OP_OBJECT(PreRopeTable, float);
 }

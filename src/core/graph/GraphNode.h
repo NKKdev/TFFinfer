@@ -89,11 +89,16 @@ namespace tff::core::graph {
                     this->_tensor->get_bytes());
                 this->_tensor->set_allocator(this->device().begin()->second->get_device_buffer_allocator(this->device().begin()->first));
             }
-
+            std::vector<std::shared_ptr<core::device::DeviceEvent>> events_list;
+            for (auto &input : this->input_nodes()) {
+                events_list.push_back(input->event());
+            }
             auto params_ptr = this->get_params();
-            //params_ptr->set_param(this->_inputs);
             params_ptr->set_param(this->_tensor);
             params_ptr->set_param(this->_mem_manager_ptr);
+            params_ptr->set_param(this->stream());
+            params_ptr->set_param(this->event());
+            params_ptr->set_param(events_list);
             if (this->op_type() == TFF_OP_MEM_REF) {
                 return nullptr;
             }
@@ -215,6 +220,11 @@ namespace tff::core::graph {
         //
         inline void bind_devices(std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> &device) {
             this->_devices = device;
+            if (!this->_devices.empty()) {
+                auto device_iter = this->_devices.begin();
+                this->_device_stream_ptr = device_iter->second->create_stream(device_iter->first);
+                this->_device_event_ptr = device_iter->second->create_event(device_iter->first);
+            }
         }
 
         std::unordered_map<int, std::shared_ptr<device::DeviceBaseObject>> device() const {
@@ -327,6 +337,14 @@ namespace tff::core::graph {
         inline std::vector<std::shared_ptr<GraphNode>> output_nodes() const {
             return this->_output_nodes;
         }
+        //
+        inline std::shared_ptr<core::device::DeviceEvent> event() const {
+            return this->_device_event_ptr;
+        }
+        //
+        inline std::shared_ptr<core::device::DeviceStream> stream() const {
+            return this->_device_stream_ptr;
+        }
     protected:
         NodeMetadata _node_metadata;
         bool _is_fused;
@@ -348,6 +366,10 @@ namespace tff::core::graph {
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject>> _devices;
         //
         std::shared_ptr<tff::core::runtime::LLMMemManager> _mem_manager_ptr;
+
+        //
+        std::shared_ptr<core::device::DeviceStream> _device_stream_ptr;
+        std::shared_ptr<core::device::DeviceEvent> _device_event_ptr;
 
 #ifndef _EXPLICIT_DAG
         //

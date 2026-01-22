@@ -176,4 +176,14 @@ namespace tff::core::device::cpu {
             OP_NODE_FLAG,
             op_name);
     }
+    std::shared_ptr<DeviceStream> DeviceCPU::create_stream(int device_id) {
+        return nullptr;
+    }
+
+    std::shared_ptr<DeviceEvent> DeviceCPU::create_event(int device_id) {
+        return nullptr;
+    }
+    float DeviceCPU::elapsed_time(const std::shared_ptr<DeviceEvent> &start, const std::shared_ptr<DeviceEvent> &stop) {
+        return 0.0f;
+    }
 }

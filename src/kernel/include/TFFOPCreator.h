@@ -92,6 +92,15 @@ namespace tff::kernel {
 
     //
     template<typename T>
+    class PagedFlashAttn : public base::OPCreatorBase<PagedFlashAttn<T>, T> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        static std::string get_op_name();
+    };
+
+    //
+    template<typename T>
     class Add : public base::OPCreatorBase<Add<T>, T> {
     public:
         static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
@@ -190,6 +199,7 @@ namespace tff::kernel {
 
         static std::string get_op_name();
     };
+
     //
     template<typename T>
     class MaskOP : public base::OPCreatorBase<MaskOP<T>, T> {

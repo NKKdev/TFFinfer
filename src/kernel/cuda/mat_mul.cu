@@ -550,7 +550,10 @@ namespace tff::kernel {
     static void gemm_kernel_cuda(const tff::core::graph::MatMulTransType &trans_type,
                                  std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
                                  std::vector<std::shared_ptr<tff::core::memory::Tensor> > &dst,
-                                 std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
+                                 std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr,
+                             std::shared_ptr<core::device::DeviceStream> &stream,
+                             std::shared_ptr<core::device::DeviceEvent> &event,
+                             std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
         auto &input_tensor_a = *src.begin();
         auto &input_tensor_b = *src.rbegin();
         auto &output_tensor = *dst.begin();
@@ -603,34 +606,41 @@ namespace tff::kernel {
               (D + BLOCK_DIM_N - 1) / BLOCK_DIM_N,
               1);
         dim3 block(BLOCK_DIM_N / VEC_DIM_N, BLOCK_DIM_M / VEC_DIM_M, 1);
+        for (auto &wait_event : wait_event_list) {
+            stream->wait_event(wait_event->get_native_event());
+        }
         switch (trans_type) {
             case tff::core::graph::MatMulTransType::TFF_TT:
                 gemm_tt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                event->record(stream);
                 break;
             case tff::core::graph::MatMulTransType::TFF_NT:
                 gemm_nt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                event->record(stream);
                 break;
             case tff::core::graph::MatMulTransType::TFF_NN:
                 gemm_nn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                event->record(stream);
                 break;
             case tff::core::graph::MatMulTransType::TFF_TN:
                 gemm_tn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                event->record(stream);
                 break;
         }
     }
@@ -648,7 +658,13 @@ namespace tff::kernel {
         std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
-
+        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream>>(5, para_ptr);
+        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(6, para_ptr);
+        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(7, para_ptr);
+        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
         if (input_tensors.size() != 2) {
             tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
@@ -662,7 +678,7 @@ namespace tff::kernel {
             inputs.push_back(input_tensor);
         }
         //
-        gemm_kernel_cuda<T>(trans_type, inputs, output_tensors, mem_buffer_manager_ptr);
+        gemm_kernel_cuda<T>(trans_type, inputs, output_tensors, mem_buffer_manager_ptr, stream, event, event_list);
     }
     template<typename T>
     std::string tff::kernel::XGemm<T>::get_op_name() {

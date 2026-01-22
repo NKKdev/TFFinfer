@@ -30,7 +30,7 @@ namespace tff::core::memory {
     }
 
     void tff::core::memory::MemBufferAllocatorCUDA::memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,
-                                                           tff::core::memory::MemCpyKind _memcpy_kind) const {
+                                                            tff::core::memory::MemCpyKind _memcpy_kind) const {
         CudaSafeCall(cudaSetDevice(this->_device_id));
         if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
@@ -42,14 +42,20 @@ namespace tff::core::memory {
     }
 
     void MemBufferAllocatorCUDA::memcpy_async(const void *src_ptr, void *dest_ptr, size_t byte_size,
-                                              tff::core::memory::MemCpyKind _memcpy_kind) const {
+                                              tff::core::memory::MemCpyKind _memcpy_kind, void *stream_handle) const {
         CudaSafeCall(cudaSetDevice(this->_device_id));
         if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
-            CudaSafeCall(cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
+            CudaSafeCall(
+                cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice, static_cast<
+                    cudaStream_t>(stream_handle)));
         } else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
-            CudaSafeCall(cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost));
+            CudaSafeCall(
+                cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost, static_cast<
+                    cudaStream_t>(stream_handle)));
         } else {
-            CudaSafeCall(cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToDevice));
+            CudaSafeCall(
+                cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToDevice, static_cast<
+                    cudaStream_t>(stream_handle)));
         }
     }
 

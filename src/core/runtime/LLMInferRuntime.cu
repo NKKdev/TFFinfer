@@ -298,7 +298,7 @@ namespace tff::core::runtime {
         std::unordered_map<int, std::string> seq_prompts;
         //std::vector<std::vector<int> > tokenized_batch;
         size_t max_seq_len = 0;
-        for (size_t i = 0; i < batch_size; ++i) {
+        for (int i = 0; i < batch_size; ++i) {
             const auto &batch = prompt_batches[i];
             std::vector<int> tokens;
             this->_vocabulary_ptr->tokenize(batch, tokens);
@@ -311,6 +311,11 @@ namespace tff::core::runtime {
             max_seq_len = std::max(max_seq_len, tokens.size());
             //tokenized_batch.push_back(std::move(tokens));
             seq_prompts[i] = batch;
+            for (int n = 0; n < this->_model_config._n_layer; ++n) {
+                for (auto &cache: this->_kv_cache_ptr | std::views::values) {
+                    cache->build_layer_kvcache_context(i, n);
+                }
+            }
             tff::log::Logger::info("Batch {%d}: tokenized {%d} tokens.", i, tokens.size());
         }
         //batch manager init;

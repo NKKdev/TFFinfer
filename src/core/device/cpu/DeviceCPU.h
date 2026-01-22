@@ -17,6 +17,7 @@ namespace tff::core::device::cpu {
         ~DeviceCPU() override = default;
 
     public:
+        float elapsed_time(const std::shared_ptr<DeviceEvent> &start, const std::shared_ptr<DeviceEvent> &stop) override;
         void get_device_id(std::vector<int> &_device_list) override;
 
         const char *get_device_name(size_t _device_id) override;
@@ -40,6 +41,10 @@ namespace tff::core::device::cpu {
         //
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
             const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) override;
+
+        std::shared_ptr<DeviceStream> create_stream(int device_id) override;
+
+        std::shared_ptr<DeviceEvent> create_event(int device_id) override;
     };
 
 

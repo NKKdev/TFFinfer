@@ -53,7 +53,10 @@ namespace tff::kernel {
                                      std::shared_ptr<tff::core::memory::Tensor> &weight,
                                      std::shared_ptr<tff::core::memory::Tensor> &x,
                                      std::shared_ptr<tff::core::memory::Tensor> &dst,
-                                     std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
+                                     std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr,
+                             std::shared_ptr<core::device::DeviceStream> &stream,
+                             std::shared_ptr<core::device::DeviceEvent> &event,
+                             std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
         auto &input_tensor = x;
         auto &weight_tensor = weight;
         auto &output_tensor = dst;
@@ -77,7 +80,10 @@ namespace tff::kernel {
         auto div_magic = tff::utils::gen_magic_u32(src_dim0);
         const dim3 grid(src_dim1, src_dim2, 1);
         const dim3 block(32, 1, 1);
-        rms_norm_kernel_cuda_impl<T, 32, 32><<<grid, block>>>(
+        for (auto &wait_event : wait_event_list) {
+            stream->wait_event(wait_event->get_native_event());
+        }
+        rms_norm_kernel_cuda_impl<T, 32, 32><<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
             std::get<0>(div_magic),
             std::get<1>(div_magic),
             eps,
@@ -85,6 +91,7 @@ namespace tff::kernel {
             (T *) input_tensor->get_buffer()->ptr(),
             (T *) weight_tensor->get_buffer()->ptr(),
             (T *) output_tensor->get_buffer()->ptr());
+        event->record(stream);
     }
 
     //
@@ -102,6 +109,13 @@ namespace tff::kernel {
         auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(5, para_ptr);
+        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream>>(6, para_ptr);
+        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(7, para_ptr);
+        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(8, para_ptr);
+        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
 
         if (weight == nullptr || x == nullptr || output_tensors == nullptr) {
             tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
@@ -109,7 +123,7 @@ namespace tff::kernel {
         }
 
         //
-        rms_norm_kernel_cuda<T>(eps, weight, x, output_tensors, mem_buffer_manager_ptr);
+        rms_norm_kernel_cuda<T>(eps, weight, x, output_tensors, mem_buffer_manager_ptr, stream, event, event_list);
     }
     template<typename T>
     std::string tff::kernel::RMSNorm<T>::get_op_name() {

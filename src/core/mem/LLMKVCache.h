@@ -17,8 +17,8 @@ namespace tff::core::memory {
     using DeviceTensor = tff::core::memory::Tensor;
 
     struct KVPage {
-        std::unique_ptr<tff::core::memory::Tensor> _k; // [n_embd_head, n_head_kv, PAGE_SIZE]
-        std::unique_ptr<tff::core::memory::Tensor> _v; // [n_embd_head, n_head_kv, PAGE_SIZE]
+        std::unique_ptr<tff::core::memory::Tensor> _k;
+        std::unique_ptr<tff::core::memory::Tensor> _v;
 
         int _n_tokens = 0; // 当前已缓存的 token 数（写入位置）
         bool _is_used = false;
@@ -204,6 +204,8 @@ namespace tff::core::memory {
 
     public:
         //
+        void build_layer_kvcache_context(const int &seq_id, const int &layer_id);
+        //
         inline void begine_prefill(const size_t &batch_size,const size_t &seq_len) {
             this->_seq_length = seq_len;
             this->_current_batch_size = batch_size;
@@ -233,7 +235,7 @@ namespace tff::core::memory {
             return ptr;
         }
 
-        bool set(int seq_id, int layer_id, const DeviceTensor *cur_k, const DeviceTensor *cur_v) {
+        bool set_k(int seq_id, int layer_id, const DeviceTensor *cur_k) {
             LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (!ctx->append_token()) {
                 return false; // 内存不足
@@ -255,7 +257,29 @@ namespace tff::core::memory {
 
             return true;
         }
+        //
+        bool set_v(int seq_id, int layer_id, const DeviceTensor *cur_v) {
+            LayerKVContext *ctx = get_context(seq_id, layer_id);
+            if (!ctx->append_token()) {
+                return false; // 内存不足
+            }
 
+            int token_pos = ctx->_num_tokens - 1;
+
+            auto index_pair = ctx->get_location(token_pos);
+            const int page_idx = index_pair.first;
+            const int offset   = index_pair.second;
+
+            PageID page_id = ctx->_page_table[page_idx];
+            //DeviceTensor* dst_k = slice_page(_page_manager->get_k(page_id), offset);
+            //DeviceTensor* dst_v = slice_page(_page_manager->get_v(page_id), offset);
+
+            // 执行拷贝：cur_k -> dst_k（形状 [d_h, h_kv, 1]）
+            //copy_tensor(cur_k, dst_k);
+            //copy_tensor(cur_v, dst_v);
+
+            return true;
+        }
         std::tuple<std::shared_ptr<tff::core::memory::Tensor>, std::shared_ptr<tff::core::memory::Tensor>, const PageID
             *, int>
         get(int seq_id, int layer_id, int from_token = 0) {

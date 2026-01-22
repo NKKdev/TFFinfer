@@ -33,6 +33,13 @@ namespace tff::kernel {
         auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(3, para_ptr);
+        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream>>(4, para_ptr);
+        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(5, para_ptr);
+        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(6, para_ptr);
+        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
 
 
 

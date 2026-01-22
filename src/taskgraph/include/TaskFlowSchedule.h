@@ -45,8 +45,8 @@ namespace tff::schedule {
         // template<typename F, typename... Args>
         // tf::Task add_io_task(const std::string &name, F &&f, Args &&... args);
         //
-        // template<typename Kernel, typename... Args>
-        // tf::Task add_gpu_task(const std::string &name, Kernel &&kernel, Args &&... args);
+        template<typename Kernel, typename... Args>
+        tf::Task add_gpu_task(const std::string &name, Kernel &&kernel, Args &&... args);
         //
         // // 同步点
         // tf::Task add_gpu_wait(const std::string &name, cudaEvent_t event);
@@ -97,29 +97,29 @@ namespace tff::schedule {
     //     return _task_flow.emplace(std::move(bound)).name(name);
     // }
     //
-    // template<typename Kernel, typename... Args>
-    // tf::Task HybridScheduler::add_gpu_task(const std::string &name, Kernel &&kernel, Args &&... args) {
-    //     static size_t stream_idx = 0;
-    //     auto &stream = _gpu_streams[stream_idx];
-    //     stream_idx = (stream_idx + 1) % _gpu_streams.size();
-    //
-    //     // 创建事件用于同步
-    //     auto &event = _sync_events[stream_idx];
-    //
-    //     auto gpu_lambda = [this,
-    //                 kern = std::forward<Kernel>(kernel),
-    //                 tup = std::make_tuple(std::ref(stream), std::forward<Args>(args)...),_event = event,
-    //                 _stream = stream]()
-    //         -> void {
-    //         std::apply(kern, std::move(tup));
-    //         cudaEventRecord(_event, _stream);
-    //     };
-    //
-    //     auto task = _task_flow.emplace(std::move(gpu_lambda))
-    //             .name(name);
-    //
-    //     return task;
-    // }
+    template<typename Kernel, typename... Args>
+    tf::Task HybridScheduler::add_gpu_task(const std::string &name, Kernel &&kernel, Args &&... args) {
+        static size_t stream_idx = 0;
+        auto &stream = _gpu_streams[stream_idx];
+        stream_idx = (stream_idx + 1) % _gpu_streams.size();
+
+        // 创建事件用于同步
+        auto &event = _sync_events[stream_idx];
+
+        auto gpu_lambda = [this,
+                    kern = std::forward<Kernel>(kernel),
+                    tup = std::make_tuple(std::ref(stream), std::forward<Args>(args)...),_event = event,
+                    _stream = stream]()
+            -> void {
+            std::apply(kern, std::move(tup));
+            cudaEventRecord(_event, _stream);
+        };
+
+        auto task = _task_flow.emplace(std::move(gpu_lambda))
+                .name(name);
+
+        return task;
+    }
 
     template<typename F, typename... Args>
     tf::Task HybridScheduler::add_subflow_task(tf::Taskflow &tf, const std::string &name, F &&f, Args &&... args) {

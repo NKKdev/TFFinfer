@@ -12,6 +12,32 @@
 #include "kernel/include/TFFOPCreatorBase.h"
 
 namespace tff::core::device {
+    class DEEP_TFF_API DeviceStream {
+    public:
+        virtual ~DeviceStream() = default;
+
+        virtual void synchronize() = 0;
+
+        virtual void *get_native_stream() = 0;
+
+        virtual void wait_event(void *event_handle) = 0;
+
+        [[nodiscard]] virtual bool is_valid() const = 0;
+    };
+
+    //
+    class DEEP_TFF_API DeviceEvent {
+    public:
+        virtual ~DeviceEvent() = default;
+
+        virtual void record(const std::shared_ptr<DeviceStream> &stream) = 0;
+
+        virtual void *get_native_event() = 0;
+
+        [[nodiscard]] virtual bool is_valid() const = 0;
+    };
+
+
     class DEEP_TFF_API DeviceBaseObject : public tff::module::ModuleObject {
     public:
         DeviceBaseObject() = default;
@@ -28,7 +54,9 @@ namespace tff::core::device {
         virtual void get_device_mem(size_t _device_id, size_t *_free_mem, size_t *_total_mem) = 0;
 
         virtual tff::core::device::DeviceType get_device_type(size_t _device_id) = 0;
+
         virtual tff::core::device::DeviceType device_type() = 0;
+
         //
         virtual std::string get_device_type_flag(size_t _device_id) = 0;
 
@@ -36,15 +64,28 @@ namespace tff::core::device {
 
         virtual void device_init() = 0;
 
-        virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(const int &device_id) = 0;
+        virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(
+            const int &device_id) = 0;
 
         //
         virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
             const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) = 0;
 
+        //
+        virtual std::shared_ptr<DeviceStream> create_stream(int device_id) = 0;
+
+        virtual std::shared_ptr<DeviceEvent> create_event(int device_id) = 0;
+
+        //
+        virtual float elapsed_time(
+            const std::shared_ptr<DeviceEvent> &start,
+            const std::shared_ptr<DeviceEvent> &stop
+        ) = 0;
+
     public:
         uint32_t _sched_priority = TFF_DEVICE_PRIORITY_GPU;
-        std::unordered_map<int, std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject>> _mem_buffer_allocators;
+        std::unordered_map<int, std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> >
+        _mem_buffer_allocators;
     };
 
     // 优先级排序;
@@ -59,11 +100,12 @@ namespace tff::core::device {
             return a->_sched_priority > b->_sched_priority;
         }
     };
+
     static size_t get_device_size(const std::string &device_key) {
         auto devices = tff::factory::ModuleFactory::instance()->create_shared_list<tff::core::device::DeviceBaseObject>(
             DEVICE_BACKEND_FLAG);
         int n_device_num = 0;
-        for (const auto& [key, info] : devices) {
+        for (const auto &[key, info]: devices) {
             if (tff::factory::ModuleKeyType(device_key) != tff::factory::ModuleKeyType(key)) {
                 continue;
             }

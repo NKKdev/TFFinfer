@@ -1,4 +1,7 @@
 //
+// Created by nkk on 2026/1/22.
+//
+//
 // Created by nkk on 2025/11/18.
 //
 #include "device/cuda/cudaInc.h"
@@ -706,7 +709,7 @@ namespace tff::kernel {
 
 
     template<typename T, const int ROPE_FLAG>
-    void flash_attention_128(const int max_ctx, const int batch, const int M, const int N, const int D,
+    void paged_flash_attention_128(const int max_ctx, const int batch, const int M, const int N, const int D,
                              const int q_ld, const int k_ld, const int v_ld,
                              const float scale,
                              const int num_q_heads, const int num_kv_heads,
@@ -743,7 +746,7 @@ namespace tff::kernel {
                     }
                     stream->wait_event(wait_event->get_native_event());
                 }
-                flash_attention_fp16_8x32<half, half, 32, 8, HIDDEN_DIM, BLOCK_DIM_M, BLOCK_DIM_N,
+                paged_flash_attention_fp16_8x32<half, half, 32, 8, HIDDEN_DIM, BLOCK_DIM_M, BLOCK_DIM_N,
                             ELEMENTS_PER_LOAD, ROPE_FLAG, B, MBit, S, HEAD_NUM_PER_BLOCK, WARP_SIZE, THREAD_BLOCK_SIZE>
                         <<<grid,
                         block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
@@ -759,9 +762,9 @@ namespace tff::kernel {
 
     //
     template<typename T>
-    void tff::kernel::FlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    void tff::kernel::PagedFlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
-        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), FlashAttn<T>::get_op_name().c_str());
+        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), PagedFlashAttn<T>::get_op_name().c_str());
         auto max_ctx = get_param_value<const int>(1, para_ptr);
         auto q_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             2, para_ptr);
@@ -809,7 +812,7 @@ namespace tff::kernel {
             case 128: {
                 auto *cos_sin_table = static_cast<float *>(rope_table->get_buffer()->ptr());
                 if (rope_table != nullptr) {
-                    flash_attention_128<T, 1>(max_ctx, B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
+                    paged_flash_attention_128<T, 1>(max_ctx, B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
                                               static_cast<T *>(q_tensor->get_buffer()->ptr()),
                                               static_cast<T *>(k_tensor->get_buffer()->ptr()),
                                               static_cast<T *>(v_tensor->get_buffer()->ptr()),
@@ -829,8 +832,8 @@ namespace tff::kernel {
     }
 
     template<typename T>
-    std::string tff::kernel::FlashAttn<T>::get_op_name() {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
+    std::string tff::kernel::PagedFlashAttn<T>::get_op_name() {
+        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_PAGED);
         if (it == core::global::TFF_OP_TYPE_MAP.end()) {
             tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
             return "";

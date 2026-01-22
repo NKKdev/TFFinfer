@@ -48,7 +48,10 @@ namespace tff::kernel {
 
     template<typename T>
     void get_autoregressive_mask(const core::graph::TFFMaskType &mask_type,
-                                 std::shared_ptr<core::memory::Tensor> &mask) {
+                                 std::shared_ptr<core::memory::Tensor> &mask,
+                                 std::shared_ptr<core::device::DeviceStream> &stream,
+                                 std::shared_ptr<core::device::DeviceEvent> &event,
+                                 std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
         switch (mask_type) {
             case core::graph::TFFMaskType::TFF_MASK_TYPE_CAUSAL: {
                 const int M = mask->get_shape()[1];
@@ -57,8 +60,12 @@ namespace tff::kernel {
                 constexpr int BLOCK_DIM_N = 64;
                 dim3 grid((N + 256 - 1) / 256, (M + 256 - 1) / 256);
                 dim3 block(32, 8);
-                autoregressive_mask<T, BLOCK_DIM_M, BLOCK_DIM_N><<<grid, block>>>(
+                for (auto &wait_event : wait_event_list) {
+                    stream->wait_event(wait_event->get_native_event());
+                }
+                autoregressive_mask<T, BLOCK_DIM_M, BLOCK_DIM_N><<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
                     M, N, static_cast<T *>(mask->get_buffer()->ptr()));
+                event->record(stream);
                 break;
             }
             default:
@@ -73,7 +80,17 @@ namespace tff::kernel {
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), MaskOP<T>::get_op_name().c_str());
         auto mask_type = static_cast<tff::core::graph::TFFMaskType>(get_param_value<const int>(1, para_ptr));
         auto mask = get_param_value<std::shared_ptr<core::memory::Tensor> >(2, para_ptr);
-        get_autoregressive_mask<T>(mask_type, mask);
+        auto mem_buffer_manager_ptr = get_param_value<
+            std::shared_ptr<
+                tff::core::runtime::LLMMemManager> >(3, para_ptr);
+        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream> >(4, para_ptr);
+        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent> >(5, para_ptr);
+        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(6, para_ptr);
+        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
+        get_autoregressive_mask<T>(mask_type, mask, stream, event, event_list);
     }
 
     template<typename T>
