@@ -7,6 +7,24 @@
 #include "device/cuda/cudaInc.h"
 
 namespace tff::core::memory {
+    static bool is_valid_device_pointer(void* ptr) {
+        cudaPointerAttributes attributes;
+        cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
+        if (err == cudaSuccess) {
+            return attributes.type == cudaMemoryTypeDevice;
+        }
+        return false;
+    }
+
+    static bool is_valid_host_pointer(void* ptr) {
+        cudaPointerAttributes attributes;
+        cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
+        if (err == cudaSuccess) {
+            return attributes.type == cudaMemoryTypeHost || attributes.type == cudaMemoryTypeUnregistered;
+        }
+        return true;
+    }
+    //
     void tff::core::memory::MemBufferAllocatorCUDA::release(void *ptr) const {
         if (ptr != nullptr) {
             CudaSafeCall(cudaSetDevice(this->_device_id));
@@ -33,6 +51,14 @@ namespace tff::core::memory {
                                                             tff::core::memory::MemCpyKind _memcpy_kind) const {
         CudaSafeCall(cudaSetDevice(this->_device_id));
         if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
+            if (!is_valid_device_pointer(dest_ptr)) {
+                tff::log::Logger::error("memory pointer type is invalid!!");
+                return;
+            }
+            if (!is_valid_host_pointer(src_ptr)) {
+                tff::log::Logger::error("memory pointer type is invalid!!");
+                return;
+            }
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
         } else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost));

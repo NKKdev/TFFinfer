@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    std::string prompt0 = "Hello my name is";
+    std::string prompt0 = "你好，我是一个AI芯片公司的高性能计算程序员，主要负责大模型推理框架的迭代和优化，年底了，请帮我写一份年终总结大纲。要求尽可能全面。";
     std::string prompt1 = "What is your name";
     std::string prompt2 = "Hello my name is";
     std::vector<std::string> prompt_pre{prompt0, prompt1, prompt2};

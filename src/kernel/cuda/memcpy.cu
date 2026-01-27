@@ -30,6 +30,28 @@ namespace tff::kernel {
         }
         allocator->memcpy_async(src->get_buffer()->ptr(), dst->get_buffer()->ptr(), dst->get_bytes(), kind,
                                 stream->get_native_stream());
+
+#ifdef _DEBUG
+        float *cpu_result = static_cast<float *>(src->get_buffer()->ptr());
+
+        std::vector<float> gpu_result;
+        gpu_result.resize(
+            dst->get_shape()[0] * dst->get_shape()[1] * dst->get_shape()[2] *
+            dst->get_shape()[3]);
+        dst->get_allocator()->memcopy(dst->get_buffer()->ptr(), gpu_result.data(),
+            dst->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+
+        for (int mm = 0; mm < dst->get_shape()[1]; mm++) {
+            for (int nn = 0; nn < dst->get_shape()[0]; nn++) {
+                float delta = gpu_result[mm * dst->get_shape()[0] + nn] - cpu_result[mm * dst->get_shape()[0] + nn];
+                if (delta > 0.001f) {
+                    tff::log::Logger::error("error: m: %d n: %d, delta: %lf", mm, nn, delta);
+                    throw std::runtime_error("error");
+                }
+            }
+        }
+        tff::log::Logger::info("layer node MemCpy op compute success!");
+#endif
     }
 
     static bool is_same_shape(std::array<int64_t, MAX_TENSOR_DIM> &shape1,

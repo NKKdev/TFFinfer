@@ -30,12 +30,14 @@ namespace tff::core::model {
 
         if (this->_tokenizer_pre == "smollm") {
             this->_vacabulary_pre_type = TFF_VOCAB_PRE_TYPE_SMOLLM;
+        }else if (this->_tokenizer_pre == "qwen2") {
+            this->_vacabulary_pre_type = TFF_VOCAB_PRE_TYPE_QWEN2;
         }
         const auto &type = LLM_TOKENIZER_MODEL_VOCAB_TYPE.find(this->_tokenizer_model)->second;
         this->_tokenizer =
                 tff::factory::ModuleFactory::instance()->create_shared<tff::core::model::LLMTokenizerBase>(
                     TOKENIZER_FLAG, tff::factory::ModuleKeyType(get_tokenizer_name(type).data()));
-
+        this->_tokenizer->init(this->_vacabulary_pre_type);
 
         bRet &= this->load_bpe();
         //

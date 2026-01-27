@@ -27,7 +27,7 @@ namespace tff::core::quant {
         static void dequantize(const Q_8_0 *blocks, float *out, const int64_t elem_count) {
             const int nb = elem_count / BLOCK_SIZE;
             for (int i = 0; i < nb; ++i) {
-                const float scale = tff::utils::fp16_to_fp32(blocks[i].d);
+                const float scale = __half2float(blocks[i].d);
                 for (int j = 0; j < BLOCK_SIZE; ++j) {
                     out[i * BLOCK_SIZE + j] = blocks[i].qs[j] * scale;
                 }

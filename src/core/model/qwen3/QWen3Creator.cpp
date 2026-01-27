@@ -47,7 +47,7 @@ namespace tff::core::model {
                 for (size_t layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
 #ifdef _DEBUG
                     {
-                        if (layer_id >= 1) {
+                        if (layer_id >= 3) {
                             continue;
                         }
                     }
@@ -89,13 +89,21 @@ namespace tff::core::model {
                                                            layer_map, attn_k_reshape_node);
                         //
 
+                        auto attn_kv_store_cache_node = build_kv_cache_store_node(
+                            layer_id, attn_k_norm_node, attn_v_reshape_node);
+                        //
+                        auto attn_k_load_node = build_kv_cache_load_node(memory::ModelTensorType::LLM_TENSOR_ATTN_K,
+                                                                         layer_id, attn_kv_store_cache_node);
+                        //
+                        auto attn_v_load_node = build_kv_cache_load_node(memory::ModelTensorType::LLM_TENSOR_ATTN_V,
+                                                                         layer_id, attn_kv_store_cache_node);
 
                         //
                         auto rope_table_node = build_rope_table_node();
                         auto q_rope_node = build_rope_node(attn_q_norm_node, rope_table_node);
-                        auto k_rope_node = build_rope_node(attn_k_norm_node, rope_table_node);
+                        auto k_rope_node = build_rope_node(attn_k_load_node, rope_table_node);
 
-                        auto attn_node = build_attn(layer_map, q_rope_node, k_rope_node, attn_v_reshape_node);
+                        auto attn_node = build_attn(layer_map, q_rope_node, k_rope_node, attn_v_load_node);
                         //
                         auto ffn_inp_node = build_ffn_inp(input_node, attn_node);
 
@@ -512,19 +520,68 @@ namespace tff::core::model {
 
     //
     std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_kv_cache_store_node(
-        const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-            tff::core::model::layer::ModelLayerObject> > &layer_map,
         const int &layer_id,
-        tff::core::memory::ModelTensorType tensor_type,
-        const std::shared_ptr<GraphNode> &node) {
-        auto input_token_layer = layer_map.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN)->second;
-
+        const std::shared_ptr<GraphNode> &k_node,
+        const std::shared_ptr<GraphNode> &v_node) {
         auto cache_store_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_SET_ROWS);
         cache_store_node->set_node_meta({"cache_store_node"});
-        auto device = node->devices();
+
+        auto device = k_node->devices();
         cache_store_node->bind_devices(device);
-        cache_store_node->add_src_node(node);
+        cache_store_node->add_src_node(k_node);
+        cache_store_node->add_src_node(v_node);
+
+        auto &input_tensor = k_node->get_tensor();
+        auto device_iter = device.begin();
+        cache_store_node->get_params()->set_param(this->_model_ctx._kv_cache_ptr[device_iter->first]);
+        this->_model_ctx._kv_idx = this->_model_ctx._kv_cache_ptr[device_iter->first]->set_k(
+            this->_model_ctx._seq_id, layer_id, input_tensor, device);
+        cache_store_node->get_params()->set_param(this->_model_ctx._kv_idx);
+        cache_store_node->get_params()->set_param(this->_model_ctx._seq_id);
+        cache_store_node->get_params()->set_param(layer_id);
+        cache_store_node->set_tensor(input_tensor);
 
         return cache_store_node;
+    }
+
+    //
+    std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_kv_cache_load_node(
+        tff::core::memory::ModelTensorType tensor_type,
+        const int &layer_id,
+        const std::shared_ptr<GraphNode> &node) {
+        auto cache_load_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_GET_ROWS);
+        if (tensor_type == core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
+            cache_load_node->set_node_meta({"k_cache_load_node"});
+        }else if (tensor_type == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
+            cache_load_node->set_node_meta({"v_cache_load_node"});
+        }
+        auto device = node->devices();
+        auto device_iter = device.begin();
+        cache_load_node->bind_devices(device);
+        cache_load_node->add_src_node(node);
+
+        auto &input_tensor = node->get_tensor();
+
+        cache_load_node->get_params()->set_param(this->_model_ctx._kv_cache_ptr[device_iter->first]);
+        this->_model_ctx._kv_idx = this->_model_ctx._kv_cache_ptr[device_iter->first]->set_k(
+            this->_model_ctx._seq_id, layer_id, input_tensor, device);
+
+        cache_load_node->get_params()->set_param(this->_model_ctx._kv_idx);
+        cache_load_node->get_params()->set_param(this->_model_ctx._seq_id);
+        cache_load_node->get_params()->set_param(layer_id);
+
+
+        std::array<int64_t, MAX_TENSOR_DIM> shape = {
+            input_tensor->get_shape()[0],
+            input_tensor->get_shape()[1], input_tensor->get_shape()[2], input_tensor->get_shape()[3]
+        };
+        auto data_type = this->_model_ctx._use_fp16
+                             ? memory::DataType::TFF_DATA_TYPE_F16
+                             : memory::DataType::TFF_DATA_TYPE_F32;
+        auto tensor = std::make_shared<tff::core::memory::Tensor>(data_type, shape);
+        tensor->set_tensor_type(tensor_type);
+        cache_load_node->set_tensor(tensor);
+
+        return cache_load_node;
     }
 }

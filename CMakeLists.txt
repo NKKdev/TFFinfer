@@ -139,27 +139,7 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCE_LIST
 message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
 
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        src/kernel/cpu/mem_ref.cpp
-        src/3rdparty/libdivideInc.h
-        src/kernel/include/kernel_util.h
-        src/kernel/cuda/mat_mul.cu
-        src/kernel/cuda/quant/quant_q_8_0.cu
-        src/kernel/cuda/quant/quant_q_8_0_reshape.cu
-        src/kernel/cuda/set_row.cu
-        src/kernel/cuda/get_row.cu
-        src/kernel/cuda/quant/dequant_q_8_0.cu
-        src/kernel/cuda/quant/quant_q_8_0_mat_mul_reshape.cu
-        src/kernel/cuda/rope_table.cu
-        src/kernel/cuda/quant/quant_q_8_0_mat_mul.cu
-        src/core/model/layer/ModelLayer.cpp
-        src/core/model/layer/ModelLayer.h
-        src/core/model/qwen3/QWen3MemCreator.cpp
-        src/kernel/cuda/mem_ref.cu
-        src/kernel/cuda/unary.cu
-        src/kernel/cuda/mask_op.cu
-        src/kernel/cuda/pagged_flash_attention.cu
-)
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)

@@ -268,10 +268,10 @@ template<> struct tff_data_type_to_cpp<gguf_enum> { using type = cpp_type; };
     TFF_TRAITS(F16,      "f16",      1,              sizeof(half));\
     TFF_TRAITS(F32,      "f32",      1,              sizeof(float));\
     TFF_TRAITS(I8,       "i8",       1,              sizeof(int8_t))\
-    TFF_TRAITS(I16,       "i16",       1,              sizeof(int8_t))\
-    TFF_TRAITS(I32,      "i32",      1,              sizeof(float))\
-    TFF_TRAITS(I64,       "i64",       1,              sizeof(int8_t))\
-    TFF_TRAITS(F64,       "f64",       1,              sizeof(int8_t))\
+    TFF_TRAITS(I16,       "i16",       1,              sizeof(int16_t))\
+    TFF_TRAITS(I32,      "i32",      1,              sizeof(int32_t))\
+    TFF_TRAITS(I64,       "i64",       1,              sizeof(int64_t))\
+    TFF_TRAITS(F64,       "f64",       1,              sizeof(double))\
     TFF_TRAITS(Q8_0,      "q8_0",      tff::core::quant::Q_8_0::BLOCK_SIZE, sizeof(tff::core::quant::Q_8_0));
 
     struct TFFTypeTraits {

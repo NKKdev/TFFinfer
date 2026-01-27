@@ -548,7 +548,7 @@ namespace tff::kernel {
         const int ELEMENTS_PER_LOAD,
         const int rope_flag, const int B, const int MBit, const int S, const int HEAD_NUM_PER_BLOCK,
         const int WARP_SIZE, const int THREAD_BLOCK>
-    __global__ void paged_flash_attention_fp16_8x32(const int M, const int N, const int D,
+    __global__ void flash_attention_fp16_8x32(const int M, const int N, const int D,
                                               const int MAX_CTX,
                                               const int q_ld, const int k_ld, const int v_ld,
                                               const float scale,

@@ -8,6 +8,32 @@
 #include "unicode.h"
 
 namespace tff::core::model {
+    void LLMTokenizerBPE::init(tff::core::model::VocabPreType pre_type) {
+        LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_BOS_ID]  = 11;
+        LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_EOS_ID] = 11;
+        LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_UNK_ID] = -1;
+        LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_SEP_ID] = -1;
+        LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_PAD_ID] = -1;
+        LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_MASK_ID] = -1;
+
+        switch (pre_type) {
+            case TFF_VOCAB_PRE_TYPE_SMOLLM: {
+                _regex = {
+                    "\\p{N}",
+                    "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)",
+                };
+                break;
+            }
+            case TFF_VOCAB_PRE_TYPE_QWEN2: {
+                _regex = {
+                    "(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
+                };
+                break;
+            }
+            default:
+                break;
+        }
+    }
     void tff::core::model::LLMTokenizerBPE::tokenize(const std::string &text, std::vector<int32_t> &token,
         const LLMLLaMaVocabulary *vocabulary_ptr) {
         const auto byte_vec = unicode_regex_split(text, this->_regex);

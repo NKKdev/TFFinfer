@@ -130,8 +130,12 @@ namespace tff::core::model {
             std::shared_ptr<tff::core::graph::GraphNode> &up_node,
             std::shared_ptr<tff::core::graph::GraphNode> &gate_node);
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_kv_cache_store_node(const std::unordered_map<memory::ModelTensorType, std::shared_ptr<layer::ModelLayerObject>> &layer_map,
-                                                                               const int &layer_id, memory::ModelTensorType tensor_type, const std::shared_ptr<GraphNode> &node);
+        std::shared_ptr<tff::core::graph::GraphNode> build_kv_cache_store_node(
+            const int &layer_id, const std::shared_ptr<GraphNode> &k_node, const std::shared_ptr<GraphNode> &v_node);
+
+        std::shared_ptr<tff::core::graph::GraphNode> build_kv_cache_load_node(
+            memory::ModelTensorType tensor_type,
+            const int &layer_id, const std::shared_ptr<GraphNode> &node);
 
         std::shared_ptr<tff::core::graph::GraphNode> build_rope_table_node();
 

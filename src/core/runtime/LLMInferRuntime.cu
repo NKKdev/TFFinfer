@@ -180,6 +180,7 @@ namespace tff::core::runtime {
                 return false;
             }
         }
+        //
 
         return true; // 初始化成功
     }
@@ -191,6 +192,7 @@ namespace tff::core::runtime {
         }
         tff::log::Logger::info("Initializing graph");
 
+        this->_model_creator->_model_ctx._kv_cache_ptr = this->_kv_cache_ptr;
         this->_model_creator->build_graph(this->_layer_map, this->_infer_graph_ptr);
         return true;
     }
@@ -333,6 +335,7 @@ namespace tff::core::runtime {
 
     void LLMInferRuntime::build_inputs(std::shared_ptr<LLMBatch> &batch) {
         //set embedding layer input
+        this->_model_creator->_model_ctx._seq_id = batch->_token_seq_ids[0];
         auto &tokens_data = batch->_tokens;
         auto &input_pos = batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(

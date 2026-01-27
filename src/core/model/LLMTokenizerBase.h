@@ -65,6 +65,7 @@ namespace tff::core::model {
         ~LLMTokenizerBase() override = default;
 
     public:
+        virtual void init(tff::core::model::VocabPreType pre_type = TFF_VOCAB_PRE_TYPE_SMOLLM){};
         virtual void tokenize(const std::string &text, std::vector<int32_t> &token, const LLMLLaMaVocabulary *vocabulary_ptr){};
 
     public:
@@ -73,23 +74,12 @@ namespace tff::core::model {
 
     class LLMTokenizerBPE : public LLMTokenizerBase {
     public:
-        explicit LLMTokenizerBPE(tff::core::model::VocabPreType pre_type = TFF_VOCAB_PRE_TYPE_SMOLLM) {
-            LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_BOS_ID]  = 11;
-            LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_EOS_ID] = 11;
-            LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_UNK_ID] = -1;
-            LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_SEP_ID] = -1;
-            LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_PAD_ID] = -1;
-            LLM_SPECIAL_TOKENS[LLM_KV_TOKENIZER_MASK_ID] = -1;
-            if (pre_type == TFF_VOCAB_PRE_TYPE_SMOLLM) {
-                _regex = {
-                    "\\p{N}",
-                    "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)",
-                };
-            }
+        explicit LLMTokenizerBPE() {
         };
 
         ~LLMTokenizerBPE() override= default;
     public:
+        void init(tff::core::model::VocabPreType pre_type = TFF_VOCAB_PRE_TYPE_SMOLLM) override;
         void tokenize(const std::string &text, std::vector<int32_t> &token, const LLMLLaMaVocabulary *vocabulary_ptr) override;
     protected:
         //

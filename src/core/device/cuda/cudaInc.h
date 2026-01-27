@@ -44,7 +44,7 @@ namespace tff::core::device::cuda {
             std::string error_code(_code_str);
             std::string sub_str = error_code.substr(0, error_code.find_first_of("("));
             std::string result_str = sub_str + " " + cudaGetErrorString(error);
-            throw result_str.c_str();
+            //throw result_str.c_str();
         }
     }
 

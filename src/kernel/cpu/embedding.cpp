@@ -16,7 +16,6 @@ namespace tff::kernel {
         std::shared_ptr<tff::core::memory::Tensor> &outputs,
         std::shared_ptr<
             tff::core::runtime::LLMMemManager> &mem_buffer_manager_ptr) {
-
         if (token_embed == nullptr || token_embed->get_buffer() == nullptr) {
             tff::log::Logger::error("embedding kernel inputs is empty");
             return;
@@ -34,14 +33,16 @@ namespace tff::kernel {
             tff::log::Logger::error("embedding output tensor is empty");
             return;
         }
-        for (size_t i = 0; i < batch_token->get_shape().size(); ++i) {
-            auto &shape_dim = batch_token->get_shape()[i];
+        for (size_t i = 0; i < batch_token->get_shape()[1]; ++i) {
+            auto &shape_dim = batch_token->get_shape()[0];
             for (size_t j = 0; j < shape_dim; ++j) {
                 int32_t token_id = batch_token->at<int32_t>(j);
                 tff::log::Logger::info("embedding token id=%d", token_id);
                 auto quant_data_ptr = (const void *) (
                     (char *) token_embed_buffer->ptr() + token_id * token_embed->get_strides()[1]);
-                auto float_data_ptr = (float *) ((char *) output_tensor->get_buffer()->ptr() + i * shape_dim + j);
+                auto float_data_ptr = (float *) (
+                    (char *) output_tensor->get_buffer()->ptr() + (i * shape_dim * token_embed->get_shape()[0] + j *
+                    token_embed->get_shape()[0]) * sizeof(float));
                 if (float_data_ptr && quant_data_ptr) {
                     dequantize_callback(quant_data_ptr, float_data_ptr, token_embed->get_shape()[0]);
                 }
@@ -54,9 +55,9 @@ namespace tff::kernel {
     void tff::kernel::Embedding<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         tff::log::Logger::info("layer node op:%s compute!", tff::kernel::Embedding<T>::get_op_name().c_str());
         const auto &name = get_param_value<std::string>(0, para_ptr);
-        auto embedding_weight = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto embedding_weight = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             1, para_ptr);
-        auto input_token = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto input_token = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
         auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             3, para_ptr);
