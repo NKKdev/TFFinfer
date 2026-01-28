@@ -9,6 +9,11 @@
 #include "quant/BaseDefine.h"
 
 namespace tff::core::memory {
+    enum class MemoryType {
+        WEIGHT,      // 持久权重内存，不可回收
+        ACTIVATION   // 临时激活内存，可复用
+    };
+    
     enum MemCpyKind {
         TFF_MEM_CPY_TYPE_UNKNOWN = 0,
         TFF_MEM_CPY_TYPE_NORMAL,
@@ -51,7 +56,8 @@ namespace tff::core::memory {
         TFF_DATA_TYPE_TQ1_0 = 34,
         TFF_DATA_TYPE_TQ2_0 = 35,
         TFF_DATA_TYPE_MXFP4 = 39,
-        TFF_DATA_TYPE_COUNT = 40,
+        TFF_DATA_TYPE_Q8_0_ALIGNED = 40,
+        TFF_DATA_TYPE_COUNT,
     };
 
     //
@@ -255,6 +261,7 @@ template<> struct tff_data_type_to_cpp<gguf_enum> { using type = cpp_type; };
     MAP_DATA_TYPE(TFF_DATA_TYPE_F64, double)
 
     MAP_DATA_TYPE(TFF_DATA_TYPE_Q8_0, tff::core::quant::Q_8_0)
+    MAP_DATA_TYPE(TFF_DATA_TYPE_Q8_0_ALIGNED, tff::core::quant::Q_8_0_ALIGNED)
 
 #define TFF_TRAITS(enum_name, name_str, blk, sz) \
     traits[TFF_DATA_TYPE_##enum_name] = TFFTypeTraits{\
@@ -272,7 +279,8 @@ template<> struct tff_data_type_to_cpp<gguf_enum> { using type = cpp_type; };
     TFF_TRAITS(I32,      "i32",      1,              sizeof(int32_t))\
     TFF_TRAITS(I64,       "i64",       1,              sizeof(int64_t))\
     TFF_TRAITS(F64,       "f64",       1,              sizeof(double))\
-    TFF_TRAITS(Q8_0,      "q8_0",      tff::core::quant::Q_8_0::BLOCK_SIZE, sizeof(tff::core::quant::Q_8_0));
+    TFF_TRAITS(Q8_0,      "q8_0",      tff::core::quant::Q_8_0::BLOCK_SIZE, sizeof(tff::core::quant::Q_8_0));\
+    TFF_TRAITS(Q8_0_ALIGNED,      "q8_0_aligned",      tff::core::quant::Q_8_0_ALIGNED::BLOCK_SIZE, sizeof(tff::core::quant::Q_8_0_ALIGNED));
 
     struct TFFTypeTraits {
         const char *_type_name;

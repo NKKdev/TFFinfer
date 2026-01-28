@@ -28,7 +28,7 @@ namespace tff::core::runtime {
 
     public:
         //
-        bool build_task_schedule(const schedule::TaskType &type, const std::shared_ptr<graph::Graph> &graph_ptr,
+        bool build_task_schedule(const tff::schedule::TaskType &type,const std::shared_ptr<graph::Graph> &graph_ptr,
                                  bool is_fuse = false) const;
 
         //

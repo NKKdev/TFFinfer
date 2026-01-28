@@ -61,7 +61,7 @@ namespace tff::kernel {
             tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
-        get_of_row<T>(seq_id, layer_id, kv_cache_ctx, kv_idx, output_tensor, stream, event, event_list);
+        //get_of_row<T>(seq_id, layer_id, kv_cache_ctx, kv_idx, output_tensor, stream, event, event_list);
     }
 
     template<typename T>

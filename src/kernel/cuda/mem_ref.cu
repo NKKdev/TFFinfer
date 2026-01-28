@@ -34,6 +34,10 @@ namespace tff::kernel {
             tff::log::Logger::error("op (%s) output tensors buffer is null", name.c_str());
             return;
         }
+        if (input_tensors == nullptr) {
+            return;
+        }
+        *output_tensors = *input_tensors;
     }
     template<typename T>
     std::string tff::kernel::MemRef<T>::get_op_name() {

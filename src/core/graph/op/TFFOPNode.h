@@ -28,7 +28,7 @@ namespace tff::core::graph::op {
         }
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_MUL_MAT) {
                 tff::log::Logger::error("MatMulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -46,7 +46,7 @@ namespace tff::core::graph::op {
             auto params = this->get_params();
             params->set_param(_weight);
             params->set_param(x);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -67,7 +67,7 @@ namespace tff::core::graph::op {
         }
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_QUANTIZE_Q8_MATMUL) {
                 tff::log::Logger::error("MatMulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -85,7 +85,7 @@ namespace tff::core::graph::op {
             auto params = this->get_params();
             params->set_param(_weight);
             params->set_param(x);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -106,7 +106,7 @@ namespace tff::core::graph::op {
         }
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("UploadBuffer param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -116,7 +116,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("UploadBuffer op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -131,13 +131,13 @@ namespace tff::core::graph::op {
         ~AddNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_ADD) {
                 tff::log::Logger::error("AddNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -155,7 +155,7 @@ namespace tff::core::graph::op {
         std::shared_ptr<core::memory::Tensor> _bias;// 可选;
         std::shared_ptr<core::memory::Tensor> _x;
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_RMS_NORM) {
                 tff::log::Logger::error("RMSNormNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -176,7 +176,7 @@ namespace tff::core::graph::op {
             auto params = this->get_params();
             params->set_param(weight);
             params->set_param(x);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -191,7 +191,7 @@ namespace tff::core::graph::op {
         ~NoneNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("NoneNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -201,7 +201,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("NoneNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -214,7 +214,7 @@ namespace tff::core::graph::op {
         }
 
 
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("DupNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -224,7 +224,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("DupNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -237,7 +237,7 @@ namespace tff::core::graph::op {
         }
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("SqrNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -247,7 +247,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("SqrNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -260,7 +260,7 @@ namespace tff::core::graph::op {
         }
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("SqrtNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -270,7 +270,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("SqrtNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -283,7 +283,7 @@ namespace tff::core::graph::op {
         ~SubNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("SubNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -293,7 +293,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("SubNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -305,13 +305,13 @@ namespace tff::core::graph::op {
 
         ~MulNode() override = default;
 
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_MUL) {
                 tff::log::Logger::error("MulNode op type(expect TFF_OP_MUL) is wrong!!");
                 return nullptr;
             }
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -323,7 +323,7 @@ namespace tff::core::graph::op {
 
         ~DivNode() override = default;
 
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("DivNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -333,7 +333,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("DivNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -346,7 +346,7 @@ namespace tff::core::graph::op {
         ~ReshapeNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_RESHAPE) {
                 tff::log::Logger::error("ReshapeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -356,7 +356,7 @@ namespace tff::core::graph::op {
             }
             auto params_ptr = this->get_params();
             params_ptr->set_param(this->_inputs);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -369,7 +369,7 @@ namespace tff::core::graph::op {
         ~TransposeNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("TransposeNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -379,7 +379,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("TransposeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -392,7 +392,7 @@ namespace tff::core::graph::op {
         ~SoftmaxNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_params_ptr->get_param_count() < 4) {
                 tff::log::Logger::error("SoftmaxNode param count is %d(expect 1)",
                                         this->_params_ptr->get_param_count());
@@ -402,7 +402,7 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("SoftmaxNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -415,13 +415,13 @@ namespace tff::core::graph::op {
         ~RopeNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_ROPE) {
                 tff::log::Logger::error("RopeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -434,7 +434,7 @@ namespace tff::core::graph::op {
         ~MapCPUBufferNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             // if (this->_params_ptr->get_param_count() < 4) {
             //     tff::log::Logger::error("MapCPUBufferNode param count is %d(expect 1)",
             //         this->_params_ptr->get_param_count());
@@ -445,7 +445,7 @@ namespace tff::core::graph::op {
             }
             auto params_ptr = this->get_params();
             params_ptr->set_param(this->_inputs);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -458,7 +458,7 @@ namespace tff::core::graph::op {
         ~MemCpyNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_MEM_CPY) {
                 tff::log::Logger::error("MemCpyNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -474,7 +474,7 @@ namespace tff::core::graph::op {
             auto params_ptr = this->get_params();
             params_ptr->set_param(this->_inputs);
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -488,7 +488,7 @@ namespace tff::core::graph::op {
     public:
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_EMBEDDING) {
                 tff::log::Logger::error("EmbeddingNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -511,7 +511,7 @@ namespace tff::core::graph::op {
             auto params_ptr = this->get_params();
             params_ptr->set_param(_embedding_weight);
             params_ptr->set_param(_input_token);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -526,13 +526,19 @@ namespace tff::core::graph::op {
         ~MemRefNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_MEM_REF) {
-                tff::log::Logger::error("MemRefNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                tff::log::Logger::error("MemRefNode op type(expect TFF_OP_MEM_REF) is wrong!!");
                 return nullptr;
             }
+            std::shared_ptr<core::memory::Tensor> x_tensor;
+            for (auto &input : this->_input_nodes) {
+                x_tensor = input->get_tensor();
+            }
+            auto params = this->get_params();
+            params->set_param(x_tensor);
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -545,7 +551,7 @@ namespace tff::core::graph::op {
         ~FlashAttnNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_FLASH_ATTN_EXT) {
                 tff::log::Logger::error("FlashAttnNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
@@ -591,7 +597,7 @@ namespace tff::core::graph::op {
             params->set_param(v);
             params->set_param(rope_table);
             params->set_param(mask);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -605,7 +611,7 @@ namespace tff::core::graph::op {
         ~PagedFlashAttnNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_FLASH_ATTN_PAGED) {
                 tff::log::Logger::error("PagedFlashAttnNode op type(expect TFF_OP_FLASH_ATTN_PAGED) is wrong!!");
                 return nullptr;
@@ -638,7 +644,7 @@ namespace tff::core::graph::op {
             params->set_param(v);
             params->set_param(rope_table);
             params->set_param(mask);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -650,13 +656,13 @@ namespace tff::core::graph::op {
         ~PreRopeTableNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_PRE_ROPE_TABLE) {
                 tff::log::Logger::error("PreRopeTableNode op type(expect TFF_OP_PRE_ROPE_TABLE) is wrong!!");
                 return nullptr;
             }
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -668,7 +674,7 @@ namespace tff::core::graph::op {
         }
         ~UnaryOPNode() override = default;
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_UNARY) {
                 tff::log::Logger::error("UnaryOPNode op type(expect TFF_OP_UNARY) is wrong!!");
                 return nullptr;
@@ -686,7 +692,7 @@ namespace tff::core::graph::op {
             auto params = this->get_params();
             params->set_param(ffn_gate_x);
             params->set_param(ffn_up_x);
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
 
@@ -699,12 +705,12 @@ namespace tff::core::graph::op {
         }
         ~MaskOPNode() override = default;
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_ATTN_MASK) {
                 tff::log::Logger::error("MaskOPNode op type(expect TFF_OP_ATTN_MASK) is wrong!!");
                 return nullptr;
             }
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
 
@@ -717,13 +723,13 @@ namespace tff::core::graph::op {
         }
         ~GetOfRowsOPNode() override = default;
         public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_GET_ROWS) {
                 tff::log::Logger::error("GetOfRowsOPNode op type (expect TFF_OP_GET_ROWS) is wrong");
                 return nullptr;
             }
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
             return callback;
         }
     };
@@ -735,7 +741,7 @@ namespace tff::core::graph::op {
         }
         ~SetOfRowsOPNode() override = default;
         public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) override {
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
             if (this->_op_type != TFF_OP_SET_ROWS) {
                 tff::log::Logger::error("SetOfRowsOPNode op type (expect TFF_OP_SET_ROWS) is wrong");
                 return nullptr;
@@ -754,7 +760,64 @@ namespace tff::core::graph::op {
             params->set_param(k_tensor);
             params->set_param(v_tensor);
 
-            auto callback = GraphNode::forward(type);
+            auto callback = GraphNode::forward();
+            return callback;
+        }
+    };
+    //
+    class QuantQ80Node final : public tff::core::graph::GraphNode {
+    public:
+        explicit QuantQ80Node(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_QUANTIZE_Q8);
+        }
+        ~QuantQ80Node() override = default;
+    public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+            if (this->_op_type != TFF_OP_QUANTIZE_Q8) {
+                tff::log::Logger::error("QuantQ80Node op type (expect TFF_OP_QUANTIZE_Q8) is wrong");
+                return nullptr;
+            }
+            if (this->_input_nodes.size() != 1) {
+                tff::log::Logger::error("QuantQ80Node op type (expect 1) is wrong");
+                return nullptr;
+            }
+            std::shared_ptr<core::memory::Tensor> x_tensor;
+            for (auto &input : this->_input_nodes) {
+                x_tensor = input->get_tensor();
+            }
+            auto params = this->get_params();
+            params->set_param(x_tensor);
+
+            auto callback = GraphNode::forward();
+            return callback;
+        }
+    };
+
+    //
+    class QuantAlignedNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit QuantAlignedNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_QUANTIZE_ALIGNED);
+        }
+        ~QuantAlignedNode() override = default;
+    public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+            if (this->_op_type != TFF_OP_QUANTIZE_ALIGNED) {
+                tff::log::Logger::error("QuantQ80Node op type (expect TFF_OP_QUANTIZE_Q8) is wrong");
+                return nullptr;
+            }
+            if (this->_input_nodes.size() != 1) {
+                tff::log::Logger::error("QuantQ80Node op type (expect 1) is wrong");
+                return nullptr;
+            }
+            std::shared_ptr<core::memory::Tensor> x_tensor;
+            for (auto &input : this->_input_nodes) {
+                x_tensor = input->get_tensor();
+            }
+            auto params = this->get_params();
+            params->set_param(x_tensor);
+
+            auto callback = GraphNode::forward();
             return callback;
         }
     };

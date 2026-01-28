@@ -154,6 +154,8 @@ namespace tff::core::model {
             std::shared_ptr<GraphNode> &current_cpu_node, bool
             is_input = false);
 
+        std::shared_ptr<tff::core::graph::GraphNode> build_aligned_node(std::shared_ptr<GraphNode> &input_node);
+
         //
         NodeType build_layer_node(memory::ModelTensorType tensor_type,
                                   const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<

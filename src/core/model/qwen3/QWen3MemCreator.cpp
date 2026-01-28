@@ -41,6 +41,7 @@ namespace tff::core::model {
                 const auto &repeating_layer_map = repeating_layer_iter->second;
 
                 for (size_t layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
+
                     auto &layer_map = repeating_layer_map.find(layer_id)->second;
                     //
                     auto attn_norm_node = build_layer_node(memory::ModelTensorType::LLM_TENSOR_ATTN_NORM,
@@ -145,6 +146,31 @@ namespace tff::core::model {
         return current_cpu2gpu_node;
     }
 
+    std::shared_ptr<tff::core::graph::GraphNode> QWen3Creator::build_aligned_node(
+        std::shared_ptr<tff::core::graph::GraphNode> &input_node) {
+        tff::core::graph::TffOpType alinged_op_type;
+        core::memory::DataType alinged_data_type;
+        switch (input_node->get_tensor()->get_data_type()) {
+            case core::memory::DataType::TFF_DATA_TYPE_Q8_0:
+                alinged_op_type = tff::core::graph::TffOpType::TFF_OP_QUANTIZE_ALIGNED;
+                alinged_data_type = core::memory::DataType::TFF_DATA_TYPE_Q8_0_ALIGNED;
+                break;
+            default:
+                break;
+        }
+        auto aligned_node = ADD_NODE(alinged_op_type);
+        auto device = input_node->device();
+        aligned_node->bind_devices(device);
+        aligned_node->set_node_meta(NodeMetadata{"aligned_node"});
+        auto tensor = std::make_shared<memory::Tensor>(input_node->get_tensor()->dims(),alinged_data_type,
+                                                       input_node->get_tensor()->get_shape());
+        aligned_node->set_tensor(tensor);
+        aligned_node->add_src_node(input_node);
+        aligned_node->set_mem_type(core::memory::MemoryType::WEIGHT);
+
+        return aligned_node;
+    }
+
     NodeType QWen3Creator::build_layer_node(memory::ModelTensorType tensor_type,
                                             const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr
                                                 <
@@ -157,8 +183,23 @@ namespace tff::core::model {
         }
         NodeType out_put_node;
         out_put_node[TFF_GRAPH_NODE_MAP2CPU] = build_host_node(layer, input_node);
-        out_put_node[TFF_GRAPH_NODE_CPU2GPU] = build_device_node(layer, input_node,
+
+        auto gpu_node = build_device_node(layer, input_node,
                                                                  out_put_node[TFF_GRAPH_NODE_MAP2CPU], is_input);
+
+        if (!is_input && layer->_tensor->get_data_type() == core::memory::DataType::TFF_DATA_TYPE_Q8_0) {
+            auto aligned_node  = build_aligned_node(gpu_node);
+            auto mem_ref_node = ADD_NODE(core::graph::TffOpType::TFF_OP_MEM_REF);
+            mem_ref_node->set_node_meta(NodeMetadata{"ref_aligned_node"});
+            auto device = aligned_node->device();
+            mem_ref_node->bind_devices(device);
+            mem_ref_node->set_tensor(layer->_tensor);
+            mem_ref_node->add_src_node(aligned_node);
+            out_put_node[TFF_GRAPH_NODE_CPU2GPU] = mem_ref_node;
+        }else {
+            gpu_node->set_mem_type(core::memory::MemoryType::WEIGHT);
+            out_put_node[TFF_GRAPH_NODE_CPU2GPU] = gpu_node;
+        }
 
         return out_put_node;
     }

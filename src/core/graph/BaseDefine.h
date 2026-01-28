@@ -113,6 +113,7 @@ namespace tff::core::graph {
         TFF_OP_EMBEDDING,
         //quant
         TFF_OP_QUANTIZE_Q8,
+        TFF_OP_QUANTIZE_ALIGNED,
         TFF_OP_QUANTIZE_Q8_RESHAPE,
         TFF_OP_QUANTIZE_Q8_MATMUL,
         TFF_OP_QUANTIZE_Q8_MATMUL_RESHAPE,

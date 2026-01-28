@@ -47,7 +47,7 @@ namespace tff::core::model {
                 for (size_t layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
 #ifdef _DEBUG
                     {
-                        if (layer_id >= 3) {
+                        if (layer_id >= 1) {
                             continue;
                         }
                     }
@@ -191,8 +191,10 @@ namespace tff::core::model {
             tff::core::model::layer::ModelLayerObject> &layer,
         std::shared_ptr<tff::core::graph::GraphNode> &b_node) {
         tff::core::graph::TffOpType op_type;
-        switch (layer->_tensor->get_data_type()) {
+        auto weight_data_type = layer->_tensor->get_data_type();
+        switch (weight_data_type) {
             case tff::core::memory::DataType::TFF_DATA_TYPE_Q8_0:
+            case memory::DataType::TFF_DATA_TYPE_Q8_0_ALIGNED:
                 op_type = tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL;
                 break;
             case tff::core::memory::DataType::TFF_DATA_TYPE_F32:
@@ -202,6 +204,7 @@ namespace tff::core::model {
                 op_type = tff::core::graph::TffOpType::TFF_OP_MUL_MAT;
                 break;
         }
+
         auto a_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_MEM_REF);
         a_node->set_node_meta(NodeMetadata(layer->_layer_name + "_w_ref"));
         a_node->bind_devices(layer->_device_list);
@@ -229,8 +232,22 @@ namespace tff::core::model {
                                                                        result_data_type, shape));
         result->get_tensor()->set_tensor_type(layer->_tensor->get_tensor_type());
 
-        result->add_src_node(b_node);
         result->add_src_node(a_node);
+        if (weight_data_type == tff::core::memory::DataType::TFF_DATA_TYPE_Q8_0 &&
+            b_node->get_tensor()->get_data_type() == tff::core::memory::DataType::TFF_DATA_TYPE_F32) {
+            auto quantize_node = ADD_NODE(TFF_OP_QUANTIZE_Q8);
+            quantize_node->bind_devices(layer->_device_list);
+            quantize_node->set_node_meta(NodeMetadata{"quantize_q_8_0_node"});
+            quantize_node->add_src_node(b_node);
+            std::array<int64_t, MAX_TENSOR_DIM> shape = {
+                b_node->get_tensor()->get_shape()[0], b_node->get_tensor()->get_shape()[1], 1, 1
+            };
+            auto tensor = std::make_shared<tff::core::memory::Tensor>(memory::DataType::TFF_DATA_TYPE_Q8_0, shape);
+            quantize_node->set_tensor(tensor);
+            result->add_src_node(quantize_node);
+        } else {
+            result->add_src_node(b_node);
+        }
 
         return result;
     }
@@ -552,7 +569,7 @@ namespace tff::core::model {
         auto cache_load_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_GET_ROWS);
         if (tensor_type == core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
             cache_load_node->set_node_meta({"k_cache_load_node"});
-        }else if (tensor_type == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
+        } else if (tensor_type == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
             cache_load_node->set_node_meta({"v_cache_load_node"});
         }
         auto device = node->devices();

@@ -98,51 +98,51 @@ namespace tff::kernel {
         event->record(stream);
 
 #ifdef _DEBUG
-        std::vector<float> cpu_src;
-        cpu_src.resize(
-            input_tensor->get_shape()[0] * input_tensor->get_shape()[1] * input_tensor->get_shape()[2] *
-            input_tensor->get_shape()[3]);
-        load_tensor_raw("norm-0_src_0.ggml", cpu_src.data());
-        std::vector<float> gpu_src;
-        gpu_src.resize(
-            input_tensor->get_shape()[0] * input_tensor->get_shape()[1] * input_tensor->get_shape()[2] *
-            input_tensor->get_shape()[3]);
-        input_tensor->get_allocator()->memcopy(input_tensor->get_buffer()->ptr(), gpu_src.data(),
-            input_tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
-
-        for (int mm = 0; mm < input_tensor->get_shape()[1]; mm++) {
-            for (int nn = 0; nn < input_tensor->get_shape()[0]; nn++) {
-                float delta = gpu_src[mm * input_tensor->get_shape()[0] + nn] - cpu_src[mm * input_tensor->get_shape()[0] + nn];
-                if (delta > 0.001f) {
-                    tff::log::Logger::error("error: m: %d n: %d, delta: %lf", mm, nn, delta);
-                    throw std::runtime_error("error");
-                }
-            }
-        }
-        tff::log::Logger::info("layer node op input success!");
-
-        std::vector<float> cpu_result;
-        cpu_result.resize(
-            output_tensor->get_shape()[0] * output_tensor->get_shape()[1] * output_tensor->get_shape()[2] *
-            output_tensor->get_shape()[3]);
-        load_tensor_raw("attn_norm-0_result.ggml", cpu_result.data());
-        std::vector<float> gpu_result;
-        gpu_result.resize(
-            output_tensor->get_shape()[0] * output_tensor->get_shape()[1] * output_tensor->get_shape()[2] *
-            output_tensor->get_shape()[3]);
-        output_tensor->get_allocator()->memcopy(output_tensor->get_buffer()->ptr(), gpu_result.data(),
-            output_tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
-
-        for (int mm = 0; mm < output_tensor->get_shape()[1]; mm++) {
-            for (int nn = 0; nn < output_tensor->get_shape()[0]; nn++) {
-                float delta = gpu_result[mm * output_tensor->get_shape()[0] + nn] - cpu_result[mm * output_tensor->get_shape()[0] + nn];
-                if (fabs(delta) > 0.001f) {
-                    tff::log::Logger::error("error: m: %d n: %d, delta: %lf", mm, nn, delta);
-                    throw std::runtime_error("error");
-                }
-            }
-        }
-        tff::log::Logger::info("layer node op compute success!");
+        // std::vector<float> cpu_src;
+        // cpu_src.resize(
+        //     input_tensor->get_shape()[0] * input_tensor->get_shape()[1] * input_tensor->get_shape()[2] *
+        //     input_tensor->get_shape()[3]);
+        // load_tensor_raw("norm-0_src_0.ggml", cpu_src.data());
+        // std::vector<float> gpu_src;
+        // gpu_src.resize(
+        //     input_tensor->get_shape()[0] * input_tensor->get_shape()[1] * input_tensor->get_shape()[2] *
+        //     input_tensor->get_shape()[3]);
+        // input_tensor->get_allocator()->memcopy(input_tensor->get_buffer()->ptr(), gpu_src.data(),
+        //     input_tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+        //
+        // for (int mm = 0; mm < input_tensor->get_shape()[1]; mm++) {
+        //     for (int nn = 0; nn < input_tensor->get_shape()[0]; nn++) {
+        //         float delta = gpu_src[mm * input_tensor->get_shape()[0] + nn] - cpu_src[mm * input_tensor->get_shape()[0] + nn];
+        //         if (delta > 0.001f) {
+        //             tff::log::Logger::error("error: m: %d n: %d, delta: %lf", mm, nn, delta);
+        //             throw std::runtime_error("error");
+        //         }
+        //     }
+        // }
+        // tff::log::Logger::info("layer node op input success!");
+        //
+        // std::vector<float> cpu_result;
+        // cpu_result.resize(
+        //     output_tensor->get_shape()[0] * output_tensor->get_shape()[1] * output_tensor->get_shape()[2] *
+        //     output_tensor->get_shape()[3]);
+        // load_tensor_raw("attn_norm-0_result.ggml", cpu_result.data());
+        // std::vector<float> gpu_result;
+        // gpu_result.resize(
+        //     output_tensor->get_shape()[0] * output_tensor->get_shape()[1] * output_tensor->get_shape()[2] *
+        //     output_tensor->get_shape()[3]);
+        // output_tensor->get_allocator()->memcopy(output_tensor->get_buffer()->ptr(), gpu_result.data(),
+        //     output_tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+        //
+        // for (int mm = 0; mm < output_tensor->get_shape()[1]; mm++) {
+        //     for (int nn = 0; nn < output_tensor->get_shape()[0]; nn++) {
+        //         float delta = gpu_result[mm * output_tensor->get_shape()[0] + nn] - cpu_result[mm * output_tensor->get_shape()[0] + nn];
+        //         if (fabs(delta) > 0.001f) {
+        //             tff::log::Logger::error("error: m: %d n: %d, delta: %lf", mm, nn, delta);
+        //             throw std::runtime_error("error");
+        //         }
+        //     }
+        // }
+        // tff::log::Logger::info("layer node op compute success!");
 #endif
     }
 

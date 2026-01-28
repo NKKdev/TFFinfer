@@ -6,8 +6,53 @@
 #include "kernel/include/TFFOPCreator.h"
 
 namespace tff::kernel {
+    template<typename T1, typename T2>
+    __device__ __forceinline__ void load_vec(const T1 *addr, T2 *out, const int count);
+
+    template<>
+    __device__ __forceinline__ void load_vec<half, half2>(const half *addr, half2 *out, const int count) {
+        if (count == 4) {
+            const auto *h = reinterpret_cast<const half2 *>(addr);
+            out[0] = h[0];
+            out[1] = h[1];
+            out[2] = h[2];
+            out[3] = h[3];
+        } else {
+            const auto *h = reinterpret_cast<const half2 *>(addr);
+            out[0] = h[0];
+        }
+    }
+
+    template<>
+    __device__ __forceinline__ void load_vec<float, float2>(const float *addr, float2 *out, const int count) {
+        if (count == 4) {
+            const float2 *h = reinterpret_cast<const float2 *>(addr);
+            out[0] = h[0];
+            out[1] = h[1];
+            out[2] = h[2];
+            out[3] = h[3];
+        } else {
+            const float2 *h = reinterpret_cast<const float2 *>(addr);
+            out[0] = h[0];
+        }
+    }
+
+    template<>
+    __device__ __forceinline__ void load_vec<int8_t, int32_t>(const int8_t *addr, int32_t *out, const int count) {
+        if (count == 4 && reinterpret_cast<uintptr_t>(addr) % 4 == 0) {
+            *out = reinterpret_cast<const int32_t>(addr);
+        } else {
+            int32_t packed = 0;
+#pragma unroll
+            for (int i = 0; i < count; ++i) {
+                packed |= static_cast<int32_t>(static_cast<uint8_t>(addr[i])) << (i * 8);
+            }
+            out[0] = (packed);
+        }
+    }
+
     template<const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K,
-        const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE>
+        const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE, const int ALIGNED_FLAG>
     __device__ void load_tile(const int ld, const int dim,
                               const int thread_x, const int warp_id,
                               const int start_block,
@@ -24,12 +69,18 @@ namespace tff::kernel {
             for (int kk = 0; kk < VEC_DIM_K; ++kk) {
                 int dim1 = k + quant_block_id + kk * QUANT_BLKS_PER_WARP / VEC_DIM_K;
                 if (dim1 < ld && dim0 < dim) {
-                    const tff::core::quant::Q_8_0 *val = &global_mem[dim0 * ld + dim1];
-                    const int *quant_data = reinterpret_cast<const int *>(&val->qs[0]);
+                    int32_t quant_data = 0;
+                    if constexpr (ALIGNED_FLAG == 1) {
+                        quant_data = *reinterpret_cast<const int32_t *>(&global_mem[dim0 * ld + dim1].qs[
+                            block_inter_index * 4]);
+                    } else {
+                        load_vec<int8_t, int32_t>(&global_mem[dim0 * ld + dim1].qs[block_inter_index * 4], &quant_data,
+                                                  4);
+                    }
+
                     quant_sm[(warp_id + j * BLOCK_DIM_LD / VEC_DIM_LD) * (BLOCK_DIM_K / sizeof(int) + PAD_SIZE) +
                              thread_x +
-                             kk * (QUANT_BLKS_PER_WARP / VEC_DIM_K) * THREAD_NUM_PER_QUANT_BLOCK] = quant_data[
-                        block_inter_index];
+                             kk * (QUANT_BLKS_PER_WARP / VEC_DIM_K) * THREAD_NUM_PER_QUANT_BLOCK] = quant_data;
                 } else {
                     quant_sm[(warp_id + j * BLOCK_DIM_LD / VEC_DIM_LD) * (BLOCK_DIM_K / sizeof(int) + PAD_SIZE) +
                              thread_x +
@@ -58,7 +109,7 @@ namespace tff::kernel {
     }
 
     template<const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K,
-        const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE>
+        const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE, const int ALIGNED_FLAG>
     __device__ void load_tile_double_buffer(const int ld, const int dim,
                                             const int thread_x, const int warp_id,
                                             const int start_block,
@@ -81,10 +132,16 @@ namespace tff::kernel {
 
             int dim1 = k + quant_block_id;
             if (dim1 < ld && dim0 < dim) {
-                const tff::core::quant::Q_8_0 *val = &global_mem[dim0 * ld + dim1];
-                const int *quant_data = reinterpret_cast<const int *>(&val->qs[0]);
+                int32_t quant_data = 0;
+                if constexpr (ALIGNED_FLAG == 1) {
+                    quant_data = *reinterpret_cast<const int32_t *>(&global_mem[dim0 * ld + dim1].qs[
+                        block_inter_index * 4]);
+                } else {
+                    load_vec<int8_t, int32_t>(&global_mem[dim0 * ld + dim1].qs[block_inter_index * 4], &quant_data,
+                                              4);
+                }
                 quant_sm[(warp_id + j * row_stride) * quant_col_width + thread_x +
-                         kk * quant_col_stride] = quant_data[block_inter_index];
+                         kk * quant_col_stride] = quant_data;
             } else {
                 quant_sm[(warp_id + j * row_stride) * quant_col_width + thread_x +
                          kk * quant_col_stride] = 0;
@@ -217,7 +274,7 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int VEC_DIM_K,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K,
         const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE,
-        const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT>
+        const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT, const int ALIGNED_FLAG>
     __global__ void mat_mul_quant_q_8_0(
         int M, int N, int K,
         int a_ld, int b_ld, int c_ld,
@@ -241,10 +298,10 @@ namespace tff::kernel {
 
         for (size_t k = 0; k < K; k += BLOCK_DIM_K / QUANT_BLOCK_SIZE) {
             load_tile<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, QUANT_BLKS_PER_WARP, THREAD_NUM_PER_QUANT_BLOCK,
-                PAD_SIZE>(
+                PAD_SIZE, ALIGNED_FLAG>(
                 a_ld, M, thread_x, warp_id, start_m, k, a, &a_quant_data_sm[0][0], &a_scale_data_sm[0][0]);
             load_tile<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, QUANT_BLKS_PER_WARP, THREAD_NUM_PER_QUANT_BLOCK,
-                PAD_SIZE>(
+                PAD_SIZE, ALIGNED_FLAG>(
                 b_ld, N, thread_x, warp_id, start_n, k, b, &b_quant_data_sm[0][0], &b_scale_data_sm[0][0]);
             __syncthreads();
 
@@ -281,7 +338,7 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int VEC_DIM_K,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K,
         const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE,
-        const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT>
+        const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT, const int ALIGNED_FLAG>
     __global__ void mat_mul_quant_q_8_0_double_buffer(
         int M, int N, int K,
         int a_ld, int b_ld, int c_ld,
@@ -306,11 +363,11 @@ namespace tff::kernel {
 
         load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
             THREAD_NUM_PER_QUANT_BLOCK,
-            PAD_SIZE>(
+            PAD_SIZE, ALIGNED_FLAG>(
             a_ld, M, thread_x, warp_id, start_m, 0, flip_flag, a, &a_quant_data_sm[0][0], &a_scale_data_sm[0][0]);
         load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
             THREAD_NUM_PER_QUANT_BLOCK,
-            PAD_SIZE>(
+            PAD_SIZE, ALIGNED_FLAG>(
             b_ld, N, thread_x, warp_id, start_n, 0, flip_flag, b, &b_quant_data_sm[0][0], &b_scale_data_sm[0][0]);
         __syncthreads();
 
@@ -330,12 +387,12 @@ namespace tff::kernel {
                 //printf("error:  next_k: %d,flip_flag: %d !flip_flag: %d \n", next_k, flip_flag, !flip_flag);
                 load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
                     THREAD_NUM_PER_QUANT_BLOCK,
-                    PAD_SIZE>(
+                    PAD_SIZE, ALIGNED_FLAG>(
                     a_ld, M, thread_x, warp_id, start_m, next_k, !flip_flag, a, &a_quant_data_sm[0][0],
                     &a_scale_data_sm[0][0]);
                 load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
                     THREAD_NUM_PER_QUANT_BLOCK,
-                    PAD_SIZE>(
+                    PAD_SIZE, ALIGNED_FLAG>(
                     b_ld, N, thread_x, warp_id, start_n, next_k, !flip_flag, b, &b_quant_data_sm[0][0],
                     &b_scale_data_sm[0][0]);
             }
@@ -367,7 +424,10 @@ namespace tff::kernel {
     void quant_q_8_0_matmul(const int M, const int N, const int K,
                             void *quant_a,
                             void *quant_b,
-                            T *c) {
+                            T *c,
+                            std::shared_ptr<core::device::DeviceStream> &stream,
+                             std::shared_ptr<core::device::DeviceEvent> &event,
+                             std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
         constexpr int QUANT_BLOCK_SIZE = tff::core::quant::Q_8_0::BLOCK_SIZE;
         constexpr int VEC_DIM_M = 8;
         constexpr int VEC_DIM_N = 2;
@@ -380,28 +440,24 @@ namespace tff::kernel {
         constexpr int PAD_SIZE = 4;
         constexpr int VEC_DOT_PRODUCT = QUANT_BLOCK_SIZE / sizeof(int);
 
+        for (auto &wait_event_ptr: wait_event_list) {
+            if (wait_event_ptr == nullptr) {
+                continue;
+            }
+            stream->wait_event(wait_event_ptr->get_native_event());
+        }
         dim3 grid((N + BLOCK_N_DIM - 1) / BLOCK_N_DIM, (M + BLOCK_M_DIM - 1) / BLOCK_M_DIM, 1);
         dim3 block(BLOCK_N_DIM / VEC_DIM_N, BLOCK_M_DIM / VEC_DIM_M, 1);
-        if (std::max(M, N) > 2048) {
-            mat_mul_quant_q_8_0<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_M_DIM, BLOCK_N_DIM, BLOCK_K_DIM,
-                        QUANT_BLKS_PER_WARP, THREAD_NUM_PER_QUANT_BLOCK, PAD_SIZE, QUANT_BLOCK_SIZE,
-                        VEC_DOT_PRODUCT><<<grid
-                    , block>>>(
-                        M, N, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, N,
-                        static_cast<tff::core::quant::Q_8_0 *>(quant_a),
-                        static_cast<tff::core::quant::Q_8_0 *>(quant_b),
-                        c);
-        } else {
-            mat_mul_quant_q_8_0_double_buffer<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_M_DIM, BLOCK_N_DIM,
+        mat_mul_quant_q_8_0_double_buffer<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_M_DIM, BLOCK_N_DIM,
                         BLOCK_K_DIM,
                         QUANT_BLKS_PER_WARP, THREAD_NUM_PER_QUANT_BLOCK, PAD_SIZE, QUANT_BLOCK_SIZE,
-                        VEC_DOT_PRODUCT><<<grid
-                    , block>>>(
+                        VEC_DOT_PRODUCT, 1><<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
                         M, N, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, N,
                         static_cast<tff::core::quant::Q_8_0 *>(quant_a),
                         static_cast<tff::core::quant::Q_8_0 *>(quant_b),
                         c);
-        }
+        event->record(stream);
+
     }
 
     template<typename T>
@@ -412,22 +468,28 @@ namespace tff::kernel {
             1, para_ptr);
         auto x_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
-        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             3, para_ptr);
         auto mem_buffer_manager_ptr = get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
-
+        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream>>(5, para_ptr);
+        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(6, para_ptr);
+        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(7, para_ptr);
+        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
         if (weight_tensor == nullptr || x_tensor == nullptr || output_tensors == nullptr) {
             tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
 
-        if (weight_tensor->get_buffer() == nullptr) {
+        if (weight_tensor->get_buffer() == nullptr || weight_tensor->get_buffer()->ptr() == nullptr) {
             tff::log::Logger::error("weight tensor is null!");
             return;
         }
-        if (x_tensor->get_buffer() == nullptr) {
+        if (x_tensor->get_buffer() == nullptr || x_tensor->get_buffer()->ptr() == nullptr) {
             tff::log::Logger::error("x tensor is null!");
             return;
         }
@@ -438,7 +500,8 @@ namespace tff::kernel {
 
         //
         quant_q_8_0_matmul<T>(M, N, K, weight_tensor->get_buffer()->ptr(),
-                              x_tensor->get_buffer()->ptr(), static_cast<T *>(output_tensors->get_buffer()->ptr()));
+                              x_tensor->get_buffer()->ptr(), static_cast<T *>(output_tensors->get_buffer()->ptr()),
+                              stream, event, event_list);
 
         // mem_buffer_manager_ptr->reset_gpu_memory(weight_tensor->get_external_memory_index());
         // mem_buffer_manager_ptr->reset_gpu_memory(x_tensor->get_external_memory_index());// todo 需要区分全部加载权重和边推理边加载权重

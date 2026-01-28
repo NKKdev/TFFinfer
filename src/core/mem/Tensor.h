@@ -97,7 +97,6 @@ namespace tff::core::memory {
             if (this == &other) {
                 return *this;
             }
-            release();
 
             _use_external = other._use_external;
             _external_memory_index = other._external_memory_index;
@@ -109,26 +108,8 @@ namespace tff::core::memory {
             _shape = other._shape;
             _strides = other._strides;
             _allocator = other._allocator;
-            if (!_use_external) {
-                auto total_bytes = std::accumulate(
-                                       _shape.begin(), _shape.end(), 1ULL, std::multiplies<uint64_t>()
-                                   ) * _type_size;
-                _buffer = std::make_shared<tff::core::memory::Memory>(
-                    total_bytes, nullptr, _use_external, _allocator
-                );
-                _buffer->allocate();
-                _is_allocated = true;
-                if (other._buffer && other._buffer->ptr() && _buffer->ptr()) {
-                    _allocator->memcopy(_buffer->ptr(), other._buffer->ptr(), total_bytes);
-                }
-            } else {
-                if (other._buffer) {
-                    _buffer = std::make_shared<tff::core::memory::Memory>(
-                        other._buffer->byte_size(), other._buffer->ptr(), true, _allocator
-                    );
-                }
-                _is_allocated = other._is_allocated;
-            }
+            this->_buffer = other._buffer;
+
             return *this;
         }
 
@@ -139,6 +120,7 @@ namespace tff::core::memory {
             release();
 
             _use_external = other._use_external;
+            _external_memory_index = other._external_memory_index;
             _is_allocated = other._is_allocated;
             _data_type = other._data_type;
             _tensor_type = other._tensor_type;
@@ -221,6 +203,9 @@ namespace tff::core::memory {
 
         inline void set_dims(const size_t &n_dims) {
             this->_n_dims = n_dims;
+        }
+        inline int dims() const {
+            return this->_n_dims;
         }
 
         //

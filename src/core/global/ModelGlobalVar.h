@@ -1758,6 +1758,7 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_EMBEDDING, "embedding"},
         //quant
         {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8, "quantize_q8"},
+        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_ALIGNED, "quantize_aligned"},
         {tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8, "dequantize_q8"},
         {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL, "quant_q8_matmul"},
         {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_RESHAPE, "quantize_q8_reshape"},
@@ -1822,8 +1823,7 @@ namespace tff::core::global {
 
             if constexpr (std::is_same_v<T, std::vector<DataType> >) {
                 result = val;
-            }
-            else if constexpr (is_vector_v<T>) {
+            } else if constexpr (is_vector_v<T>) {
                 using U = typename T::value_type;
                 for (const auto &item: val) {
                     if constexpr (std::is_convertible_v<U, DataType>) {
@@ -1834,8 +1834,7 @@ namespace tff::core::global {
                         }
                     }
                 }
-            }
-            else if constexpr (std::is_same_v<T, ModelContext::BasicType>) {
+            } else if constexpr (std::is_same_v<T, ModelContext::BasicType>) {
                 std::visit([&result](const auto &inner) {
                     using U = std::decay_t<decltype(inner)>;
                     if constexpr (std::is_convertible_v<U, DataType>) {
@@ -1846,8 +1845,7 @@ namespace tff::core::global {
                         }
                     }
                 }, val);
-            }
-            else if constexpr (!is_vector_v<T> && !std::is_same_v<T, ModelContext::BasicType>) {
+            } else if constexpr (!is_vector_v<T> && !std::is_same_v<T, ModelContext::BasicType>) {
                 if constexpr (std::is_convertible_v<T, DataType>) {
                     result.push_back(static_cast<DataType>(val));
                 } else if constexpr (requires { try_convert<DataType>(val); }) {
@@ -1902,6 +1900,7 @@ namespace tff::core::global {
         else if constexpr (std::is_same_v<T, int64_t>) return "i64";
         else if constexpr (std::is_same_v<T, half>) return "fp16";
         else if constexpr (std::is_same_v<T, Q8_0>) return "q8_0";
+        else if constexpr (std::is_same_v<T, Q8_0_ALIGNED>) return "q8_0_aligned";
         else return "unknown";
     }
 }

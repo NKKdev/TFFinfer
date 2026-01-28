@@ -22,7 +22,6 @@ namespace tff::core::runtime {
         if (is_fuse) {
             this->fuse_op_node(graph_ptr, graph_ptr->nodes());
         }
-        auto mem_type = type == schedule::TaskType::TFF_TASK_TYPE_IO ? MemoryType::WEIGHT : MemoryType::ACTIVATION;
         std::unordered_map<std::shared_ptr<tff::core::graph::GraphNode>, tf::Task> node_to_task;
         node_to_task.reserve(graph_ptr->nodes().size());
         for (const auto &node: graph_ptr->nodes()) {
@@ -31,7 +30,7 @@ namespace tff::core::runtime {
                 continue;
             }
 
-            auto callable = node->forward(mem_type);
+            auto callable = node->forward();
             if (!callable) {
                 tff::log::Logger::error("layer node: %s has not op callback!", node->name().c_str());
                 continue;
@@ -110,6 +109,7 @@ namespace tff::core::runtime {
                     if (pre_pred->is_fuse()) {
                         continue;
                     }
+                    pre_pred->remove_src_node(pred);
                     pre_pred->add_src_node(current_node);
                     current_node->add_output_node(pre_pred);
                 }

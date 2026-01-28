@@ -48,7 +48,9 @@ namespace tff::kernel {
         std::shared_ptr<core::device::DeviceEvent> &event,
         std::vector<std::shared_ptr<core::device::DeviceEvent>> &event_list
         ) {
-
+        if (cur_k == nullptr) {
+            return;
+        }
         auto batch = cur_k->get_shape()[3];
 
         constexpr int BLOCK_ROW_SIZE = PAGE_SIZE;
@@ -91,6 +93,10 @@ namespace tff::kernel {
         auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(10, para_ptr);
         auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(11, para_ptr);
         if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr || kv_cache_ctx == nullptr) {
+            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            return;
+        }
+        if (cur_k == nullptr || cur_v == nullptr || out_tensor == nullptr || mem_buffer_manager_ptr == nullptr) {
             tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }

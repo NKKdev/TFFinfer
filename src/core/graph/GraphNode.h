@@ -57,7 +57,8 @@ namespace tff::core::graph {
         friend class Graph;
 
     public:
-        explicit GraphNode(const std::string &name = ""):_is_fused(false) {
+        explicit GraphNode(const std::string &name = ""):
+        _is_fused(false),_memory_type(core::memory::MemoryType::ACTIVATION) {
             this->_node_metadata._name = name;
             this->_params_ptr = std::make_shared<tff::core::global::ParamBaseObject>();
             this->_mem_manager_ptr = std::dynamic_pointer_cast<tff::core::runtime::LLMMemManager>(
@@ -76,7 +77,7 @@ namespace tff::core::graph {
         }
     public:
         //
-        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward(runtime::MemoryType &type) {
+        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() {
             const auto dev = device();
             if (dev.empty()) {
                 tff::log::Logger::error("Node '%s': no valid device bound", this->_node_metadata._name.c_str());
@@ -85,8 +86,8 @@ namespace tff::core::graph {
 
             if (this->_tensor->get_buffer() == nullptr) {
                 this->_tensor->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
-                    this->_tensor->get_external_memory_index(), type),
-                    this->_tensor->get_bytes());
+                    this->_tensor->get_external_memory_index(), this->_memory_type),
+                    this->_tensor->get_bytes(), this->_tensor->get_external_memory_index());
                 this->_tensor->set_allocator(this->device().begin()->second->get_device_buffer_allocator(this->device().begin()->first));
             }
             std::vector<std::shared_ptr<core::device::DeviceEvent>> events_list;
@@ -99,9 +100,9 @@ namespace tff::core::graph {
             params_ptr->set_param(this->stream());
             params_ptr->set_param(this->event());
             params_ptr->set_param(events_list);
-            if (this->op_type() == TFF_OP_MEM_REF) {
-                return nullptr;
-            }
+            // if (this->op_type() == TFF_OP_MEM_REF) {
+            //     return nullptr;
+            // }
             auto callback = this->_devices.begin()->second->get_op_func(this->_op_type, this->data_type());
             return callback;
         };
@@ -345,6 +346,12 @@ namespace tff::core::graph {
         inline std::shared_ptr<core::device::DeviceStream> stream() const {
             return this->_device_stream_ptr;
         }
+        inline void set_mem_type(const tff::core::memory::MemoryType &mem_type) {
+            this->_memory_type = mem_type;
+        }
+        inline tff::core::memory::MemoryType mem_type() const {
+            return this->_memory_type;
+        }
     protected:
         NodeMetadata _node_metadata;
         bool _is_fused;
@@ -358,6 +365,7 @@ namespace tff::core::graph {
 
 
         TffOpType _op_type = TFF_OP_NONE;
+        core::memory::MemoryType _memory_type;
         std::shared_ptr<tff::core::global::ParamBaseObject> _params_ptr;
 
         tff::core::model::ModelTensorLayerType _layer_type =

@@ -70,8 +70,8 @@ namespace tff::core::runtime {
         //
         bool init_io_graph();
         //
-        bool init_mem_manager(const std::shared_ptr<graph::Graph> &graph_ptr, std::shared_ptr<LLMMemManager> &_mem_manager_ptr, const MemoryType &
-                              type) const;
+        bool init_mem_manager(const std::shared_ptr<graph::Graph> &graph_ptr,
+            std::shared_ptr<LLMMemManager> &_mem_manager_ptr) const;
 
         //
         bool prefill();
@@ -105,8 +105,9 @@ namespace tff::core::runtime {
         void bind_device(std::shared_ptr<layer::ModelLayerObject> &layer_obj, const int &total_layer_index);
         //
         void build_mem_offset(const std::shared_ptr<LLMMemManager> &_mem_manager_ptr,
-                              const std::shared_ptr<graph::Graph> &graph_ptr, std::unordered_map<std::string, std::unordered_map<int, size_t>> &
-                              mem_buffer_offset_map, const MemoryType &type) const;
+                              const std::shared_ptr<graph::Graph> &graph_ptr, std::unordered_map<memory::MemoryType, std::unordered_map<std::string,
+                              std::unordered_map<int,
+                              size_t>>> &mem_buffer_offset_map) const;
 
     public:
         std::string _name;

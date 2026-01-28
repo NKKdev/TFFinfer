@@ -109,26 +109,28 @@ namespace tff::core::device::cuda {
         std::string op_name = std::string(it->second) + std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
         switch (data_type) {
             case tff::core::memory::DataType::TFF_DATA_TYPE_F32:
-                op_name = op_name + +tff::core::global::get_type_suffix<float>();
+                op_name = op_name + tff::core::global::get_type_suffix<float>();
                 break;
             case tff::core::memory::DataType::TFF_DATA_TYPE_F64:
-                op_name = op_name + +tff::core::global::get_type_suffix<double>();
+                op_name = op_name + tff::core::global::get_type_suffix<double>();
                 break;
             case tff::core::memory::DataType::TFF_DATA_TYPE_I32:
-                op_name = op_name + +tff::core::global::get_type_suffix<int32_t>();
+                op_name = op_name + tff::core::global::get_type_suffix<int32_t>();
                 break;
             case tff::core::memory::DataType::TFF_DATA_TYPE_I64:
-                op_name = op_name + +tff::core::global::get_type_suffix<int64_t>();
+                op_name = op_name + tff::core::global::get_type_suffix<int64_t>();
                 break;
             case tff::core::memory::DataType::TFF_DATA_TYPE_I8:
-                op_name = op_name + +tff::core::global::get_type_suffix<uint8_t>();
+                op_name = op_name + tff::core::global::get_type_suffix<uint8_t>();
                 break;
             case tff::core::memory::DataType::TFF_DATA_TYPE_F16:
-                op_name = op_name + +tff::core::global::get_type_suffix<half>();
+                op_name = op_name + tff::core::global::get_type_suffix<half>();
                 break;
             case tff::core::memory::TFF_DATA_TYPE_Q8_0:
-                op_name = op_name + +tff::core::global::get_type_suffix<Q8_0>();
+                op_name = op_name + tff::core::global::get_type_suffix<Q8_0>();
                 break;
+            case memory::TFF_DATA_TYPE_Q8_0_ALIGNED:
+                op_name += tff::core::global::get_type_suffix<Q8_0_ALIGNED>();
             default:
                 break;
         }

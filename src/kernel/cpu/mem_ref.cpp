@@ -11,8 +11,7 @@ namespace tff::kernel {
     void tff::kernel::MemRef<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto &name = get_param_value<std::string>(0, para_ptr);
         tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), MemRef<T>::get_op_name().c_str());
-        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
-            core::memory::Tensor::TensorCompare> >(
+        auto input_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             1, para_ptr);
         auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
@@ -24,7 +23,10 @@ namespace tff::kernel {
             tff::log::Logger::error("op (%s) output tensors buffer is null", name.c_str());
             return;
         }
-        output_tensors = *input_tensors.begin();
+        if (input_tensor == nullptr) {
+            return;
+        }
+        output_tensors = input_tensor;
    }
     template<typename T>
     std::string tff::kernel::MemRef<T>::get_op_name() {

@@ -210,36 +210,51 @@ namespace tff::core::runtime {
 
     void LLMInferRuntime::build_mem_offset(const std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr,
                                            const std::shared_ptr<graph::Graph> &graph_ptr,
-                                           std::unordered_map<std::string, std::unordered_map<int, size_t> > &
-                                           mem_buffer_offset_map,
-                                           const MemoryType &type) const {
+                                           std::unordered_map<core::memory::MemoryType, std::unordered_map<std::string,
+                                               std::unordered_map<int, size_t> > > &
+                                           mem_buffer_offset_map) const {
         for (auto &node: graph_ptr->total_nodes()) {
+            if (node->op_type() == core::graph::TffOpType::TFF_OP_MEM_REF) {
+                continue;
+            }
             auto current_device = *node->device().begin();
             auto [start, end] = graph_ptr->get_lifetime(node);
             tff::log::Logger::info("node： %s start: %d, end: %d", node->name().c_str(), start, end);
+
             auto mem_offset = _mem_manager_ptr->allocate_memory(node->get_tensor()->get_bytes(),
-                                                                start, end, current_device.first, type);
+                                                                start, end, current_device.first, node->mem_type());
             node->get_tensor()->set_external_memory_index(mem_offset);
             auto device_type_flag = current_device.second->get_device_type_flag(current_device.first);
-            auto iter = mem_buffer_offset_map.find(device_type_flag);
+
+            auto iter = mem_buffer_offset_map.find(node->mem_type());
             if (iter != mem_buffer_offset_map.end()) {
-                auto devoce_iter = iter->second.find(current_device.first);
-                if (devoce_iter != iter->second.end()) {
-                    devoce_iter->second = devoce_iter->second < mem_offset ? mem_offset : devoce_iter->second;
+                auto device_iter = iter->second.find(device_type_flag);
+                if (device_iter != iter->second.end()) {
+                    auto device_backend = device_iter->second.find(current_device.first);
+                    if (device_backend != device_iter->second.end()) {
+                        device_backend->second = device_backend->second < mem_offset
+                                                     ? mem_offset
+                                                     : device_backend->second;
+                    } else {
+                        device_iter->second.insert(std::make_pair(current_device.first, mem_offset));
+                    }
                 } else {
-                    mem_buffer_offset_map[device_type_flag].insert(std::make_pair(current_device.first, mem_offset));
+                    std::unordered_map<int, size_t> device_offset;
+                    device_offset.insert(std::make_pair(current_device.first, mem_offset));
+                    iter->second.insert(std::make_pair(device_type_flag, device_offset));
                 }
             } else {
                 std::unordered_map<int, size_t> device_mem_offset_map;
                 device_mem_offset_map.insert(std::make_pair(current_device.first, mem_offset));
-                mem_buffer_offset_map.insert(std::make_pair(device_type_flag, device_mem_offset_map));
+                std::unordered_map<std::string, std::unordered_map<int, size_t> > tmp;
+                tmp.insert(std::make_pair(device_type_flag, device_mem_offset_map));
+                mem_buffer_offset_map.insert(std::make_pair(node->mem_type(), tmp));
             }
         }
     }
 
     bool LLMInferRuntime::init_mem_manager(const std::shared_ptr<graph::Graph> &graph_ptr,
-                                           std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr,
-                                           const MemoryType &type) const {
+                                           std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr) const {
         if (graph_ptr == nullptr) {
             tff::log::Logger::error("model graph is invalid!!\n");
             return false;
@@ -248,13 +263,16 @@ namespace tff::core::runtime {
             tff::log::Logger::error("model memory manager is invalid!!\n");
             return false;
         }
-        std::unordered_map<std::string, std::unordered_map<int, size_t> > mem_buffer_offset_map;
-        this->build_mem_offset(_mem_manager_ptr, graph_ptr, mem_buffer_offset_map, type);
+        std::unordered_map<core::memory::MemoryType, std::unordered_map<std::string, std::unordered_map<int, size_t> > >
+                mem_buffer_offset_map;
+        this->build_mem_offset(_mem_manager_ptr, graph_ptr, mem_buffer_offset_map);
 
         bool bRet = true;
-        for (auto &mem_buffer_offset: mem_buffer_offset_map) {
-            for (auto &mem_buffer: mem_buffer_offset.second) {
-                bRet &= _mem_manager_ptr->init(mem_buffer.first, type);
+        for (auto &mem_buffer_map: mem_buffer_offset_map) {
+            for (auto &mem_buffer: mem_buffer_map.second) {
+                for (auto &mem_offset: mem_buffer.second) {
+                    bRet &= _mem_manager_ptr->init(mem_offset.first, mem_buffer_map.first);
+                }
             }
         }
 
@@ -269,14 +287,15 @@ namespace tff::core::runtime {
             if (!this->_infer_graph_ptr) {
                 this->init_graph();
                 //init mem buffer;
-                if (!this->init_mem_manager(this->_infer_graph_ptr, this->_mem_manager_ptr, MemoryType::ACTIVATION)) {
+                if (!this->init_mem_manager(this->_infer_graph_ptr, this->_mem_manager_ptr)) {
                     tff::log::Logger::error("Failed to initialize memory manager.");
                     return false;
                 }
             }
             try {
-                this->_task_manager->build_task_schedule(tff::schedule::TaskType::TFF_TASK_TYPE_INFER,
-                                                         this->_infer_graph_ptr, this->_model_config._is_fuse_op);
+                this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER,
+                                                         this->_infer_graph_ptr,
+                                                         this->_model_config._is_fuse_op);
                 this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_INFER);
             } catch (const std::exception &e) {
                 tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
@@ -542,13 +561,13 @@ namespace tff::core::runtime {
     bool LLMInferRuntime::load_tensor_data() {
         this->init_io_graph();
 
-        if (!this->init_mem_manager(this->_mem_graph_ptr, this->_mem_manager_ptr, MemoryType::WEIGHT)) {
+        if (!this->init_mem_manager(this->_mem_graph_ptr, this->_mem_manager_ptr)) {
             tff::log::Logger::error("Failed to initialize memory manager.");
             return false;
         }
 
         try {
-            this->_task_manager->build_task_schedule(tff::schedule::TaskType::TFF_TASK_TYPE_IO, this->_mem_graph_ptr);
+            this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_IO,this->_mem_graph_ptr);
             this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_IO);
         } catch (const std::exception &e) {
             tff::log::Logger::error("Prefill forward failed: {%s}", e.what());

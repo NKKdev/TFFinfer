@@ -45,7 +45,7 @@ namespace tff::core::quant {
                     max_abs = std::max(max_abs, std::abs(x[j]));
                 }
                 if (max_abs == 0.0f) {
-                    blocks[i].d = tff::utils::fp32_to_fp16(0.0f);
+                    blocks[i].d = __float2half(0.0f);
                     for (int j = 0; j < BLOCK_SIZE; ++j) {
                         blocks[i].qs[j] = 0;
                     }
@@ -54,7 +54,7 @@ namespace tff::core::quant {
                 const float scale = max_abs / 127.0f;
                 const float inv_scale = 1.0f / scale;
 
-                blocks[i].d = tff::utils::fp32_to_fp16(scale);
+                blocks[i].d = __float2half(scale);
 
                 for (int j = 0; j < BLOCK_SIZE; ++j) {
                     const float v = x[j] * inv_scale;
@@ -70,6 +70,58 @@ namespace tff::core::quant {
     };
 
     static_assert(sizeof(tff::core::quant::Q_8_0) == 34);
+
+    struct Q_8_0_ALIGNED {
+        static constexpr int BLOCK_SIZE = 32;
+        float d;
+        int8_t qs[BLOCK_SIZE];
+
+        static void dequantize(const Q_8_0_ALIGNED *blocks, float *out, const int64_t elem_count) {
+            const int nb = elem_count / BLOCK_SIZE;
+            for (int i = 0; i < nb; ++i) {
+                const float scale = (blocks[i].d);
+                for (int j = 0; j < BLOCK_SIZE; ++j) {
+                    out[i * BLOCK_SIZE + j] = blocks[i].qs[j] * scale;
+                }
+            }
+        }
+
+        //
+        static void quantize(const float *src, Q_8_0_ALIGNED *blocks, const int64_t elem_count) {
+            const int nb = static_cast<int>(elem_count / BLOCK_SIZE);
+            for (int i = 0; i < nb; ++i) {
+                const float *x = src + i * BLOCK_SIZE;
+
+                float max_abs = 0.0f;
+                for (int j = 0; j < BLOCK_SIZE; ++j) {
+                    max_abs = std::max(max_abs, std::abs(x[j]));
+                }
+                if (max_abs == 0.0f) {
+                    blocks[i].d = 0.0f;
+                    for (int j = 0; j < BLOCK_SIZE; ++j) {
+                        blocks[i].qs[j] = 0;
+                    }
+                    continue;
+                }
+                const float scale = max_abs / 127.0f;
+                const float inv_scale = 1.0f / scale;
+
+                blocks[i].d = (scale);
+
+                for (int j = 0; j < BLOCK_SIZE; ++j) {
+                    const float v = x[j] * inv_scale;
+                    const int32_t iv = static_cast<int32_t>(std::round(v));
+                    blocks[i].qs[j] = static_cast<int8_t>(
+                        std::max(-127, std::min(127, iv))
+                    );
+                }
+            }
+        }
+
+        static constexpr bool is_quantized() { return true; };
+    };
+
+    static_assert(sizeof(tff::core::quant::Q_8_0_ALIGNED) == 36);
 
     //
     struct Q_8_1 {
@@ -230,4 +282,5 @@ namespace tff::core::quant {
 }
 
 using Q8_0 = tff::core::quant::Q_8_0;
+using Q8_0_ALIGNED = tff::core::quant::Q_8_0_ALIGNED;
 #endif //TFFINFER_BASEDEFINE_H

@@ -7,7 +7,7 @@
 #include "device/DeviceBaseObject.h"
 namespace tff::core::runtime {
     REGISTER_MODULE_OBJECT(LLMMemManager, tff::module::ModuleObject, WEIGHT_MEM_BUFFER_MANAGER_FLAG,WEIGHT_MEM_BUFFER_MANAGER_FLAG);
-    bool LLMMemManager::init(const int &device_id, const MemoryType &type) {
+    bool LLMMemManager::init(const int &device_id, const core::memory::MemoryType &type) {
         auto mem_allocator = this->_devices_map[device_id]->get_device_buffer_allocator(device_id);
         this->_mem_buffer_map[type][device_id] = mem_allocator->allocate(this->_current_offset[type][device_id]);
         if (this->_mem_buffer_map[type][device_id] == nullptr) {
@@ -18,7 +18,7 @@ namespace tff::core::runtime {
         return true;
     }
 
-    size_t LLMMemManager::allocate_memory(size_t size, int start, int end, const int &device_id, const MemoryType &type) {
+    size_t LLMMemManager::allocate_memory(size_t size, int start, int end, const int &device_id, const core::memory::MemoryType &type) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         size_t offset;
@@ -27,7 +27,7 @@ namespace tff::core::runtime {
             actual_size = align_up(size, _alignment);
         }
 
-        if (type == MemoryType::WEIGHT) {//权重内存常驻，不参与回收复用;
+        if (type ==core::memory:: MemoryType::WEIGHT) {//权重内存常驻，不参与回收复用;
             offset = _current_offset[type][device_id];
             _current_offset[type][device_id] += actual_size;
 
