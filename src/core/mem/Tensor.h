@@ -13,7 +13,7 @@
 #include "global/GlobalDefine.h"
 
 namespace tff::core::memory {
-    class Tensor :public std::enable_shared_from_this<Tensor>{
+    class Tensor : public std::enable_shared_from_this<Tensor> {
     public:
         struct TensorCompare {
             bool operator()(const std::shared_ptr<Tensor> &a, const std::shared_ptr<Tensor> &b) const {
@@ -52,13 +52,17 @@ namespace tff::core::memory {
             //     _is_allocated = other->_is_allocated;
             // }
         }
-        Tensor(const int n_dim = 4, const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
+
+        Tensor(const int n_dim = 4,
+               const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
+               const MemoryType memory_type = MemoryType::TFF_MEM_TYPE_WORKSPACE,
                std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
                bool use_external = true,
-               std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
+               std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
-                                  _allocator(std::move(alloc)) {
+                                  _allocator(std::move(alloc)),
+                                  _memory_type(memory_type) {
             if (_shape.empty()) {
                 tff::log::Logger::error("tensor shape is invalid!!");
                 return;
@@ -72,13 +76,16 @@ namespace tff::core::memory {
                 this->allocate();
             }
         }
+
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
+        const MemoryType memory_type = MemoryType::TFF_MEM_TYPE_WORKSPACE,
                std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
                bool use_external = true,
-               std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> alloc =
+               std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> alloc =
                        nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
                                   _shape(std::move(shapes)),
-                                  _allocator(std::move(alloc)) {
+                                  _allocator(std::move(alloc)),
+                                  _memory_type(memory_type) {
             if (_shape.empty()) {
                 tff::log::Logger::error("tensor shape is invalid!!");
                 return;
@@ -101,6 +108,7 @@ namespace tff::core::memory {
             _use_external = other._use_external;
             _external_memory_index = other._external_memory_index;
             _data_type = other._data_type;
+            _memory_type = other._memory_type;
             _tensor_type = other._tensor_type;
             _type_size = other._type_size;
             _blk_size = other._blk_size;
@@ -123,6 +131,7 @@ namespace tff::core::memory {
             _external_memory_index = other._external_memory_index;
             _is_allocated = other._is_allocated;
             _data_type = other._data_type;
+            _memory_type = other._memory_type;
             _tensor_type = other._tensor_type;
             _type_size = other._type_size;
             _blk_size = other._blk_size;
@@ -136,31 +145,6 @@ namespace tff::core::memory {
             other._n_dims = 0;
             return *this;
         }
-
-        // bool operator==(const Tensor& other) const {
-        //     if (_data_type != other._data_type ||
-        //         _shape != other._shape ||
-        //         _use_external != other._use_external) {
-        //         return false;
-        //         }
-        //     if (!_is_allocated && !other._is_allocated) {
-        //         return true;
-        //     }
-        //
-        //     if (!_is_allocated || !other._is_allocated) {
-        //         return false;
-        //     }
-        //     size_t this_bytes = get_bytes();
-        //     size_t other_bytes = other.get_bytes();
-        //     if (this_bytes != other_bytes) {
-        //         return false;
-        //     }
-        //     if (!_buffer || !_buffer->ptr() || !other._buffer || !other._buffer->ptr()) {
-        //         return false;
-        //     }
-        //     return std::memcmp(_buffer->ptr(), other._buffer->ptr(), this_bytes) == 0;
-        // }
-
 
         ~Tensor() {
         }
@@ -204,6 +188,7 @@ namespace tff::core::memory {
         inline void set_dims(const size_t &n_dims) {
             this->_n_dims = n_dims;
         }
+
         inline int dims() const {
             return this->_n_dims;
         }
@@ -228,7 +213,13 @@ namespace tff::core::memory {
             this->_shape = shape;
             this->set_dims(this->_shape.size());
         }
-
+        //
+        inline MemoryType memory_type() const {
+            return this->_memory_type;
+        }
+        inline void set_memory_type(const MemoryType &memory_type) {
+            this->_memory_type = memory_type;
+        }
         //
         inline DataType get_data_type() const {
             return this->_data_type;
@@ -269,6 +260,7 @@ namespace tff::core::memory {
             std::lock_guard<std::mutex> lock(this->_mutex);
             return _external_memory_index;
         }
+
         inline void set_external_memory_index(const size_t &mem_offset) {
             std::lock_guard<std::mutex> lock(this->_mutex);
             this->_external_memory_index = mem_offset;
@@ -293,12 +285,12 @@ namespace tff::core::memory {
         }
 
         //
-        inline std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &get_allocator() {
+        inline std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> &get_allocator() {
             return _allocator;
         }
 
         //
-        inline void set_allocator(const std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &allocator) {
+        inline void set_allocator(const std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> &allocator) {
             _allocator = allocator;
         }
 
@@ -322,12 +314,13 @@ namespace tff::core::memory {
         inline void set_priority(const int &priority) {
             _priority = priority;
         }
+
         //
         inline int get_ref_count() const {
             try {
                 tff::log::Logger::info("current ref count: %d ", shared_from_this().use_count());
                 return shared_from_this().use_count();
-            } catch (const std::bad_weak_ptr& e) {
+            } catch (const std::bad_weak_ptr &e) {
                 return -1;
             }
         }
@@ -354,13 +347,16 @@ namespace tff::core::memory {
             }
             return *reinterpret_cast<const T *>(_buffer->ptr() + compute_offset(indices...));
         }
+
         //
         inline void set_live_range(int start, int end) {
             this->_start = start;
             this->_end = end;
         }
+
         inline int start() const { return _start; }
         inline int end() const { return _end; }
+
     private:
         template<typename... Args>
         size_t compute_offset(Args... indices) const {
@@ -389,19 +385,20 @@ namespace tff::core::memory {
         size_t _external_memory_index = -1;
         size_t _n_dims{};
         tff::core::memory::DataType _data_type;
+        core::memory::MemoryType _memory_type;
         tff::core::memory::ModelTensorType _tensor_type;
         size_t _type_size{};
         uint32_t _blk_size{};
-        std::array<int64_t, MAX_TENSOR_DIM> _shape{1,1,1,1};
-        std::array<int64_t, MAX_TENSOR_DIM> _strides{0,0,0,0};
-        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
+        std::array<int64_t, MAX_TENSOR_DIM> _shape{1, 1, 1, 1};
+        std::array<int64_t, MAX_TENSOR_DIM> _strides{0, 0, 0, 0};
+        std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> _allocator;
         std::shared_ptr<tff::core::memory::Memory> _buffer;
 
 
         //
         //用于内存管理;
-        int _start;  // 活跃开始时间点
-        int _end;    // 活跃结束时间点
+        int _start; // 活跃开始时间点
+        int _end; // 活跃结束时间点
 
 
     private:

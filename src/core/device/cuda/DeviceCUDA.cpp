@@ -7,7 +7,7 @@
 #include "cudaInc.h"
 #include "Logger.h"
 #include "global/ModelGlobalVar.h"
-#include "mem/MemBufferAllocatorCUDA.h"
+#include "MemBufferAllocatorCUDA.h"
 
 namespace tff::core::device::cuda {
     REGISTER_MODULE_OBJECT(DeviceCUDA, DeviceBaseObject, DEVICE_BACKEND_FLAG, DEVICE_BACKEND_TYPE_CUDA)
@@ -49,6 +49,7 @@ namespace tff::core::device::cuda {
     }
 
     void DeviceCUDA::get_device_mem(size_t _device_id, size_t *_free_mem, size_t *_total_mem) {
+        CudaSafeCall(cudaSetDevice(_device_id));
         CudaSafeCall(cudaMemGetInfo(_free_mem, _total_mem));
     }
 
@@ -88,56 +89,14 @@ namespace tff::core::device::cuda {
         get_device_id(device_list);
         for (size_t i = 0; i < device_list.size(); i++) {
             CudaSafeCall(cudaSetDevice(device_list[i]));
-            auto mem_buffer_allocator = std::make_shared<core::memory::MemBufferAllocatorCUDA>(device_list[i]);
+            auto mem_buffer_allocator = std::make_shared<MemBufferAllocatorCUDA>(device_list[i]);
             this->_mem_buffer_allocators.insert(std::make_pair(device_list[i], mem_buffer_allocator));
         }
     }
 
-    std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> DeviceCUDA::get_device_buffer_allocator(
+    std::shared_ptr<MemBufferAllocatorBaseObject> DeviceCUDA::get_device_buffer_allocator(
         const int &device_id) {
         return this->_mem_buffer_allocators[device_id];
-    }
-
-    //
-    std::function<tff::kernel::base::OP_CALLBACK_TYPE> DeviceCUDA::get_op_func(
-        const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(op_type);
-        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-            return nullptr;
-        }
-        std::string op_name = std::string(it->second) + std::string("_") + DEVICE_BACKEND_TYPE_CUDA;
-        switch (data_type) {
-            case tff::core::memory::DataType::TFF_DATA_TYPE_F32:
-                op_name = op_name + tff::core::global::get_type_suffix<float>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_F64:
-                op_name = op_name + tff::core::global::get_type_suffix<double>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_I32:
-                op_name = op_name + tff::core::global::get_type_suffix<int32_t>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_I64:
-                op_name = op_name + tff::core::global::get_type_suffix<int64_t>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_I8:
-                op_name = op_name + tff::core::global::get_type_suffix<uint8_t>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_F16:
-                op_name = op_name + tff::core::global::get_type_suffix<half>();
-                break;
-            case tff::core::memory::TFF_DATA_TYPE_Q8_0:
-                op_name = op_name + tff::core::global::get_type_suffix<Q8_0>();
-                break;
-            case memory::TFF_DATA_TYPE_Q8_0_ALIGNED:
-                op_name += tff::core::global::get_type_suffix<Q8_0_ALIGNED>();
-            default:
-                break;
-        }
-
-        return tff::factory::FunctionFactory::instance()->get_callback<tff::kernel::base::OP_CALLBACK_TYPE>(
-            OP_NODE_FLAG,
-            op_name);
     }
 
     std::shared_ptr<DeviceStream> DeviceCUDA::create_stream(int device_id) {

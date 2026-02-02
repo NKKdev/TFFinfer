@@ -36,11 +36,7 @@ namespace tff::core::device::cpu {
 
         void device_init() override;
 
-        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(const int &device_id) override;
-
-        //
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
-            const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) override;
+        std::shared_ptr<MemBufferAllocatorBaseObject> get_device_buffer_allocator(const int &device_id) override;
 
         std::shared_ptr<DeviceStream> create_stream(int device_id) override;
 

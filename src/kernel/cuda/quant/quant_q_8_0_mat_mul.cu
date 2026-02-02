@@ -2,8 +2,10 @@
 // Created by nkk on 2026/1/3.
 //
 
+#include "../../../../cmake-build-release/_deps/fmt-src/include/fmt/os.h"
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
+#include "kernel/include/kernel_util.h"
 
 namespace tff::kernel {
     template<typename T1, typename T2>
@@ -114,7 +116,7 @@ namespace tff::kernel {
                                             const int thread_x, const int warp_id,
                                             const int start_block,
                                             const int k, const int kk,
-                                            const tff::core::quant::Q_8_0 *__restrict__ global_mem,
+                                            const tff::core::quant::Q_8_0_ALIGNED *__restrict__ global_mem,
                                             int *quant_sm, half *scale_sm) {
         const int quant_block_id = thread_x / THREAD_NUM_PER_QUANT_BLOCK;
         const int block_inter_index = thread_x % THREAD_NUM_PER_QUANT_BLOCK;
@@ -155,7 +157,7 @@ namespace tff::kernel {
 
             int dim1 = k + quant_block_id;
             if (dim1 < ld && dim0 < dim) {
-                const tff::core::quant::Q_8_0 *val = global_mem + dim0 * ld + dim1;
+                const tff::core::quant::Q_8_0_ALIGNED *val = global_mem + dim0 * ld + dim1;
                 scale_sm[(warp_id + j * row_stride) * scale_col_width + quant_block_id +
                          kk * scale_col_stride] = val->d;
             } else {
@@ -342,8 +344,8 @@ namespace tff::kernel {
     __global__ void mat_mul_quant_q_8_0_double_buffer(
         int M, int N, int K,
         int a_ld, int b_ld, int c_ld,
-        const tff::core::quant::Q_8_0 *__restrict__ a,
-        const tff::core::quant::Q_8_0 *__restrict__ b,
+        const tff::core::quant::Q_8_0_ALIGNED *__restrict__ a,
+        const tff::core::quant::Q_8_0_ALIGNED *__restrict__ b,
         T *__restrict__ c) {
         const int g_thread_id = threadIdx.x + threadIdx.y * blockDim.x;
 
@@ -422,12 +424,10 @@ namespace tff::kernel {
 
     template<typename T>
     void quant_q_8_0_matmul(const int M, const int N, const int K,
-                            void *quant_a,
-                            void *quant_b,
-                            T *c,
-                            std::shared_ptr<core::device::DeviceStream> &stream,
-                             std::shared_ptr<core::device::DeviceEvent> &event,
-                             std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
+                            std::shared_ptr<tff::core::memory::Tensor> &quant_a,
+                            std::shared_ptr<tff::core::memory::Tensor> &quant_b,
+                            std::shared_ptr<tff::core::memory::Tensor> &c,
+                            std::shared_ptr<core::device::DeviceStream> &stream) {
         constexpr int QUANT_BLOCK_SIZE = tff::core::quant::Q_8_0::BLOCK_SIZE;
         constexpr int VEC_DIM_M = 8;
         constexpr int VEC_DIM_N = 2;
@@ -440,48 +440,93 @@ namespace tff::kernel {
         constexpr int PAD_SIZE = 4;
         constexpr int VEC_DOT_PRODUCT = QUANT_BLOCK_SIZE / sizeof(int);
 
-        for (auto &wait_event_ptr: wait_event_list) {
-            if (wait_event_ptr == nullptr) {
-                continue;
-            }
-            stream->wait_event(wait_event_ptr->get_native_event());
-        }
         dim3 grid((N + BLOCK_N_DIM - 1) / BLOCK_N_DIM, (M + BLOCK_M_DIM - 1) / BLOCK_M_DIM, 1);
         dim3 block(BLOCK_N_DIM / VEC_DIM_N, BLOCK_M_DIM / VEC_DIM_M, 1);
         mat_mul_quant_q_8_0_double_buffer<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_M_DIM, BLOCK_N_DIM,
-                        BLOCK_K_DIM,
-                        QUANT_BLKS_PER_WARP, THREAD_NUM_PER_QUANT_BLOCK, PAD_SIZE, QUANT_BLOCK_SIZE,
-                        VEC_DOT_PRODUCT, 1><<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
-                        M, N, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, N,
-                        static_cast<tff::core::quant::Q_8_0 *>(quant_a),
-                        static_cast<tff::core::quant::Q_8_0 *>(quant_b),
-                        c);
-        event->record(stream);
-
+            BLOCK_K_DIM,
+            QUANT_BLKS_PER_WARP, THREAD_NUM_PER_QUANT_BLOCK, PAD_SIZE, QUANT_BLOCK_SIZE,
+            VEC_DOT_PRODUCT, 1><<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
+            M, N, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, N,
+            static_cast<tff::core::quant::Q_8_0_ALIGNED *>(quant_a->get_buffer()->ptr()),
+            static_cast<tff::core::quant::Q_8_0_ALIGNED *>(quant_b->get_buffer()->ptr()),
+            static_cast<T *>(c->get_buffer()->ptr()));
     }
 
+#ifdef _DEBUG
+    static void varify(std::string &filename, std::shared_ptr<core::memory::Tensor> &tensor) {
+        switch (tensor->get_data_type()) {
+            case core::memory::DataType::TFF_DATA_TYPE_F32: {
+                std::vector<float> weight_cpu_result;
+                weight_cpu_result.resize(
+                    tensor->get_shape()[0] * tensor->get_shape()[1] * tensor->get_shape()[2] *
+                    tensor->get_shape()[3]);
+                load_tensor_raw(filename.c_str(), weight_cpu_result.data());
+
+                std::vector<float> weight_gpu_result;
+                weight_gpu_result.resize(weight_cpu_result.size());
+                tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
+                                                 tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+
+                for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
+                    for (int nn = 0; nn < tensor->get_shape()[0]; nn++) {
+                        float delta = weight_gpu_result[mm * tensor->get_shape()[0] + nn] - weight_cpu_result[
+                                          mm * tensor->get_shape()[0] + nn];
+                        if (fabs(delta) > 0.001f) {
+                            tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf", filename.c_str(), nn, delta);
+                            throw std::runtime_error("error");
+                        }
+                    }
+                }
+                break;
+            }
+            case core::memory::DataType::TFF_DATA_TYPE_Q8_0_ALIGNED: {
+                std::vector<Q8_0> weight_cpu_result;
+                weight_cpu_result.resize(
+                    tensor->get_shape()[0] / Q8_0::BLOCK_SIZE * tensor->get_shape()[1] * tensor->get_shape()[2] *
+                    tensor->get_shape()[3]);
+                load_tensor_raw(filename.c_str(), weight_cpu_result.data());
+
+                std::vector<Q8_0_ALIGNED> weight_gpu_result;
+                weight_gpu_result.resize(weight_cpu_result.size());
+                tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
+                                                 tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+
+                for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
+                    for (int nn = 0; nn < tensor->get_shape()[0]/Q8_0::BLOCK_SIZE; nn++) {
+                        float delta = weight_gpu_result[mm * tensor->get_shape()[0] /Q8_0::BLOCK_SIZE  + nn].d -
+                            __half2float(weight_cpu_result[
+                                          mm * tensor->get_shape()[0]/Q8_0::BLOCK_SIZE + nn].d);
+                        if (fabs(delta) > 0.001f) {
+                            tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf", filename.c_str(),mm, nn, delta);
+                            throw std::runtime_error("error");
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        tff::log::Logger::info("layer node op varify (%s) success!", filename.c_str());
+    }
+#endif
     template<typename T>
     void tff::kernel::QuantQ8MatMul<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        const auto &name = get_param_value<std::string>(0, para_ptr);
-        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), QuantQ8MatMul<T>::get_op_name().c_str());
-        auto weight_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+
+        auto weight_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             1, para_ptr);
-        auto x_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+        auto x_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             2, para_ptr);
-        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+        auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             3, para_ptr);
-        auto mem_buffer_manager_ptr = get_param_value<
+        auto mem_buffer_manager_ptr = kernel::base::get_param_value<
             std::shared_ptr<
                 tff::core::runtime::LLMMemManager> >(4, para_ptr);
-        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream>>(5, para_ptr);
-        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(6, para_ptr);
-        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(7, para_ptr);
-        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
-            return;
-        }
-        if (weight_tensor == nullptr || x_tensor == nullptr || output_tensors == nullptr) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+        auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
+                        para_ptr->get_param_count() - 1, para_ptr);
+
+        if (weight_tensor == nullptr || x_tensor == nullptr || output_tensor == nullptr) {
             return;
         }
 
@@ -499,25 +544,40 @@ namespace tff::kernel {
         const int N = x_tensor->get_shape()[1];
 
         //
-        quant_q_8_0_matmul<T>(M, N, K, weight_tensor->get_buffer()->ptr(),
-                              x_tensor->get_buffer()->ptr(), static_cast<T *>(output_tensors->get_buffer()->ptr()),
-                              stream, event, event_list);
+        quant_q_8_0_matmul<T>(M, N, K, weight_tensor,
+                              x_tensor, output_tensor,
+                              stream);
 
-        // mem_buffer_manager_ptr->reset_gpu_memory(weight_tensor->get_external_memory_index());
-        // mem_buffer_manager_ptr->reset_gpu_memory(x_tensor->get_external_memory_index());// todo 需要区分全部加载权重和边推理边加载权重
-    }
-
-    template<typename T>
-    std::string tff::kernel::QuantQ8MatMul<T>::get_op_name() {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL);
-        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-            return "";
+#ifdef _DEBUG
+        const auto &name = kernel::base::get_param_value<std::string>(para_ptr->get_param_count() - 5, para_ptr);
+        std::string filename = "";
+        if (name == "blk.0.attn_q_mul_w") {
+            filename = "Qcur-0_src_0.ggml";
+        } else if (name == "blk.0.attn_k_mul_w") {
+            filename = "Kcur-0_src_0.ggml";
+        } else if (name == "blk.0.attn_v_mul_w") {
+            filename = "Vcur-0_src_0.ggml";
         }
-        std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();
+        varify(filename, weight_tensor);
+        if (name == "blk.0.attn_q_mul_w") {
 
-        return name;
+            filename = "Qcur-0_src_1.ggml";
+        } else if (name == "blk.0.attn_k_mul_w") {
+            filename = "Kcur-0_src_1.ggml";
+        } else if (name == "blk.0.attn_v_mul_w") {
+            filename = "Vcur-0_src_1.ggml";
+        }
+        //varify(filename, x_tensor);
+
+        if (name == "blk.0.attn_q_mul_w") {
+            filename = "Qcur-0_result.ggml";
+        } else if (name == "blk.0.attn_k_mul_w") {
+            filename = "Kcur-0_result.ggml";
+        } else if (name == "blk.0.attn_v_mul_w") {
+            filename = "Vcur-0_result.ggml";
+        }
+        varify(filename, output_tensor);
+#endif
     }
 
     template class tff::kernel::QuantQ8MatMul<float>;

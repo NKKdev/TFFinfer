@@ -550,10 +550,7 @@ namespace tff::kernel {
     static void gemm_kernel_cuda(const tff::core::graph::MatMulTransType &trans_type,
                                  std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
                                  std::vector<std::shared_ptr<tff::core::memory::Tensor> > &dst,
-                                 std::shared_ptr<core::runtime::LLMMemManager> &mem_buffer_manager_ptr,
-                             std::shared_ptr<core::device::DeviceStream> &stream,
-                             std::shared_ptr<core::device::DeviceEvent> &event,
-                             std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
+                             std::shared_ptr<core::device::DeviceStream> &stream) {
         auto &input_tensor_a = *src.begin();
         auto &input_tensor_b = *src.rbegin();
         auto &output_tensor = *dst.begin();
@@ -606,9 +603,7 @@ namespace tff::kernel {
               (D + BLOCK_DIM_N - 1) / BLOCK_DIM_N,
               1);
         dim3 block(BLOCK_DIM_N / VEC_DIM_N, BLOCK_DIM_M / VEC_DIM_M, 1);
-        for (auto &wait_event : wait_event_list) {
-            stream->wait_event(wait_event->get_native_event());
-        }
+
         switch (trans_type) {
             case tff::core::graph::MatMulTransType::TFF_TT:
                 gemm_tt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
@@ -616,7 +611,6 @@ namespace tff::kernel {
                         block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
-                event->record(stream);
                 break;
             case tff::core::graph::MatMulTransType::TFF_NT:
                 gemm_nt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
@@ -624,7 +618,6 @@ namespace tff::kernel {
                         block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
-                event->record(stream);
                 break;
             case tff::core::graph::MatMulTransType::TFF_NN:
                 gemm_nn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
@@ -632,7 +625,6 @@ namespace tff::kernel {
                         block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
-                event->record(stream);
                 break;
             case tff::core::graph::MatMulTransType::TFF_TN:
                 gemm_tn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
@@ -640,37 +632,26 @@ namespace tff::kernel {
                         block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
                                  static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
                                  static_cast<float *>(output_tensor->get_buffer()->ptr()));
-                event->record(stream);
                 break;
         }
     }
 
     template<typename T>
     void tff::kernel::XGemm<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        const auto &name = get_param_value<std::string>(0, para_ptr);
-        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), XGemm<T>::get_op_name().c_str());
-        auto trans_type = get_param_value<tff::core::graph::MatMulTransType>(1, para_ptr);
-        auto input_tensors = get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
+        auto trans_type = kernel::base::get_param_value<tff::core::graph::MatMulTransType>(0, para_ptr);
+        auto input_tensors = kernel::base::get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
             core::memory::Tensor::TensorCompare> >(
+            1, para_ptr);
+        auto output_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
             2, para_ptr);
-        auto output_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
-            3, para_ptr);
-        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
-            std::shared_ptr<
-                tff::core::runtime::LLMMemManager> >(4, para_ptr);
-        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream>>(5, para_ptr);
-        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(6, para_ptr);
-        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(7, para_ptr);
-        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
-            return;
-        }
+
+        auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
+                        para_ptr->get_param_count() - 1, para_ptr);
+
         if (input_tensors.size() != 2) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
         if (output_tensors.size() != 1) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
         std::vector<std::shared_ptr<core::memory::Tensor>> inputs;
@@ -678,19 +659,9 @@ namespace tff::kernel {
             inputs.push_back(input_tensor);
         }
         //
-        gemm_kernel_cuda<T>(trans_type, inputs, output_tensors, mem_buffer_manager_ptr, stream, event, event_list);
+        gemm_kernel_cuda<T>(trans_type, inputs, output_tensors, stream);
     }
-    template<typename T>
-    std::string tff::kernel::XGemm<T>::get_op_name() {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_MUL_MAT);
-        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-            return "";
-        }
-        std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();
-        return name;
-    }
+
     template class tff::kernel::XGemm<float>;
     template class tff::kernel::XGemm<half>;
     template class tff::kernel::XGemm<Q8_0>;

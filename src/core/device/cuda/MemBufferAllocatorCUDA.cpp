@@ -6,8 +6,8 @@
 #include "Logger.h"
 #include "device/cuda/cudaInc.h"
 
-namespace tff::core::memory {
-    static bool is_valid_device_pointer(void* ptr) {
+namespace tff::core::device {
+    static bool is_valid_device_pointer(void *ptr) {
         cudaPointerAttributes attributes;
         cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
         if (err == cudaSuccess) {
@@ -16,7 +16,7 @@ namespace tff::core::memory {
         return false;
     }
 
-    static bool is_valid_host_pointer(void* ptr) {
+    static bool is_valid_host_pointer(void *ptr) {
         cudaPointerAttributes attributes;
         cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
         if (err == cudaSuccess) {
@@ -24,8 +24,9 @@ namespace tff::core::memory {
         }
         return true;
     }
+
     //
-    void tff::core::memory::MemBufferAllocatorCUDA::release(void *ptr) const {
+    void MemBufferAllocatorCUDA::release(void *ptr) const {
         if (ptr != nullptr) {
             CudaSafeCall(cudaSetDevice(this->_device_id));
             CudaSafeCall(cudaFree(ptr));
@@ -33,7 +34,7 @@ namespace tff::core::memory {
         }
     }
 
-    void *tff::core::memory::MemBufferAllocatorCUDA::allocate(const size_t byte_size) const {
+    void *MemBufferAllocatorCUDA::allocate(const size_t byte_size) const {
         CudaSafeCall(cudaSetDevice(this->_device_id));
         void *ptr = nullptr;
         CudaSafeCall(cudaMalloc(&ptr, byte_size));
@@ -47,10 +48,40 @@ namespace tff::core::memory {
         return ptr;
     }
 
-    void tff::core::memory::MemBufferAllocatorCUDA::memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,
-                                                            tff::core::memory::MemCpyKind _memcpy_kind) const {
+    //
+    void *MemBufferAllocatorCUDA::allocate_vvm(size_t byte_size) {
         CudaSafeCall(cudaSetDevice(this->_device_id));
-        if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
+        const size_t alignment = 128;
+        byte_size                   = alignment * ((byte_size + alignment - 1) / alignment);
+        if ((this->_vmm_used + byte_size) > this->_vmm_size) {
+            size_t reserve_size = this->_vmm_granularity * ((byte_size + this->_vmm_granularity - 1) / this->_vmm_granularity);
+            CUmemAllocationProp prop = {};
+            prop.type                = CU_MEM_ALLOCATION_TYPE_PINNED;
+            prop.location.type       = CU_MEM_LOCATION_TYPE_DEVICE;
+            prop.location.id         = this->_device_id;
+            CUmemGenericAllocationHandle handle;
+            cuMemCreate(&handle, reserve_size, &prop, 0);
+
+            CUdeviceptr start_ptr = (CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_size);
+            cuMemMap(start_ptr, reserve_size, 0, handle, 0);
+            cuMemRelease(handle);
+            CUmemAccessDesc access = {};
+            access.location.type   = CU_MEM_LOCATION_TYPE_DEVICE;
+            access.location.id     = this->_device_id;
+            access.flags           = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
+            cuMemSetAccess((CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_size), reserve_size, &access, 1);
+            this->_vmm_size += reserve_size;
+        }
+        void * ptr   = (void *) ((CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_used));
+        this->_vmm_used += byte_size;
+        return ptr;
+
+    }
+
+    void MemBufferAllocatorCUDA::memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,
+                                                            memory::MemCpyKind _memcpy_kind) const {
+        CudaSafeCall(cudaSetDevice(this->_device_id));
+        if (_memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
             if (!is_valid_device_pointer(dest_ptr)) {
                 tff::log::Logger::error("memory pointer type is invalid!!");
                 return;
@@ -60,7 +91,7 @@ namespace tff::core::memory {
                 return;
             }
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice));
-        } else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
+        } else if (_memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost));
         } else {
             CudaSafeCall(cudaMemcpy(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToDevice));
@@ -68,13 +99,13 @@ namespace tff::core::memory {
     }
 
     void MemBufferAllocatorCUDA::memcpy_async(const void *src_ptr, void *dest_ptr, size_t byte_size,
-                                              tff::core::memory::MemCpyKind _memcpy_kind, void *stream_handle) const {
+                                              memory::MemCpyKind _memcpy_kind, void *stream_handle) const {
         CudaSafeCall(cudaSetDevice(this->_device_id));
-        if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
+        if (_memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
             CudaSafeCall(
                 cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice, static_cast<
                     cudaStream_t>(stream_handle)));
-        } else if (_memcpy_kind == tff::core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
+        } else if (_memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
             CudaSafeCall(
                 cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost, static_cast<
                     cudaStream_t>(stream_handle)));
@@ -85,7 +116,7 @@ namespace tff::core::memory {
         }
     }
 
-    void tff::core::memory::MemBufferAllocatorCUDA::memset_zero(void *ptr, size_t byte_size) {
+    void MemBufferAllocatorCUDA::memset_zero(void *ptr, size_t byte_size) {
         CudaSafeCall(cudaSetDevice(this->_device_id));
         CudaSafeCall(cudaMemset(ptr, 0, byte_size));
     }

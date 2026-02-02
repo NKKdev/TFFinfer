@@ -15,13 +15,13 @@
 #include "../global/ModelGlobalVar.h"
 #include "graph/GraphNode.h"
 #include "taskgraph/include/TaskFlowSchedule.h"
-#include "mem/LLMKVCache.h"
-#include "mem/MemBufferAllocatorBaseObject.h"
+#include "KVCache.h"
+#include "../device/MemBufferAllocatorBaseObject.h"
 #include "ExportInc.h"
-#include "LLMMemManager.h"
+#include "MemManager.h"
 #include "model/base/ModelCreatorBase.h"
-#include "runtime/LLMBatchManager.h"
-#include "runtime/LLMTaskFlowManager.h"
+#include "runtime/BatchManager.h"
+#include "runtime/TaskFlowManager.h"
 
 namespace tff::core::runtime {
     class DEEP_TFF_API LLMInferRuntime {
@@ -64,6 +64,10 @@ namespace tff::core::runtime {
 
         //
         bool init_runtime_context();
+        //
+        bool init_kvcache();
+        //
+        bool init_model_weight_mem();
 
         //
         bool init_graph();
@@ -72,12 +76,13 @@ namespace tff::core::runtime {
         //
         bool init_mem_manager(const std::shared_ptr<graph::Graph> &graph_ptr,
             std::shared_ptr<LLMMemManager> &_mem_manager_ptr) const;
+        //
+        bool infer(int n_predict, std::vector<std::string> &generate_str);
+        //
+        bool prefill(std::shared_ptr<LLMBatch> &ubatch);
 
         //
-        bool prefill();
-
-        //
-        bool decode(const int &n_predict, std::string &generate_str);
+        bool decode(std::shared_ptr<LLMBatch> &ubatch, const int &n_predict, std::string &generate_str);
         //
         int encode(const std::vector<std::string> &prompt_batches);
         //
@@ -105,9 +110,8 @@ namespace tff::core::runtime {
         void bind_device(std::shared_ptr<layer::ModelLayerObject> &layer_obj, const int &total_layer_index);
         //
         void build_mem_offset(const std::shared_ptr<LLMMemManager> &_mem_manager_ptr,
-                              const std::shared_ptr<graph::Graph> &graph_ptr, std::unordered_map<memory::MemoryType, std::unordered_map<std::string,
-                              std::unordered_map<int,
-                              size_t>>> &mem_buffer_offset_map) const;
+                              const std::shared_ptr<graph::Graph> &graph_ptr, std::unordered_map<std::string, std::unordered_map<int, size_t>> &
+                              mem_buffer_offset_map) const;
 
     public:
         std::string _name;
@@ -144,7 +148,7 @@ namespace tff::core::runtime {
     public:
         //std::shared_ptr<tff::schedule::HybridScheduler> _scheduler;
         //
-        std::unordered_map<int, std::shared_ptr<tff::core::memory::LLMKVCache>> _kv_cache_ptr;
+        std::unordered_map<int, std::shared_ptr<LLMKVCache>> _kv_cache_ptr;
 
     public:
         //

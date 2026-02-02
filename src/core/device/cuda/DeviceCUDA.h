@@ -38,10 +38,19 @@ namespace tff::core::device::cuda {
             return this->_isvalid;
         };
 
+        std::string name() override {
+            return this->_name;
+        };
+
+        void set_name(std::string &name) override {
+            this->_name = name;
+        }
+
     protected:
         cudaStream_t _stream = nullptr;
         int _device_id = -1;
         bool _isvalid = false;
+        std::string _name;
     };
 
     //
@@ -64,7 +73,11 @@ namespace tff::core::device::cuda {
             cudaSetDevice(_device_id);
             cudaEventRecord(_event, static_cast<cudaStream_t>(cuda_stream->get_native_stream()));
         };
-
+        bool query() override {
+            CudaSafeCall(cudaSetDevice(_device_id));
+            cudaError_t err = cudaEventQuery(this->_event);
+            return err == cudaSuccess;
+        }
 
         inline void *get_native_event() override {
             return static_cast<void *>(_event);
@@ -75,11 +88,20 @@ namespace tff::core::device::cuda {
             return _isvalid;
         };
 
+        std::string name() override {
+            return this->_name;
+        };
+
+        void set_name(std::string &name) override {
+            this->_name = name;
+        }
+
 
     protected:
         cudaEvent_t _event = nullptr;
         int _device_id = -1;
         bool _isvalid = false;
+        std::string _name;
     };
 
     class DeviceCUDA final : public DeviceBaseObject {
@@ -111,11 +133,8 @@ namespace tff::core::device::cuda {
 
         void device_init() override;
 
-        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(
+        std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> get_device_buffer_allocator(
             const int &device_id) override;
-
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
-            const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) override;
 
         std::shared_ptr<DeviceStream> create_stream(int device_id) override;
 

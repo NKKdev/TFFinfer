@@ -9,7 +9,6 @@
 #include "ModuleFactory.h"
 #include "ModuleObject.h"
 #include "graph/Graph.h"
-#include "LLMMemManager.h"
 
 namespace tff::core::runtime {
     struct TaskObject {
@@ -45,6 +44,8 @@ namespace tff::core::runtime {
         }
 
     protected:
+        bool fuse_quant_node(const std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
+                                  const std::shared_ptr<graph::GraphNode> &current_node) const;
         void fuse_op_node(const std::shared_ptr<graph::Graph> &graph_ptr,
                           const std::vector<std::shared_ptr<graph::GraphNode> > &nodes) const;
 

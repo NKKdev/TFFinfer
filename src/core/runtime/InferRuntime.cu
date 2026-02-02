@@ -2,7 +2,7 @@
 // Created by nkk on 2025/10/21.
 //
 
-#include "LLMInferRuntime.h"
+#include "InferRuntime.h"
 #include "model/base/ModelDetectorRegistry.h"
 #include "model/llama/LLAMACreator.h"
 #include "FunctionFactory.h"
@@ -27,7 +27,7 @@ namespace tff::core::runtime {
         this->load_hparams(params._is_fuse_op, params._kv_data_type);
         this->load_vocab();
         this->build_layers();
-        this->load_tensor_data();
+        //this->load_tensor_data();
         return bRet;
     }
 
@@ -96,8 +96,26 @@ namespace tff::core::runtime {
     }
 
     bool LLMInferRuntime::init_runtime_context() {
+        bool ret = true;
+        ret &= this->init_model_weight_mem();
+        ret &= this->init_kvcache();
+        return ret;
+    }
+
+    bool LLMInferRuntime::init_model_weight_mem() {
+
+        for (auto weight: this->_model_loader->get_weight_map()) {
+            if (weight.second._tensor_ptr->get_data_type() == core::memory::DataType::TFF_DATA_TYPE_Q8_0) {
+
+            }else {
+
+            }
+        }
+    }
+
+    bool LLMInferRuntime::init_kvcache() {
         //
-        tff::core::memory::LLMKVCache::KVConfig kv_cfg;
+        LLMKVCache::KVConfig kv_cfg;
         kv_cfg._n_embd_head = this->_model_config._n_embd_head_k;
         kv_cfg._n_head = this->_model_config._n_head_arr[0];
         kv_cfg._n_head_kv = this->_model_config._n_head_kv_arr[0];
@@ -126,6 +144,7 @@ namespace tff::core::runtime {
         }
         tff::log::Logger::info("KV Cache: Target devices: {%d}", device_ids[0]);
 
+        auto model_ctx = this->_model_loader->get_model_ctx();
         for (const auto device_id: device_ids) {
             size_t free_mem = 0;
             size_t total_mem = 0;
@@ -134,9 +153,8 @@ namespace tff::core::runtime {
                                    device_id, total_mem, free_mem);
             //
 
-            //预留模型上下文至少MAX_PREFETCH_BUFFER_SIZE层权重和其他开销的显存;
-            const size_t context_reserve = this->_model_loader->get_model_ctx()->_max_tensor_byte_size *
-                                           MAX_PREFETCH_BUFFER_SIZE;
+            //预留模型上下文权重和其他开销的显存;
+            const size_t context_reserve = model_ctx->_max_tensor_byte_size * model_ctx->_tensor_info.size();
             free_mem -= context_reserve;
             tff::log::Logger::info("Reserved memory for model context and overhead: {%lld} bytes", context_reserve);
 
@@ -162,11 +180,9 @@ namespace tff::core::runtime {
             }
 
             try {
-                this->_kv_cache_ptr[device_id] = std::make_shared<tff::core::memory::LLMKVCache>(
+                this->_kv_cache_ptr[device_id] = std::make_shared<LLMKVCache>(
                     this->_model_config._kv_data_type,
-                    kv_cfg,
-                    device->get_device_buffer_allocator(device_id)
-                );
+                    kv_cfg);
                 tff::log::Logger::info("KV Cache successfully initialized with {%d} pages.", kv_cfg._total_pages);
             } catch (const std::exception &e) {
                 tff::log::Logger::error("Failed to create LLMKVCache instance. Exception: {%s}", e.what());
@@ -210,45 +226,38 @@ namespace tff::core::runtime {
 
     void LLMInferRuntime::build_mem_offset(const std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr,
                                            const std::shared_ptr<graph::Graph> &graph_ptr,
-                                           std::unordered_map<core::memory::MemoryType, std::unordered_map<std::string,
-                                               std::unordered_map<int, size_t> > > &
+                                           std::unordered_map<std::string,
+                                               std::unordered_map<int, size_t> > &
                                            mem_buffer_offset_map) const {
         for (auto &node: graph_ptr->total_nodes()) {
-            if (node->op_type() == core::graph::TffOpType::TFF_OP_MEM_REF) {
+            if (node->op_type() == core::graph::TffOpType::TFF_OP_MEM_REF ||
+                node->op_type() == TFF_OP_VIEW) {
                 continue;
             }
             auto current_device = *node->device().begin();
             auto [start, end] = graph_ptr->get_lifetime(node);
-            tff::log::Logger::info("node： %s start: %d, end: %d", node->name().c_str(), start, end);
+            //tff::log::Logger::info("node： %s start: %d, end: %d", node->name().c_str(), start, end);
 
             auto mem_offset = _mem_manager_ptr->allocate_memory(node->get_tensor()->get_bytes(),
                                                                 start, end, current_device.first, node->mem_type());
-            node->get_tensor()->set_external_memory_index(mem_offset);
+            //node->get_tensor()->set_external_memory_index(mem_offset);
             auto device_type_flag = current_device.second->get_device_type_flag(current_device.first);
-
-            auto iter = mem_buffer_offset_map.find(node->mem_type());
+            tff::log::Logger::info("node: %s mem start offset: %lld, mem end offset: %lld", node->name().c_str(),
+                                   mem_offset, mem_offset + node->get_tensor()->get_bytes());
+            auto iter = mem_buffer_offset_map.find(device_type_flag);
             if (iter != mem_buffer_offset_map.end()) {
-                auto device_iter = iter->second.find(device_type_flag);
+                auto device_iter = iter->second.find(current_device.first);
                 if (device_iter != iter->second.end()) {
-                    auto device_backend = device_iter->second.find(current_device.first);
-                    if (device_backend != device_iter->second.end()) {
-                        device_backend->second = device_backend->second < mem_offset
-                                                     ? mem_offset
-                                                     : device_backend->second;
-                    } else {
-                        device_iter->second.insert(std::make_pair(current_device.first, mem_offset));
-                    }
+                    device_iter->second = device_iter->second < mem_offset
+                                              ? mem_offset
+                                              : device_iter->second;
                 } else {
-                    std::unordered_map<int, size_t> device_offset;
-                    device_offset.insert(std::make_pair(current_device.first, mem_offset));
-                    iter->second.insert(std::make_pair(device_type_flag, device_offset));
+                    iter->second.insert(std::make_pair(current_device.first, mem_offset));
                 }
             } else {
                 std::unordered_map<int, size_t> device_mem_offset_map;
                 device_mem_offset_map.insert(std::make_pair(current_device.first, mem_offset));
-                std::unordered_map<std::string, std::unordered_map<int, size_t> > tmp;
-                tmp.insert(std::make_pair(device_type_flag, device_mem_offset_map));
-                mem_buffer_offset_map.insert(std::make_pair(node->mem_type(), tmp));
+                mem_buffer_offset_map.insert(std::make_pair(device_type_flag, device_mem_offset_map));
             }
         }
     }
@@ -263,16 +272,14 @@ namespace tff::core::runtime {
             tff::log::Logger::error("model memory manager is invalid!!\n");
             return false;
         }
-        std::unordered_map<core::memory::MemoryType, std::unordered_map<std::string, std::unordered_map<int, size_t> > >
+        std::unordered_map<std::string, std::unordered_map<int, size_t> >
                 mem_buffer_offset_map;
         this->build_mem_offset(_mem_manager_ptr, graph_ptr, mem_buffer_offset_map);
 
         bool bRet = true;
         for (auto &mem_buffer_map: mem_buffer_offset_map) {
-            for (auto &mem_buffer: mem_buffer_map.second) {
-                for (auto &mem_offset: mem_buffer.second) {
-                    bRet &= _mem_manager_ptr->init(mem_offset.first, mem_buffer_map.first);
-                }
+            for (auto &mem_offset: mem_buffer_map.second) {
+                bRet &= _mem_manager_ptr->init(mem_offset.first);
             }
         }
 
@@ -280,32 +287,44 @@ namespace tff::core::runtime {
         return bRet;
     }
 
-    bool LLMInferRuntime::prefill() {
+    bool LLMInferRuntime::infer(const int n_predict, std::vector<std::string> &generate_str_vec) {
+        bool bRet = true;
         for (auto &batch: this->_llm_batch_manager_ptr->_ubatches) {
-            this->build_inputs(batch);
-            this->build_output();
-            if (!this->_infer_graph_ptr) {
-                this->init_graph();
-                //init mem buffer;
+            bRet &= this->prefill(batch);
+            std::string generate_str;
+            bRet &= this->decode(batch, n_predict, generate_str);
+            generate_str_vec.push_back(generate_str);
+        }
+
+        return bRet;
+    }
+
+    bool LLMInferRuntime::prefill(std::shared_ptr<LLMBatch> &ubatch) {
+        this->build_inputs(ubatch);
+        this->build_output();
+        if (!this->_infer_graph_ptr) {
+            this->init_graph();
+            if (!this->_mem_manager_ptr->is_initialized()) {
                 if (!this->init_mem_manager(this->_infer_graph_ptr, this->_mem_manager_ptr)) {
                     tff::log::Logger::error("Failed to initialize memory manager.");
                     return false;
                 }
             }
-            try {
-                this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER,
-                                                         this->_infer_graph_ptr,
-                                                         this->_model_config._is_fuse_op);
-                this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_INFER);
-            } catch (const std::exception &e) {
-                tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
-                return false;
-            }
+        }
+        try {
+            this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER,
+                                                     this->_infer_graph_ptr,
+                                                     this->_model_config._is_fuse_op);
+            this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_INFER);
+        } catch (const std::exception &e) {
+            tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
+            return false;
         }
         return true;
     }
 
-    bool LLMInferRuntime::decode(const int &n_predict, std::string &generate_str) {
+    bool LLMInferRuntime::decode(std::shared_ptr<LLMBatch> &ubatch,
+        const int &n_predict, std::string &generate_str) {
         return true;
     }
 
@@ -359,6 +378,7 @@ namespace tff::core::runtime {
         auto &input_pos = batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(
             MAX_TENSOR_DIM, tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+            memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
             std::array<int64_t, MAX_TENSOR_DIM>{
                 static_cast<int64_t>(tokens_data.size()), 1, 1, 1
             }, true);
@@ -369,6 +389,7 @@ namespace tff::core::runtime {
 
         auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(MAX_TENSOR_DIM,
                                                                             tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+                                                                            memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
                                                                             std::array<int64_t, MAX_TENSOR_DIM>{
                                                                                 static_cast<int64_t>(input_pos.size()),
                                                                                 1, 1, 1
@@ -410,6 +431,7 @@ namespace tff::core::runtime {
     void LLMInferRuntime::build_output() {
         auto output_tensor = std::make_shared<tff::core::memory::Tensor>(
             MAX_TENSOR_DIM, tff::core::memory::DataType::TFF_DATA_TYPE_F32,
+            memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
             std::array<int64_t, MAX_TENSOR_DIM>{
                 static_cast<int64_t>(this->_model_config._n_embd), this->_vocabulary_ptr->get_vocab_size(), 1, 1
             }, true);
@@ -567,7 +589,7 @@ namespace tff::core::runtime {
         }
 
         try {
-            this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_IO,this->_mem_graph_ptr);
+            this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_IO, this->_mem_graph_ptr);
             this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_IO);
         } catch (const std::exception &e) {
             tff::log::Logger::error("Prefill forward failed: {%s}", e.what());

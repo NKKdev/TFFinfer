@@ -10,8 +10,9 @@
 
 namespace tff::core::memory {
     enum class MemoryType {
-        WEIGHT,      // 持久权重内存，不可回收
-        ACTIVATION   // 临时激活内存，可复用
+        TFF_MEM_TYPE_WEIGHT,      // 持久权重内存，不可回收，常驻
+        TFF_MEM_TYPE_WORKSPACE,   // 临时激活内存等，可复用，及时释放
+        TFF_MEM_TYPE_KV_CACHE,// 可复用，固定内存块
     };
     
     enum MemCpyKind {

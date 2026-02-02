@@ -2,9 +2,8 @@
 // Created by nkk on 2025/11/2.
 //
 
-#include "LLMBatchManager.h"
+#include "BatchManager.h"
 #include "Logger.h"
-#include "../../../../../../../../../usr/local/cuda/include/cuda/__ptx/ptx_dot_variants.h"
 
 namespace tff::core::runtime {
     REGISTER_MODULE_OBJECT(LLMBatchManager, tff::module::ModuleObject, BATCH_MANAGER_FLAG, BATCH_MANAGER_FLAG);

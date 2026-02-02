@@ -47,7 +47,7 @@ namespace tff::core::model {
 
 
     bool GGUFLoader::load(const std::vector<std::string> &model_files_name,
-        const tff::core::model::ModelConfig &params) {
+                          const tff::core::model::ModelConfig &params) {
         bool bRet = true;
         for (size_t i = 0; i < model_files_name.size(); i++) {
             const std::string &model_file_name = model_files_name[i];
@@ -172,7 +172,8 @@ namespace tff::core::model {
             int32_t data_type = 0;
             file_loader->read(data_type);
             auto type = static_cast<tff::core::memory::DataType>(data_type);
-            tensor_info._tensor_ptr = std::make_shared<tff::core::memory::Tensor>(n_dims, type, shapes, true);
+            tensor_info._tensor_ptr = std::make_shared<tff::core::memory::Tensor>(n_dims, type,
+                core::memory::MemoryType::TFF_MEM_TYPE_WEIGHT, shapes, true);
             tensor_info._tensor_ptr->set_tensor_type(this->get_model_tensor_type(tensor_info._name));
 
             //
@@ -222,9 +223,9 @@ namespace tff::core::model {
     bool GGUFLoader::load_tensor_data(const std::shared_ptr<FileLoader> &file_loader,
                                       const std::shared_ptr<tff::core::model::ModelContext> &gguf_ctx) {
         if (this->_alloc) {
-            std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> allocator =
+            std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> allocator =
                     tff::factory::ModuleFactory::instance()->create_shared<
-                        tff::core::memory::MemBufferAllocatorBaseObject>(
+                        tff::core::device::MemBufferAllocatorBaseObject>(
                         MEMORY_ALLOCATOR_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
             gguf_ctx->_data_memory_ptr = std::make_shared<tff::core::memory::Memory>(gguf_ctx->_size, nullptr, false,
                 allocator);
@@ -276,8 +277,8 @@ namespace tff::core::model {
                         tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_HEAD_COUNT_KV,
                         this->_model_config._n_head_kv_arr);
         LOAD_KEY_VALUE(ctx, ModelContext::BasicType, float,
-                        tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_LAYERNORM_RMS_EPS,
-                        this->_model_config._f_norm_rms_eps);
+                       tff::core::model::ModelMetaKV::LLM_KV_ATTENTION_LAYERNORM_RMS_EPS,
+                       this->_model_config._f_norm_rms_eps);
 
         return true;
     }
@@ -334,7 +335,7 @@ namespace tff::core::model {
             std::string pattern(pattern_str);
 
             if (matches_pattern(raw_name, pattern)) {
-                 return tensor_type;
+                return tensor_type;
             }
         }
         return tff::core::memory::ModelTensorType::LLM_TENSOR_TYPE_UNKNOWN;

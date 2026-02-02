@@ -7,7 +7,7 @@
 #include "model/base/ModelCreatorBase.h"
 #include <memory>
 
-#include "mem/MemBufferAllocatorBaseObject.h"
+#include "../../device/MemBufferAllocatorBaseObject.h"
 #include "graph/GraphNode.h"
 #include "global/ModelGlobalVar.h"
 #include "global/GlobalDefine.h"

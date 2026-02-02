@@ -224,15 +224,10 @@ namespace tff::kernel {
 
     template<typename T>
     void tff::kernel::QuantQ8MatMulReshape<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        const auto &name = get_param_value<std::string>(0, para_ptr);
-        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), QuantQ8MatMulReshape<T>::get_op_name().c_str());
-        auto input_tensors = get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        auto input_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+            0, para_ptr);
+        auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             1, para_ptr);
-        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            2, para_ptr);
-        std::shared_ptr<core::runtime::LLMMemManager> mem_buffer_manager_ptr = get_param_value<
-            std::shared_ptr<
-                tff::core::runtime::LLMMemManager> >(3, para_ptr);
 
         if (input_tensors.size() != 2) {
             tff::log::Logger::error("memcpy kernel param is invalid!");
@@ -265,18 +260,6 @@ namespace tff::kernel {
         //mem_buffer_manager_ptr->reset_gpu_memory(x_tensor->get_external_memory_index());
     }
 
-    template<typename T>
-    std::string tff::kernel::QuantQ8MatMulReshape<T>::get_op_name() {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL_RESHAPE);
-        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-            return "";
-        }
-        std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();
-
-        return name;
-    }
 
     template class tff::kernel::QuantQ8MatMulReshape<float>;
     template class tff::kernel::QuantQ8MatMulReshape<half>;

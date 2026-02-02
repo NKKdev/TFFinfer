@@ -46,18 +46,6 @@ namespace tff::kernel {
 
     }
 
-    template<typename T>
-    std::string tff::kernel::DeQuantQ8<T>::get_op_name() {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8);
-        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-            return "";
-        }
-        std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();
-
-        return name;
-    }
 
     template class tff::kernel::DeQuantQ8<float>;
     template class tff::kernel::DeQuantQ8<half>;

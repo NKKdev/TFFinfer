@@ -716,9 +716,7 @@ namespace tff::kernel {
                              T *mask,
                              float *cos_sin_table,
                              float *out_put,
-                             std::shared_ptr<core::device::DeviceStream> &stream,
-                             std::shared_ptr<core::device::DeviceEvent> &event,
-                             std::vector<std::shared_ptr<core::device::DeviceEvent>> &wait_event_list) {
+                             std::shared_ptr<core::device::DeviceStream> &stream) {
         if (std::is_same_v<T, half>) {
             if (num_q_heads == 32 && num_kv_heads == 8 && D == 128) {
                 constexpr int B = 4;
@@ -735,14 +733,7 @@ namespace tff::kernel {
 
                 dim3 grid((M + BLOCK_DIM_M - 1) / BLOCK_DIM_M, num_q_heads, batch);
                 dim3 block(THREAD_BLOCK_SIZE);
-                //
-                for (int i = 0;i < wait_event_list.size(); i++) {
-                    auto &wait_event = wait_event_list[i];
-                    if (wait_event == nullptr) {
-                        continue;
-                    }
-                    stream->wait_event(wait_event->get_native_event());
-                }
+
                 flash_attention_fp16_8x32<half, half, 32, 8, HIDDEN_DIM, BLOCK_DIM_M, BLOCK_DIM_N,
                             ELEMENTS_PER_LOAD, ROPE_FLAG, B, MBit, S, HEAD_NUM_PER_BLOCK, WARP_SIZE, THREAD_BLOCK_SIZE>
                         <<<grid,
@@ -750,7 +741,6 @@ namespace tff::kernel {
                             M, N, D, max_ctx, D, D, D,
                             scale,
                             q_gpu, k_gpu, v_gpu, mask, cos_sin_table, out_put);
-                event->record(stream);
             }
         } else if (std::is_same_v<T, float>) {
             //todo
@@ -760,41 +750,29 @@ namespace tff::kernel {
     //
     template<typename T>
     void tff::kernel::FlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        const auto &name = get_param_value<std::string>(0, para_ptr);
-        tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), FlashAttn<T>::get_op_name().c_str());
-        auto max_ctx = get_param_value<const int>(1, para_ptr);
-        auto q_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto max_ctx = kernel::base::get_param_value<const int>(0, para_ptr);
+        auto q_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            1, para_ptr);
+        auto k_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             2, para_ptr);
-        auto k_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto v_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             3, para_ptr);
-        auto v_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto rope_table = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             4, para_ptr);
-        auto rope_table = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto mask_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             5, para_ptr);
-        auto mask_tensor = get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+        auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
             6, para_ptr);
-        auto output_tensors = get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            7, para_ptr);
-        auto mem_buffer_manager_ptr = get_param_value<
-            std::shared_ptr<
-                tff::core::runtime::LLMMemManager> >(8, para_ptr);
 
-        auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream>>(9, para_ptr);
-        auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent>>(10, para_ptr);
-        auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent>>>(11, para_ptr);
-        if (stream == nullptr || event == nullptr || mem_buffer_manager_ptr == nullptr) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
-            return;
-        }
+        auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
+                        para_ptr->get_param_count() - 1, para_ptr);
 
         if (q_tensor== nullptr || k_tensor == nullptr || v_tensor == nullptr || output_tensors == nullptr
-            || rope_table == nullptr || mask_tensor == nullptr || mem_buffer_manager_ptr == nullptr) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
+            || rope_table == nullptr || mask_tensor == nullptr ) {
             return;
         }
         if (q_tensor->get_buffer() == nullptr || k_tensor->get_buffer() == nullptr || v_tensor->get_buffer() == nullptr ||
             rope_table->get_buffer() == nullptr || mask_tensor->get_buffer() == nullptr) {
-            tff::log::Logger::error("kernel (%s) param is invalid!", name.c_str());
             return;
         }
         auto &output = output_tensors;
@@ -815,7 +793,7 @@ namespace tff::kernel {
                                               static_cast<T *>(v_tensor->get_buffer()->ptr()),
                                               static_cast<T *>(mask_tensor->get_buffer()->ptr()),
                                               cos_sin_table,
-                                              static_cast<float *>(output->get_buffer()->ptr()), stream, event, event_list);
+                                              static_cast<float *>(output->get_buffer()->ptr()), stream);
                 }
                 break;
             }
@@ -826,19 +804,6 @@ namespace tff::kernel {
             default:
                 break;
         }
-    }
-
-    template<typename T>
-    std::string tff::kernel::FlashAttn<T>::get_op_name() {
-        auto it = core::global::TFF_OP_TYPE_MAP.find(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
-        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-            return "";
-        }
-        std::string name = std::string(it->second);
-        name += std::string("_") + DEVICE_BACKEND_TYPE_CUDA + tff::core::global::get_type_suffix<T>();;
-
-        return name;
     }
 
 

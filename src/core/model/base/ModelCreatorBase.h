@@ -9,7 +9,7 @@
 #include "global/GlobalDefine.h"
 #include "FunctionFactory.h"
 #include "global/FunctionTraits.h"
-#include "mem/LLMKVCache.h"
+#include "../../runtime/KVCache.h"
 #include "mem/Memory.h"
 #include "mem/Tensor.h"
 #include "model/layer/ModelLayer.h"
@@ -46,7 +46,7 @@ namespace tff::core::model {
 
         std::shared_ptr<tff::core::model::ModelLoaderBase> _model_loader;
         std::shared_ptr<tff::core::runtime::LLMMemManager> _mem_manager_ptr;
-        std::unordered_map<int, std::shared_ptr<tff::core::memory::LLMKVCache>> _kv_cache_ptr;
+        std::unordered_map<int, std::shared_ptr<tff::core::runtime::LLMKVCache>> _kv_cache_ptr;
         GraphContext &operator=(const GraphContext &) = default;
     };
     class ModelCreatorBase {

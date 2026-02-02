@@ -140,7 +140,8 @@ message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        src/kernel/cuda/quant/convert_quant_q_8_0_aligned.cu)
+        src/kernel/cuda/quant/convert_quant_q_8_0_aligned.cu
+        src/kernel/cuda/view.cu)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)
@@ -158,7 +159,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/sr
 target_include_directories(${PROJECT_NAME} PUBLIC ${json_include_dirs})
 target_include_directories(${PROJECT_NAME} PUBLIC ${cutlass_INCLUDE_DIRS})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart nlohmann_json::nlohmann_json glog::glog fmt::fmt)
+target_link_libraries(${PROJECT_NAME}
+        PRIVATE
+        CUDA::cudart
+        CUDA::cuda_driver
+        nlohmann_json::nlohmann_json
+        glog::glog
+)
 
 
 

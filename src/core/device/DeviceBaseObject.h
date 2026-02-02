@@ -7,11 +7,66 @@
 #include <memory>
 #include "ModuleObject.h"
 #include "BaseDefine.h"
-#include "mem/MemBufferAllocatorBaseObject.h"
+#include "MemBufferAllocatorBaseObject.h"
 #include "graph/BaseDefine.h"
-#include "kernel/include/TFFOPCreatorBase.h"
-
+#include "global/GlobalDefine.h"
 namespace tff::core::device {
+    template<DeviceType Type>
+    struct DeviceTag {
+        static constexpr DeviceType value = Type;
+
+        static const char *name() {
+            if constexpr (Type == TFF_BACKEND_DEVICE_TYPE_CPU) {
+                return DEVICE_BACKEND_TYPE_CPU;
+            } else if constexpr (Type == TFF_BACKEND_DEVICE_TYPE_GPU) {
+                return DEVICE_BACKEND_TYPE_CUDA;
+            } else {
+                return "UNKNOWN";
+            }
+        }
+
+        static constexpr bool is_gpu() {
+            return Type == TFF_BACKEND_DEVICE_TYPE_GPU;
+        }
+
+        static constexpr bool is_cpu() {
+            return Type == TFF_BACKEND_DEVICE_TYPE_CPU;
+        }
+
+        static constexpr bool supports_async() {
+            return is_gpu();
+        }
+
+        static constexpr uint32_t default_priority() {
+            if constexpr (is_cpu()) {
+                return TFF_DEVICE_PRIORITY_CPU;
+            } else if constexpr (is_gpu()) {
+                return TFF_DEVICE_PRIORITY_GPU;
+            } else {
+                return TFF_DEVICE_PRIORITY_DEFAULT;
+            }
+        }
+
+        template<typename T>
+        static constexpr bool supports_data_type() {
+            if constexpr (is_gpu()) {
+                return std::is_same_v<T, float> ||
+                       std::is_same_v<T, half> ||
+                       std::is_same_v<T, double> ||
+                       std::is_same_v<T, int32_t> ||
+                       std::is_same_v<T, int64_t> ||
+                       std::is_same_v<T, uint8_t>;
+            } else if constexpr (is_cpu()) {
+                return std::is_same_v<T, float> ||
+                       std::is_same_v<T, double> ||
+                       std::is_same_v<T, int32_t> ||
+                       std::is_same_v<T, int64_t> ||
+                       std::is_same_v<T, uint8_t>;
+            }
+            return false;
+        }
+    };
+
     class DEEP_TFF_API DeviceStream {
     public:
         virtual ~DeviceStream() = default;
@@ -21,6 +76,10 @@ namespace tff::core::device {
         virtual void *get_native_stream() = 0;
 
         virtual void wait_event(void *event_handle) = 0;
+
+        virtual std::string name() = 0;
+
+        virtual void set_name(std::string &name) = 0;
 
         [[nodiscard]] virtual bool is_valid() const = 0;
     };
@@ -32,9 +91,15 @@ namespace tff::core::device {
 
         virtual void record(const std::shared_ptr<DeviceStream> &stream) = 0;
 
+        virtual bool query() = 0;
+
         virtual void *get_native_event() = 0;
 
         [[nodiscard]] virtual bool is_valid() const = 0;
+
+        virtual std::string name() = 0;
+
+        virtual void set_name(std::string &name) = 0;
     };
 
 
@@ -64,13 +129,8 @@ namespace tff::core::device {
 
         virtual void device_init() = 0;
 
-        virtual std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> get_device_buffer_allocator(
+        virtual std::shared_ptr<MemBufferAllocatorBaseObject> get_device_buffer_allocator(
             const int &device_id) = 0;
-
-        //
-        virtual std::function<tff::kernel::base::OP_CALLBACK_TYPE> get_op_func(
-            const tff::core::graph::TffOpType &op_type, const tff::core::memory::DataType &data_type) = 0;
-
         //
         virtual std::shared_ptr<DeviceStream> create_stream(int device_id) = 0;
 
@@ -84,7 +144,7 @@ namespace tff::core::device {
 
     public:
         uint32_t _sched_priority = TFF_DEVICE_PRIORITY_GPU;
-        std::unordered_map<int, std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> >
+        std::unordered_map<int, std::shared_ptr<MemBufferAllocatorBaseObject> >
         _mem_buffer_allocators;
     };
 
@@ -115,6 +175,38 @@ namespace tff::core::device {
         }
         return n_device_num;
     }
+
+    using CPUTag = DeviceTag<TFF_BACKEND_DEVICE_TYPE_CPU>;
+    using GPUTag = DeviceTag<TFF_BACKEND_DEVICE_TYPE_GPU>;
+
+
+    struct CUDATag : public GPUTag {
+        static constexpr DeviceType value = TFF_BACKEND_DEVICE_TYPE_GPU;
+        static constexpr const char *name = DEVICE_BACKEND_TYPE_CUDA;
+        static constexpr bool supports_tensor_cores = true;
+        static constexpr int sm_version = 80;
+
+        template<typename T>
+        static constexpr bool supports_data_type() {
+            return std::is_same_v<T, float> ||
+                   std::is_same_v<T, half> ||
+                   std::is_same_v<T, __nv_bfloat16> ||
+                   std::is_same_v<T, double> ||
+                   std::is_same_v<T, int32_t> ||
+                   std::is_same_v<T, int64_t> ||
+                   std::is_same_v<T, uint8_t>;
+        }
+
+        static bool is_available() {
+#ifdef HAS_CUDA
+            int count = 0;
+            cudaError_t err = cudaGetDeviceCount(&count);
+            return err == cudaSuccess && count > 0;
+#else
+            return false;
+#endif
+        }
+    };
 }
 
 

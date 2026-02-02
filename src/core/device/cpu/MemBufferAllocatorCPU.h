@@ -4,11 +4,11 @@
 
 #ifndef TFFINFER_MEMBUFFERALLOCATORCPU_H
 #define TFFINFER_MEMBUFFERALLOCATORCPU_H
-#include "MemBufferAllocatorBaseObject.h"
+#include "../MemBufferAllocatorBaseObject.h"
 #include "ModuleFactory.h"
 #include "global/GlobalDefine.h"
-namespace tff::core::memory {
-    class MemBufferAllocatorCPU :public tff::core::memory::MemBufferAllocatorBaseObject{
+namespace tff::core::device {
+    class MemBufferAllocatorCPU :public tff::core::device::MemBufferAllocatorBaseObject{
     public:
         MemBufferAllocatorCPU(int device_id):MemBufferAllocatorBaseObject(device_id){};
 
@@ -23,8 +23,10 @@ namespace tff::core::memory {
 
         [[nodiscard]] void *allocate(size_t byte_size) const override;
 
+        void *allocate_vvm(size_t byte_size) override;
+
         void memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,
-                    tff::core::memory::MemCpyKind _memcpy_kind = TFF_MEM_CPY_TYPE_NORMAL) const override;
+                    tff::core::memory::MemCpyKind _memcpy_kind = memory::MemCpyKind::TFF_MEM_CPY_TYPE_NORMAL) const override;
         void memcpy_async(const void* src_ptr, void* dest_ptr, size_t byte_size,
                 tff::core::memory::MemCpyKind _memcpy_kind, void *stream_handle = nullptr) const override;
         void memset_zero(void *ptr, size_t byte_size) override;

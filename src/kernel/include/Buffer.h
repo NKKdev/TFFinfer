@@ -5,7 +5,7 @@
 #ifndef TFFINFER_BUFFER_H
 #define TFFINFER_BUFFER_H
 #include "BaseDefine.h"
-#include "mem/MemBufferAllocatorBaseObject.h"
+#include "../../core/device/MemBufferAllocatorBaseObject.h"
 #include "log/Logger.h"
 #include "device/cuda/cudaInc.h"
 namespace tff::kernel {
@@ -13,7 +13,7 @@ namespace tff::kernel {
     class Buffer {
     public:
         explicit Buffer(T *buffer,
-                        const std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> &allocator =
+                        const std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> &allocator =
                                 nullptr) :
                                            _access(base::BufferAccess::kNotOwned),
                                            _allocator(allocator) {
@@ -67,7 +67,7 @@ namespace tff::kernel {
     private:
         T *_buffer;
         base::BufferAccess _access;
-        std::shared_ptr<tff::core::memory::MemBufferAllocatorBaseObject> _allocator;
+        std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> _allocator;
     };
 }
 

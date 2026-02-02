@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <iostream>
 #include "device/cuda/cudaInc.h"
-#include "runtime/LLMInferRuntime.h"
+#include "runtime/InferRuntime.h"
 
 static void rtrim(std::string &s) {
     s.erase(
@@ -49,10 +49,9 @@ int main(int argc, char *argv[]) {
         prompt_batches[i] = prompt_pre[i] + " " + names[i];
         rtrim(prompt_batches[i]);
     }
-    std::string respone_str = "";
-    const int n_predict = 256;
+    std::vector<std::string> respone_str;
+    constexpr int n_predict = 256;
     llm_runtime.encode(prompt_batches);
-    llm_runtime.prefill();
-    llm_runtime.decode(n_predict, respone_str);
+    llm_runtime.infer(n_predict, respone_str);
     return 0;
 }

@@ -469,7 +469,9 @@ namespace tff::core::graph::op {
                 return nullptr;
             }
             for (auto &input : this->input_nodes()) {
-                this->add_inputs(input->get_tensor());
+                if (input->op_type() != core::graph::TffOpType::TFF_OP_VIEW) {
+                    this->add_inputs(input->get_tensor());
+                }
             }
             auto params_ptr = this->get_params();
             params_ptr->set_param(this->_inputs);
@@ -816,6 +818,24 @@ namespace tff::core::graph::op {
             }
             auto params = this->get_params();
             params->set_param(x_tensor);
+
+            auto callback = GraphNode::forward();
+            return callback;
+        }
+    };
+    //
+    class ViewNode final : public tff::core::graph::GraphNode {
+        public:
+        explicit ViewNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_VIEW);
+        }
+        ~ViewNode() override = default;
+        public:
+        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+            if (this->_op_type != TFF_OP_VIEW) {
+                tff::log::Logger::error("");
+                return nullptr;
+            }
 
             auto callback = GraphNode::forward();
             return callback;

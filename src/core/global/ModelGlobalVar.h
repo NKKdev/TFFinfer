@@ -6,7 +6,6 @@
 #define TFFINFER_MODELGLOBALVAR_H
 #include <unordered_map>
 #include "../model/BaseDefine.h"
-#include "graph/GraphNode.h"
 #include "graph/BaseDefine.h"
 #include "mem/BaseDefine.h"
 #include "../model/LLAMADefine.h"
