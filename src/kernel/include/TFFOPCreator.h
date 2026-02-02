@@ -4,11 +4,9 @@
 
 #ifndef TFFINFER_XGEMM_H
 #define TFFINFER_XGEMM_H
-#include "Buffer.h"
 #include "core/global/ModelGlobalVar.h"
 #include "TFFOPCreatorBase.h"
 #include "global/ParamBaseObject.h"
-#include "log/Logger.h"
 
 namespace tff::kernel {
     template<typename T>

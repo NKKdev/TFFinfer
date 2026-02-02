@@ -9,7 +9,6 @@
 
 #include "FunctionFactory.h"
 #include "kernel/include/TFFOPCreator.h"
-#include "kernel/include/Buffer.h"
 
 namespace tff::core::graph::op {
     class MatMulNode final : public tff::core::graph::GraphNode {
