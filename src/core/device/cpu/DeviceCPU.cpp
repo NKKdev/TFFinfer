@@ -57,7 +57,7 @@ namespace tff::core::device::cpu {
         uint64_t mem_total = 0, mem_available = 0;
 
         while (std::getline(meminfo, line)) {
-            tff::log::Logger::info("cpu device info: %s", line.c_str());
+            //tff::log::Logger::info("cpu device info: %s", line.c_str());
             if (starts_with(line, "MemTotal:")) {
                 size_t pos = line.find_first_of(":");
                 size_t end_pos = line.find_last_of("kb");

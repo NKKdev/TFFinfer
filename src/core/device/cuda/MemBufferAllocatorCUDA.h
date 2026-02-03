@@ -9,10 +9,11 @@
 #include "global/GlobalDefine.h"
 
 namespace tff::core::device {
-    static const size_t CUDA_POOL_VMM_MAX_SIZE = 1ull << 35; // 32 GB
+    static constexpr size_t VMM_INITIAL_RESERVE = 1ULL << 35;
+    static constexpr size_t ALIGNMENT = 128;
     class MemBufferAllocatorCUDA : public tff::core::device::MemBufferAllocatorBaseObject {
     public:
-        MemBufferAllocatorCUDA(int device_id) : MemBufferAllocatorBaseObject(device_id), _vmm_ptr(nullptr),
+        MemBufferAllocatorCUDA(int device_id) : MemBufferAllocatorBaseObject(device_id), _vmm_ptr(0),
                                                 _vmm_size(0), _vmm_used(0) {
             int device_vmm = 0;
             CUdevice device;
@@ -26,16 +27,19 @@ namespace tff::core::device {
                 alloc_prop.location.id = device_id;
                 cuMemGetAllocationGranularity(&this->_vmm_granularity, &alloc_prop,
                                               CU_MEM_ALLOC_GRANULARITY_RECOMMENDED);
-                cuMemAddressReserve(this->_vmm_ptr, CUDA_POOL_VMM_MAX_SIZE, 0, 0, 0);
+                auto error = cuMemAddressReserve(&this->_vmm_ptr, VMM_INITIAL_RESERVE, 128, 0, 0);
+                if (error != CUDA_SUCCESS) {
+                    tff::log::Logger::warning("current device vmm addr reserve failed!");
+                }
             } else {
-                tff::log::Logger::warning("current device don't support vvm!");
+                tff::log::Logger::warning("current device don't support vmm!");
             }
         };
 
         ~MemBufferAllocatorCUDA() {
-            if (this->_vmm_ptr != nullptr) {
-                cuMemUnmap(*this->_vmm_ptr, this->_vmm_size);
-                cuMemAddressFree(*this->_vmm_ptr, CUDA_POOL_VMM_MAX_SIZE);
+            if (this->_vmm_ptr != 0) {
+                cuMemUnmap(this->_vmm_ptr, this->_vmm_size);
+                cuMemAddressFree(this->_vmm_ptr, VMM_INITIAL_RESERVE);
             }
         }
 
@@ -61,7 +65,7 @@ namespace tff::core::device {
 
     private:
         size_t _vmm_granularity{};
-        CUdeviceptr *_vmm_ptr;
+        CUdeviceptr _vmm_ptr;
         size_t _vmm_size;
         size_t _vmm_used;
     };

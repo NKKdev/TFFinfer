@@ -108,8 +108,9 @@ namespace tff::core::model {
         params->set_param<double>(std::move(layer->_data_size));
         params->set_param(this->_model_ctx._model_loader);
         current_map2cpu_node->add_input_node(input_node[tff::core::graph::GraphNodeType::TFF_GRAPH_NODE_MAP2CPU]);
-        layer->_tensor->set_memory_type(core::memory::MemoryType::TFF_MEM_TYPE_WORKSPACE);
-        current_map2cpu_node->set_tensor(layer->_tensor);
+        auto tensor = std::make_shared<tff::core::memory::Tensor>(layer->_tensor);
+        tensor->set_memory_type(core::memory::MemoryType::TFF_MEM_TYPE_WORKSPACE);
+        current_map2cpu_node->set_tensor(tensor);
         return current_map2cpu_node;
     }
 
@@ -138,7 +139,7 @@ namespace tff::core::model {
         if (iter != input_node.end()) {
             auto view_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_VIEW);
             view_node->set_node_meta(NodeMetadata{layer->_layer_name + "_view"});
-            auto device = current_cpu2gpu_node->device();
+            auto device = iter->second->device();
             view_node->bind_devices(device);
             view_node->set_tensor(iter->second->get_tensor());
             view_node->add_input_node(iter->second);
@@ -198,21 +199,23 @@ namespace tff::core::model {
                                               out_put_node[TFF_GRAPH_NODE_MAP2CPU], is_input);
             if (layer->_tensor->get_data_type() == core::memory::DataType::TFF_DATA_TYPE_Q8_0) {
                 auto aligned_node = build_aligned_node(gpu_node);
-                auto mem_ref_node = ADD_NODE(core::graph::TffOpType::TFF_OP_MEM_REF);
-                mem_ref_node->set_node_meta(NodeMetadata{gpu_node->name() + "_ref_aligned_node"});
-                auto device = aligned_node->device();
-                mem_ref_node->bind_devices(device);
-                mem_ref_node->set_tensor(layer->_tensor);
-                mem_ref_node->add_input_node(aligned_node);
-                out_put_node[TFF_GRAPH_NODE_CPU2GPU] = mem_ref_node;
+
+                out_put_node[TFF_GRAPH_NODE_CPU2GPU] = aligned_node;
             } else {
                 out_put_node[TFF_GRAPH_NODE_CPU2GPU] = gpu_node;
             }
         } else {
+            out_put_node[TFF_GRAPH_NODE_MAP2CPU]->set_mem_type(core::memory::MemoryType::TFF_MEM_TYPE_WEIGHT);
             out_put_node[TFF_GRAPH_NODE_CPU2GPU] = out_put_node[TFF_GRAPH_NODE_MAP2CPU];
         }
 
-
+        auto mem_ref_node = ADD_NODE(core::graph::TffOpType::TFF_OP_MEM_REF);
+        mem_ref_node->set_node_meta(NodeMetadata{out_put_node[TFF_GRAPH_NODE_CPU2GPU]->name() + "_ref_node"});
+        auto device = out_put_node[TFF_GRAPH_NODE_CPU2GPU]->device();
+        mem_ref_node->bind_devices(device);
+        mem_ref_node->set_tensor(layer->_tensor);
+        mem_ref_node->add_input_node(out_put_node[TFF_GRAPH_NODE_CPU2GPU]);
+        out_put_node[TFF_GRAPH_NODE_CPU2GPU] = mem_ref_node;
         return out_put_node;
     }
 }

@@ -36,6 +36,7 @@ namespace tff::core::model {
 
         bool _use_fp16;
         bool _use_mmap;
+        bool _is_prefill;
 
         //
         int _seq_id;

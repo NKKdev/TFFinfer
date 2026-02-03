@@ -85,7 +85,8 @@ namespace tff::core::graph {
             }
             auto device_id = this->_devices.begin()->first;
             auto device_ptr = this->_devices.begin()->second;
-            if (this->_tensor->get_buffer() == nullptr) {
+            if (this->_tensor->get_buffer() == nullptr && this->op_type() != TFF_OP_MAP2CPU &&
+                this->op_type() != TFF_OP_VIEW) {
                 auto buffer = this->_mem_manager_ptr->allocate_memory(
                     this->_tensor->get_bytes(), device_id);
                 this->_tensor->set_buffer_data(buffer.second, this->_tensor->get_bytes(),
@@ -103,12 +104,14 @@ namespace tff::core::graph {
             std::vector<std::shared_ptr<core::device::DeviceEvent>> events_list;
             for (auto &input : this->input_nodes()) {
                 events_list.push_back(input->event());
-                this->add_inputs(input->get_tensor());
+                if (input->op_type() != TFF_OP_VIEW) {
+                    this->add_inputs(input->get_tensor());
+                }
             }
             //
             auto params_ptr = this->get_params();
-            params_ptr->set_param(this->_inputs);
             params_ptr->set_param(this->_tensor);
+            params_ptr->set_param(this->_inputs);
             params_ptr->set_param(this->_node_metadata._name);
             params_ptr->set_param(this->_mem_manager_ptr);
             params_ptr->set_param(this->event());
@@ -216,7 +219,9 @@ namespace tff::core::graph {
                         return src_node;
                     }
                 }
-                if (this->_devices.begin()->first != src_node->device().begin()->first && this->op_type() != TFF_OP_MEM_CPY) {//设备不一致，自动插入拷贝节点;
+                if (this->_devices.begin()->first != src_node->device().begin()->first &&
+                    this->op_type() != TFF_OP_MEM_CPY && !this->is_input_node() &&
+                    this->op_type() != TFF_OP_VIEW) {//设备不一致，自动插入拷贝节点;
                     auto mem_cpy_node = ADD_NODE(TFF_OP_MEM_CPY);
                     mem_cpy_node->set_node_meta(NodeMetadata(src_node->name() + "_mem_cpy"));
                     mem_cpy_node->bind_devices(this->_devices);

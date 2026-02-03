@@ -21,12 +21,12 @@ namespace tff::core::runtime {
         return true;
     }
 
-    size_t LLMMemManager::allocate_memory(size_t size, int start, int end, const int &device_id,
+    int64_t LLMMemManager::allocate_memory(int64_t size, int start, int end, const int &device_id,
                                           const core::memory::MemoryType &type) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        size_t offset;
-        size_t actual_size = size;
+        int64_t offset;
+        int64_t actual_size = size;
         if (this->_devices_map[device_id]->get_device_type(device_id) !=
             device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU) {
             actual_size = align_up(size, _alignment);
@@ -44,13 +44,13 @@ namespace tff::core::runtime {
             auto it = free_set.lower_bound({0, actual_size});
 
             if (it != free_set.end()) {
-                const size_t candidate_offset = it->offset;
-                const size_t candidate_size = it->size;
+                const int64_t candidate_offset = it->offset;
+                const int64_t candidate_size = it->size;
 
                 if (candidate_size >= actual_size + _alignment) {
                     offset = candidate_offset;
-                    size_t remaining_offset = candidate_offset + actual_size;
-                    size_t remaining_size = candidate_size - actual_size;
+                    int64_t remaining_offset = candidate_offset + actual_size;
+                    int64_t remaining_size = candidate_size - actual_size;
 
                     free_set.erase(it);
                     free_set.insert({remaining_offset, remaining_size});
@@ -68,11 +68,11 @@ namespace tff::core::runtime {
     }
 
     //
-    size_t LLMMemManager::allocate_memory_offset(size_t size, const int &device_id) {
+    int64_t LLMMemManager::allocate_memory_offset(int64_t size, const int &device_id) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        size_t offset;
-        size_t actual_size = size;
+        int64_t offset;
+        int64_t actual_size = size;
         if (this->_devices_map[device_id]->get_device_type(device_id) !=
             device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU) {
             actual_size = align_up(size, _alignment);
@@ -84,13 +84,13 @@ namespace tff::core::runtime {
         auto it = free_set.lower_bound({0, actual_size});
 
         if (it != free_set.end()) {
-            const size_t candidate_offset = it->offset;
-            const size_t candidate_size = it->size;
+            const int64_t candidate_offset = it->offset;
+            const int64_t candidate_size = it->size;
 
             if (candidate_size >= actual_size + _alignment) {
                 offset = candidate_offset;
-                size_t remaining_offset = candidate_offset + actual_size;
-                size_t remaining_size = candidate_size - actual_size;
+                int64_t remaining_offset = candidate_offset + actual_size;
+                int64_t remaining_size = candidate_size - actual_size;
 
                 free_set.erase(it);
                 free_set.insert({remaining_offset, remaining_size});
@@ -102,19 +102,22 @@ namespace tff::core::runtime {
             offset = _current_offset[device_id];
             _current_offset[device_id] += actual_size;
             auto mem_allocator = this->_devices_map[device_id]->get_device_buffer_allocator(device_id);
-            mem_allocator->allocate_vvm(actual_size);//显存不够时，增量开辟，保底；
+            mem_allocator->allocate_vvm(actual_size);
         }
         return offset;
     }
 
     //
-    std::pair<size_t, void *> LLMMemManager::allocate_memory(size_t size, const int &device_id) {
-        const size_t offset = allocate_memory_offset(size, device_id);
-        return std::pair<size_t, void *>(offset, this->get_ptr_by_offset(device_id, offset));
+    std::pair<int64_t, void *> LLMMemManager::allocate_memory(int64_t size, const int &device_id) {
+        const int64_t offset = allocate_memory_offset(size, device_id);
+        return std::pair<int64_t, void *>(offset, this->get_ptr_by_offset(device_id, offset));
     }
 
-    void LLMMemManager::release_memory(const int &device_id, const size_t &offset) {
+    void LLMMemManager::release_memory(const int &device_id, const int64_t &offset) {
         std::lock_guard<std::mutex> lock(_mutex);
+        if (this->_const_mem_offset[device_id].empty()) {
+            return;
+        }
         if (this->_const_mem_offset[device_id].find(offset) != this->_const_mem_offset[device_id].end()) {
             return;
         }
@@ -183,13 +186,13 @@ namespace tff::core::runtime {
     }
 
     void LLMMemManager::new_memory_block(const int &device_id,
-                                         const size_t &offset, const size_t &actual_size, const size_t &end) {
+                                         const int64_t &offset, const int64_t &actual_size, const int &end) {
         _memory_heap[device_id].push({offset, actual_size, end});
     }
 
     //
     void LLMMemManager::collect(const int &device_id) {
-        if (_memory_heap.empty()) {
+        if (_memory_heap[device_id].empty()) {
             reclaim_async(device_id);
         }
         while (!_memory_heap[device_id].empty()) {

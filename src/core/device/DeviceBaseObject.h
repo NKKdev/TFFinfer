@@ -178,35 +178,6 @@ namespace tff::core::device {
 
     using CPUTag = DeviceTag<TFF_BACKEND_DEVICE_TYPE_CPU>;
     using GPUTag = DeviceTag<TFF_BACKEND_DEVICE_TYPE_GPU>;
-
-
-    struct CUDATag : public GPUTag {
-        static constexpr DeviceType value = TFF_BACKEND_DEVICE_TYPE_GPU;
-        static constexpr const char *name = DEVICE_BACKEND_TYPE_CUDA;
-        static constexpr bool supports_tensor_cores = true;
-        static constexpr int sm_version = 80;
-
-        template<typename T>
-        static constexpr bool supports_data_type() {
-            return std::is_same_v<T, float> ||
-                   std::is_same_v<T, half> ||
-                   std::is_same_v<T, __nv_bfloat16> ||
-                   std::is_same_v<T, double> ||
-                   std::is_same_v<T, int32_t> ||
-                   std::is_same_v<T, int64_t> ||
-                   std::is_same_v<T, uint8_t>;
-        }
-
-        static bool is_available() {
-#ifdef HAS_CUDA
-            int count = 0;
-            cudaError_t err = cudaGetDeviceCount(&count);
-            return err == cudaSuccess && count > 0;
-#else
-            return false;
-#endif
-        }
-    };
 }
 
 

@@ -9,7 +9,7 @@
 
 namespace tff::kernel {
     template<typename T>
-    void tff::kernel::MemRef<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    void tff::kernel::MemRef<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         auto input_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
             0, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
@@ -31,12 +31,14 @@ namespace tff::kernel {
     }
 
 
-    template class tff::kernel::MemRef<float>;
-    template class tff::kernel::MemRef<double>;
-    template class tff::kernel::MemRef<int32_t>;
-    template class tff::kernel::MemRef<Q8_0>;
-    REGISTER_OP_OBJECT(MemRef, float);
-    REGISTER_OP_OBJECT(MemRef, double);
-    REGISTER_OP_OBJECT(MemRef, int32_t);
-    REGISTER_OP_OBJECT(MemRef, Q8_0);
+    template class tff::kernel::MemRef<float, core::device::GPUTag>;
+    template class tff::kernel::MemRef<double, core::device::GPUTag>;
+    template class tff::kernel::MemRef<int32_t, core::device::GPUTag>;
+    template class tff::kernel::MemRef<Q8_0_ALIGNED, core::device::GPUTag>;
+    template class tff::kernel::MemRef<Q8_0, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(MemRef, float, core::device::GPUTag);
+    REGISTER_OP_OBJECT_DEVICE(MemRef, double, core::device::GPUTag);
+    REGISTER_OP_OBJECT_DEVICE(MemRef, int32_t, core::device::GPUTag);
+    REGISTER_OP_OBJECT_DEVICE(MemRef, Q8_0_ALIGNED, core::device::GPUTag);
+    REGISTER_OP_OBJECT_DEVICE(MemRef, Q8_0, core::device::GPUTag);
 }

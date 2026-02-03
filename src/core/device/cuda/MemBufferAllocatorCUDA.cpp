@@ -51,8 +51,7 @@ namespace tff::core::device {
     //
     void *MemBufferAllocatorCUDA::allocate_vvm(size_t byte_size) {
         CudaSafeCall(cudaSetDevice(this->_device_id));
-        const size_t alignment = 128;
-        byte_size                   = alignment * ((byte_size + alignment - 1) / alignment);
+        byte_size                   = ALIGNMENT * ((byte_size + ALIGNMENT - 1) / ALIGNMENT);
         if ((this->_vmm_used + byte_size) > this->_vmm_size) {
             size_t reserve_size = this->_vmm_granularity * ((byte_size + this->_vmm_granularity - 1) / this->_vmm_granularity);
             CUmemAllocationProp prop = {};
@@ -73,6 +72,7 @@ namespace tff::core::device {
             this->_vmm_size += reserve_size;
         }
         void * ptr   = (void *) ((CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_used));
+        CudaSafeCall(cudaMemset(ptr, 0, byte_size));
         this->_vmm_used += byte_size;
         return ptr;
 

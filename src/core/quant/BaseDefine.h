@@ -29,6 +29,7 @@ namespace tff::core::quant {
             for (int i = 0; i < nb; ++i) {
                 const float scale = __half2float(blocks[i].d);
                 for (int j = 0; j < BLOCK_SIZE; ++j) {
+                    float tmp = blocks[i].qs[j] * scale;
                     out[i * BLOCK_SIZE + j] = blocks[i].qs[j] * scale;
                 }
             }

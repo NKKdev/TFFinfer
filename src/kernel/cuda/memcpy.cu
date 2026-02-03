@@ -60,26 +60,20 @@ namespace tff::kernel {
     template<typename T>
     void tff::kernel::MemCpy<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         const auto memcpy_kind = kernel::base::get_param_value<tff::core::memory::MemCpyKind>(0, para_ptr);
-        auto input_tensors = kernel::base::get_param_value<std::set<std::shared_ptr<core::memory::Tensor>,
-            core::memory::Tensor::TensorCompare> >(
-            1, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            2, para_ptr);
-
+            1, para_ptr);
+        auto input_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<core::memory::Tensor>>>(
+                   2, para_ptr);
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
                         para_ptr->get_param_count() - 1, para_ptr);
 
         for (auto &input_tensor: input_tensors) {
-            if (input_tensor == nullptr) {
+            if (input_tensor == nullptr || output_tensors == nullptr) {
                 tff::log::Logger::error("kernel param is invalid!");
                 return;
             }
             if (input_tensor->get_shape() != output_tensors->get_shape()) {
                 return;;
-            }
-            if (input_tensor == nullptr || output_tensors == nullptr) {
-                tff::log::Logger::error("kernel param is invalid!");
-                return;
             }
             if (input_tensor->get_buffer() == nullptr) {
                 tff::log::Logger::error("kernel param is invalid!");

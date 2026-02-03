@@ -101,11 +101,11 @@ namespace tff::kernel {
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
                para_ptr->get_param_count() - 1, para_ptr);
 
-        if (input_tensor->get_buffer() == nullptr) {
+        if (input_tensor == nullptr || input_tensor->get_buffer() == nullptr) {
             tff::log::Logger::error("input_tensor buffer is nullptr!");
             return;
         }
-        if (output_tensor->get_buffer() == nullptr) {
+        if (output_tensor == nullptr || output_tensor->get_buffer() == nullptr) {
             tff::log::Logger::error("output_tensor buffer is nullptr!");
             return;
         }

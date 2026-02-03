@@ -67,9 +67,6 @@ namespace tff::core::runtime {
         //
         bool init_kvcache();
         //
-        bool init_model_weight_mem();
-
-        //
         bool init_graph();
         //
         bool init_io_graph();

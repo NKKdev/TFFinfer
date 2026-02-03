@@ -434,16 +434,10 @@ namespace tff::core::graph::op {
 
     public:
         std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            // if (this->_params_ptr->get_param_count() < 4) {
-            //     tff::log::Logger::error("MapCPUBufferNode param count is %d(expect 1)",
-            //         this->_params_ptr->get_param_count());
-            //     return nullptr;
-            // }
-            for (auto &input : this->input_nodes()) {
-                this->add_inputs(input->get_tensor());
+            if (this->_op_type != TFF_OP_MAP2CPU) {
+                tff::log::Logger::error("MapCPUBufferNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return nullptr;
             }
-            auto params_ptr = this->get_params();
-            params_ptr->set_param(this->_inputs);
             auto callback = GraphNode::forward();
             return callback;
         }
@@ -462,18 +456,6 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("MemCpyNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-
-            if (this->_params_ptr->get_param_count() < 2) {
-                tff::log::Logger::error("MemCpyNode param count is less than 2");
-                return nullptr;
-            }
-            for (auto &input : this->input_nodes()) {
-                if (input->op_type() != core::graph::TffOpType::TFF_OP_VIEW) {
-                    this->add_inputs(input->get_tensor());
-                }
-            }
-            auto params_ptr = this->get_params();
-            params_ptr->set_param(this->_inputs);
 
             auto callback = GraphNode::forward();
             return callback;

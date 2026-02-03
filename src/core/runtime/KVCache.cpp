@@ -7,7 +7,7 @@
 namespace tff::core::runtime {
     void LLMKVCache::build_layer_kvcache_context(const int &seq_id, const int &layer_id) {
         auto context = this->get_context(seq_id, layer_id);
-        if (context) {
+        if (context == nullptr) {
             tff::log::Logger::error("kv cache layer context create failed");
         }
     }

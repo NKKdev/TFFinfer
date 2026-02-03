@@ -1166,7 +1166,7 @@ void PopulateVector(std::vector<T> &vector, std::mt19937 &mt, std::uniform_real_
     }
 }
 
-int main598666(int argc, char *argv) {
+int main645474(int argc, char *argv) {
     cudaDeviceProp device_prop{};
     cudaGetDeviceProperties(&device_prop, 0);
     printf("device prop sharedMemPerBlock:%d \n", device_prop.sharedMemPerBlock);

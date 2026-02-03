@@ -76,7 +76,9 @@ namespace tff::kernel {
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
                         para_ptr->get_param_count() - 1, para_ptr);
-
+        if (mask == nullptr) {
+            return;
+        }
         get_autoregressive_mask<T>(mask_type, mask, stream);
     }
 

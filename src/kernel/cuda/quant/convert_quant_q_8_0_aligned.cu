@@ -142,11 +142,11 @@ namespace tff::kernel {
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
                para_ptr->get_param_count() - 1, para_ptr);
 
-        if (input_tensor->get_buffer() == nullptr) {
+        if (input_tensor == nullptr || input_tensor->get_buffer() == nullptr) {
             tff::log::Logger::error("input_tensor buffer is nullptr!");
             return;
         }
-        if (output_tensor->get_buffer() == nullptr) {
+        if (output_tensor == nullptr || output_tensor->get_buffer() == nullptr) {
             tff::log::Logger::error("output_tensor buffer is nullptr!");
             return;
         }
@@ -156,19 +156,19 @@ namespace tff::kernel {
         quant_aligned<T>(M, N, input_tensor, output_tensor, stream);
 
 #ifdef _DEBUG
-        cudaDeviceSynchronize();
-        cudaStreamSynchronize(static_cast<cudaStream_t>(stream->
-                    get_native_stream()));
-        std::string filename = "";
-        if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q) {
-            filename = "Qcur-0_src_0.ggml";
-        } else if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
-            filename = "Kcur-0_src_0.ggml";
-        } else if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
-            filename = "Vcur-0_src_0.ggml";
-        }
-        varify(filename, input_tensor);
-        varify(filename, output_tensor);
+        // cudaDeviceSynchronize();
+        // cudaStreamSynchronize(static_cast<cudaStream_t>(stream->
+        //             get_native_stream()));
+        // std::string filename = "";
+        // if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q) {
+        //     filename = "Qcur-0_src_0.ggml";
+        // } else if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
+        //     filename = "Kcur-0_src_0.ggml";
+        // } else if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
+        //     filename = "Vcur-0_src_0.ggml";
+        // }
+        // varify(filename, input_tensor);
+        // varify(filename, output_tensor);
 #endif
     }
 

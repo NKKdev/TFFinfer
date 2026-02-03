@@ -15,7 +15,25 @@ namespace tff::core::device {
     }
 
     void *MemBufferAllocatorCPU::allocate_vvm(size_t byte_size) {
-        return malloc(byte_size);
+        byte_size = ALIGNMENT * ((byte_size + ALIGNMENT - 1) / ALIGNMENT);
+        if (_vmm_used + byte_size > this->_vmm_size) {
+            tff::log::Logger::error(
+                "CPU VMM exhausted: requested %zu, used %zu, reserved %zu",
+                byte_size, _vmm_used, _vmm_size
+            );
+            return nullptr;
+        }
+
+        char* alloc_ptr = static_cast<char*>(this->_vmm_ptr) + _vmm_used;
+
+        if (mprotect(alloc_ptr, byte_size, PROT_READ | PROT_WRITE) != 0) {
+            tff::log::Logger::error("mprotect failed to commit VMM pages");
+            return nullptr;
+        }
+
+        std::memset(alloc_ptr, 0, byte_size);
+        _vmm_used += byte_size;
+        return alloc_ptr;
     }
 
     void MemBufferAllocatorCPU::memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,

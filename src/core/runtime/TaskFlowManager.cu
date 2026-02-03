@@ -67,8 +67,6 @@ namespace tff::core::runtime {
             if (!fuse(graph_ptr, node)) {
                 //tff::log::Logger::info("fuse op(%s) do not need fuse!!\n", node->name().c_str());
                 continue;
-            } else {
-                tff::log::Logger::info("op(%s) fused\n", node->name().c_str());
             }
         }
     }

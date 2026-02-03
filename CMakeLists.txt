@@ -141,7 +141,8 @@ message("-- TFFInfer sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         src/kernel/cuda/quant/convert_quant_q_8_0_aligned.cu
-        src/kernel/cuda/view.cu)
+        src/kernel/cuda/view.cu
+        src/kernel/cpu/view.cpp)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)

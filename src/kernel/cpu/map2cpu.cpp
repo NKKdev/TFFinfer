@@ -34,13 +34,7 @@ namespace tff::kernel {
             return;
         }
         auto buffer = (uint8_t *) file_map_ptr->addr() + offset;
-        auto allocator = outputs->get_allocator();
-        if (allocator == nullptr) {
-            tff::log::Logger::error("Failed to create device buffer allocator");
-            return;
-        }
-
-        allocator->memcopy((void*)buffer, outputs->get_buffer()->ptr(), data_size);
+        outputs->set_buffer_data(buffer, data_size);
     }
 
     template<typename T>
@@ -49,10 +43,9 @@ namespace tff::kernel {
         const auto offset = kernel::base::get_param_value<size_t>(1, para_ptr);
         const auto data_size = kernel::base::get_param_value<double>(2, para_ptr);
         const auto model_loader_ptr = kernel::base::get_param_value<std::shared_ptr<tff::core::model::ModelLoaderBase> >(3, para_ptr);
-        auto input_tensors = kernel::base::get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
-            core::memory::Tensor::TensorCompare> >(
-            4, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            4, para_ptr);
+        auto input_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>>>(
             5, para_ptr);
 
         std::vector<std::shared_ptr<core::memory::Tensor>> inputs;

@@ -27,6 +27,9 @@ namespace tff::kernel {
             }else if (core::memory::ModelTensorType::LLM_TENSOR_ATTN_V == output_tensor->get_tensor_type()) {
                 kv_tensor = kv_cache_ctx->get_v(seq_id, layer_id, kv_id.first);
             }
+            if (kv_tensor == nullptr || kv_tensor->get_buffer() == nullptr) {
+                continue;
+            }
             auto kv_cache_block_ptr = static_cast<T*>(kv_tensor->get_buffer()->ptr());
             T *output_block_ptr = output + n * BLOCK_ROW_SIZE * n_stride;
             for (int i = 0; i < row; i++) {
@@ -47,7 +50,9 @@ namespace tff::kernel {
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
                         para_ptr->get_param_count() - 1, para_ptr);
-
+        if (output_tensor == nullptr || output_tensor->get_buffer() == nullptr) {
+            return;
+        }
         get_of_row<T>(seq_id, layer_id, kv_cache_ctx, kv_idx, output_tensor, stream);
     }
 

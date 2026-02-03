@@ -55,6 +55,10 @@ namespace tff::core::memory {
 
         const void *ptr() const;
 
+        inline void set_buffer(void *buffer_ptr) {
+            this->_ptr = buffer_ptr;
+        }
+
         size_t byte_size() const;
 
         std::shared_ptr<device::MemBufferAllocatorBaseObject> allocator() const;

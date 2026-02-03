@@ -144,13 +144,13 @@ namespace tff::kernel {
     template<typename T>
     void tff::kernel::RMSNorm<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
 
-        auto eps = kernel::base::get_param_value<float>(1, para_ptr);
+        auto eps = kernel::base::get_param_value<float>(0, para_ptr);
         auto weight = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            2, para_ptr);
+            1, para_ptr);
         auto x = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            3, para_ptr);
+            2, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            4, para_ptr);
+            3, para_ptr);
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
                         para_ptr->get_param_count() - 1, para_ptr);
         if (weight == nullptr || x == nullptr || output_tensors == nullptr) {

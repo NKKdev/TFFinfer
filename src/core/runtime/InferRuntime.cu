@@ -27,7 +27,7 @@ namespace tff::core::runtime {
         this->load_hparams(params._is_fuse_op, params._kv_data_type);
         this->load_vocab();
         this->build_layers();
-        //this->load_tensor_data();
+        this->load_tensor_data();
         return bRet;
     }
 
@@ -97,20 +97,8 @@ namespace tff::core::runtime {
 
     bool LLMInferRuntime::init_runtime_context() {
         bool ret = true;
-        ret &= this->init_model_weight_mem();
         ret &= this->init_kvcache();
         return ret;
-    }
-
-    bool LLMInferRuntime::init_model_weight_mem() {
-
-        for (auto weight: this->_model_loader->get_weight_map()) {
-            if (weight.second._tensor_ptr->get_data_type() == core::memory::DataType::TFF_DATA_TYPE_Q8_0) {
-
-            }else {
-
-            }
-        }
     }
 
     bool LLMInferRuntime::init_kvcache() {
@@ -231,7 +219,7 @@ namespace tff::core::runtime {
                                            mem_buffer_offset_map) const {
         for (auto &node: graph_ptr->total_nodes()) {
             if (node->op_type() == core::graph::TffOpType::TFF_OP_MEM_REF ||
-                node->op_type() == TFF_OP_VIEW) {
+                node->op_type() == TFF_OP_VIEW || node->op_type() == TFF_OP_MAP2CPU) {
                 continue;
             }
             auto current_device = *node->device().begin();
@@ -242,8 +230,8 @@ namespace tff::core::runtime {
                                                                 start, end, current_device.first, node->mem_type());
             //node->get_tensor()->set_external_memory_index(mem_offset);
             auto device_type_flag = current_device.second->get_device_type_flag(current_device.first);
-            tff::log::Logger::info("node: %s mem start offset: %lld, mem end offset: %lld", node->name().c_str(),
-                                   mem_offset, mem_offset + node->get_tensor()->get_bytes());
+            // tff::log::Logger::info("node: %s mem start offset: %lld, mem end offset: %lld", node->name().c_str(),
+            //                        mem_offset, mem_offset + node->get_tensor()->get_bytes());
             auto iter = mem_buffer_offset_map.find(device_type_flag);
             if (iter != mem_buffer_offset_map.end()) {
                 auto device_iter = iter->second.find(current_device.first);
@@ -277,12 +265,18 @@ namespace tff::core::runtime {
         this->build_mem_offset(_mem_manager_ptr, graph_ptr, mem_buffer_offset_map);
 
         bool bRet = true;
+        bool is_cpu_init = false;
         for (auto &mem_buffer_map: mem_buffer_offset_map) {
+            if (mem_buffer_map.first == "CPU") {
+                is_cpu_init = true;
+            }
             for (auto &mem_offset: mem_buffer_map.second) {
                 bRet &= _mem_manager_ptr->init(mem_offset.first);
             }
         }
-
+        if (!is_cpu_init) {
+            bRet &= _mem_manager_ptr->init(-1);//cpu id = -1;
+        }
         this->_model_creator->_model_ctx._mem_manager_ptr = _mem_manager_ptr;
         return bRet;
     }
@@ -300,6 +294,7 @@ namespace tff::core::runtime {
     }
 
     bool LLMInferRuntime::prefill(std::shared_ptr<LLMBatch> &ubatch) {
+        this->_model_creator->_model_ctx._is_prefill = true;
         this->build_inputs(ubatch);
         this->build_output();
         if (!this->_infer_graph_ptr) {
@@ -312,6 +307,7 @@ namespace tff::core::runtime {
             }
         }
         try {
+
             this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER,
                                                      this->_infer_graph_ptr,
                                                      this->_model_config._is_fuse_op);
@@ -325,6 +321,7 @@ namespace tff::core::runtime {
 
     bool LLMInferRuntime::decode(std::shared_ptr<LLMBatch> &ubatch,
         const int &n_predict, std::string &generate_str) {
+        this->_model_creator->_model_ctx._is_prefill = false;
         return true;
     }
 
