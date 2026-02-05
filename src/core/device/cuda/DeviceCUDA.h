@@ -28,6 +28,7 @@ namespace tff::core::device::cuda {
             CudaSafeCall(cudaStreamSynchronize(_stream));
         };
         inline void wait_event(void *event_handle) override{
+            CudaSafeCall(cudaSetDevice(_device_id));
             CudaSafeCall(cudaStreamWaitEvent(this->_stream, static_cast<cudaEvent_t>(event_handle)));
         }
         inline void *get_native_stream() override {
@@ -57,7 +58,6 @@ namespace tff::core::device::cuda {
     class CUDAEvent : public tff::core::device::DeviceEvent {
     public:
         CUDAEvent(const int &device_id) : _device_id(device_id) {
-            CudaSafeCall(cudaSetDevice(_device_id));
             CudaSafeCall(cudaEventCreate(&_event));
             _isvalid = true;
         };
@@ -70,11 +70,9 @@ namespace tff::core::device::cuda {
         inline void record(const std::shared_ptr<DeviceStream> &stream) override {
             auto cuda_stream = std::dynamic_pointer_cast<DeviceStream>(stream);
             if (!cuda_stream) tff::log::Logger::error("Invalid stream type");
-            cudaSetDevice(_device_id);
-            cudaEventRecord(_event, static_cast<cudaStream_t>(cuda_stream->get_native_stream()));
+            CudaSafeCall(cudaEventRecord(_event, static_cast<cudaStream_t>(cuda_stream->get_native_stream())));
         };
         bool query() override {
-            CudaSafeCall(cudaSetDevice(_device_id));
             cudaError_t err = cudaEventQuery(this->_event);
             return err == cudaSuccess;
         }

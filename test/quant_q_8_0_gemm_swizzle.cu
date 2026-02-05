@@ -1531,7 +1531,7 @@
 //     for (int i = 0; i < m; i++) {
 //         for (int j = 0; j < n; j++) {
 //             float delta = c_mat_cpu[i * n + j] - c_mat[i * n + j];
-//             if (delta > 0.001f) {
+//             if (fabs(delta) > 0.001f) {
 //                 error_num++;
 //                  printf("m: %d, n: %d, error: %f, c_mat_cpu[%d]: %f, c_mat[%d]: %f,\n", i, j, delta,
 //                         i * n + j, c_mat_cpu[i * n + j], i * n + j, c_mat[i * n + j]);
@@ -1746,11 +1746,89 @@
 //     printf("quant gemm sucess!\n");
 // #endif
 // }
+// static size_t get_tensor_data_size(const int64_t ne[4], const size_t nb[4], tff::core::memory::DataType type) {
+//     size_t total_bytes = 0;
+//     for (int i = MAX_TENSOR_DIM - 1; i >= 0; --i) {
+//         if (ne[i] > 1) {
+//             total_bytes = nb[i] * ne[i];
+//             break;
+//         }
+//     }
+//     return total_bytes;
+// }
+// static void load_tensor_raw(const char *filename, void *data) {
+//         if (!filename) {
+//             fprintf(stderr, "%s: filename is null\n", __func__);
+//             return;
+//         }
+//
+//         FILE *fp = fopen(filename, "rb");
+//         if (!fp) {
+//             fprintf(stderr, "%s: failed to open %s\n", __func__, filename);
+//             return;
+//         }
+//
+//         // 1. Check magic
+//         uint32_t magic;
+//         if (fread(&magic, sizeof(magic), 1, fp) != 1 || magic != 0x67676d6c) {
+//             fprintf(stderr, "%s: invalid magic in %s\n", __func__, filename);
+//             fclose(fp);
+//             return;
+//         }
+//
+//         // 2. Read ne and nb
+//         int32_t ne32[4], nb32[4];
+//         if (fread(ne32, sizeof(int32_t), 4, fp) != 4 || fread(nb32, sizeof(int32_t), 4, fp) != 4) {
+//             fprintf(stderr, "%s: failed to read ne/nb\n", __func__);
+//             fclose(fp);
+//             return;
+//         }
+//
+//         // Convert to int64_t / size_t
+//         int64_t ne[4];
+//         size_t nb[4];
+//         for (int i = 0; i < 4; ++i) {
+//             ne[i] = (int64_t) ne32[i];
+//             nb[i] = (size_t) nb32[i];
+//         }
+//
+//         // 3. Read type
+//         int32_t type_i32;
+//         if (fread(&type_i32, sizeof(int32_t), 1, fp) != 1) {
+//             fprintf(stderr, "%s: failed to read type\n", __func__);
+//             fclose(fp);
+//             return;
+//         }
+//         tff::core::memory::DataType type = (tff::core::memory::DataType) type_i32;
+//
+//         // 4. Compute data size and allocate
+//         size_t data_size = get_tensor_data_size(ne, nb, type);
+//         if (!data) {
+//             fprintf(stderr, "%s: failed to allocate %zu bytes for data\n", __func__, data_size);
+//             fclose(fp);
+//             return;
+//         }
+//
+//         if (fread(data, 1, data_size, fp) != data_size) {
+//             fprintf(stderr, "%s: failed to read data\n", __func__);
+//             fclose(fp);
+//             return;
+//         }
+//         fclose(fp);
+//
+//         printf("%s: loaded raw tensor from %s (shape=[%ld,%ld,%ld,%ld], type=%d, data_size=%zu)\n", __func__, filename,
+//                ne[0], ne[1], ne[2], ne[3], (int) type, data_size);
+//
+//         return;
+//     }
+//
 // int main(int argc, char *argv[]) {
 //     cudaDeviceProp device_prop{};
 //     cudaGetDeviceProperties(&device_prop, 0);
 //     std::mt19937 mt(42);
 //     std::uniform_real_distribution<double> dist(-4, 4);
+//
+//
 // #ifdef _DEBUG
 //     int dim = 513;
 //     int m = dim;

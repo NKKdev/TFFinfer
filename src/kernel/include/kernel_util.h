@@ -7,7 +7,7 @@
 #include "device/cuda/cudaInc.h"
 #include "global/GlobalDefine.h"
 #include "mem/Memory.h"
-
+#include "mem/Tensor.h"
 namespace tff::kernel {
     __device__ __forceinline__ uint32_t div_u32(uint32_t n, uint32_t magic, int shift) {
         return (__umulhi(n, magic) + n) >> shift;
@@ -145,10 +145,135 @@ namespace tff::kernel {
         }
         fclose(fp);
 
-        printf("%s: loaded raw tensor from %s (shape=[%ld,%ld,%ld,%ld], type=%d, data_size=%zu)\n", __func__, filename,
-               ne[0], ne[1], ne[2], ne[3], (int) type, data_size);
+        // printf("%s: loaded raw tensor from %s (shape=[%ld,%ld,%ld,%ld], type=%d, data_size=%zu)\n", __func__, filename,
+        //        ne[0], ne[1], ne[2], ne[3], (int) type, data_size);
 
         return;
     }
+#ifdef _DEBUG
+    static void varify(std::string &filename, std::shared_ptr<core::memory::Tensor> &tensor) {
+        switch (tensor->get_data_type()) {
+            case core::memory::DataType::TFF_DATA_TYPE_F32: {
+                std::vector<float> weight_cpu_result;
+                weight_cpu_result.resize(
+                    tensor->get_shape()[0] * tensor->get_shape()[1] * tensor->get_shape()[2] *
+                    tensor->get_shape()[3]);
+                load_tensor_raw(filename.c_str(), weight_cpu_result.data());
+
+                std::vector<float> weight_gpu_result;
+                weight_gpu_result.resize(weight_cpu_result.size());
+                tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
+                                                 tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+
+                float error_raio = 0.0f;
+                for (int b = 0; b < tensor->get_shape()[3]; b++) {
+                    for (int s = 0; s < tensor->get_shape()[2]; s++) {
+                        float *gpu_ptr = weight_gpu_result.data() + b * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0]
+                        + s * tensor->get_shape()[1] * tensor->get_shape()[0];
+                        float *cpu_ptr = weight_cpu_result.data() + b * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0]
+                        + s * tensor->get_shape()[1] * tensor->get_shape()[0];
+                        for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
+                            for (int nn = 0; nn < tensor->get_shape()[0]; nn++) {
+                                float delta = gpu_ptr[mm * tensor->get_shape()[0] + nn] - cpu_ptr[
+                                                  mm * tensor->get_shape()[0] + nn];
+                                if (fabs(delta) > 0.01f) {
+                                    // tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf, gpu: %lf, cpu: %lf",
+                                    //     filename.c_str(),mm, nn, delta, gpu_ptr[mm * tensor->get_shape()[0] + nn],
+                                    //     cpu_ptr[mm * tensor->get_shape()[0] + nn]);
+
+                                    error_raio++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                error_raio /= tensor->get_shape()[3] * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0];
+                if (error_raio > 0.01) {
+                    tff::log::Logger::error("error_raio: %lf", error_raio);
+                    return;
+                }
+                break;
+            }
+            case core::memory::DataType::TFF_DATA_TYPE_Q8_0_ALIGNED: {
+                std::vector<Q8_0> weight_cpu_result;
+                weight_cpu_result.resize(
+                    tensor->get_shape()[0] / Q8_0::BLOCK_SIZE * tensor->get_shape()[1] * tensor->get_shape()[2] *
+                    tensor->get_shape()[3]);
+                load_tensor_raw(filename.c_str(), weight_cpu_result.data());
+
+                std::vector<Q8_0_ALIGNED> weight_gpu_result;
+                weight_gpu_result.resize(weight_cpu_result.size());
+                tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
+                                                 tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+
+                for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
+                    for (int nn = 0; nn < tensor->get_shape()[0] / Q8_0::BLOCK_SIZE; nn++) {
+                        float delta = weight_gpu_result[mm * tensor->get_shape()[0] / Q8_0::BLOCK_SIZE + nn].d -
+                                      __half2float(weight_cpu_result[
+                                          mm * tensor->get_shape()[0] / Q8_0::BLOCK_SIZE + nn].d);
+                        if (fabs(delta) > 0.001f) {
+                            tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf", filename.c_str(),
+                                                    mm, nn, delta);
+                            //throw std::runtime_error("error");
+                            return;
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        tff::log::Logger::info("layer node op varify (%s) success!", filename.c_str());
+    }
+#endif
+    // static void save_tensor(char * filename, std::shared_ptr<tff::core::memory::Tensor> &tensor) {
+    //     FILE * fp = fopen(filename, "wb");
+    //     if (!fp) {
+    //         fprintf(stderr, "%s: failed to open %s for writing\n", __func__, filename);
+    //         return;
+    //     }
+    //
+    //     const uint32_t magic = 0x67676d6c;  // 'ggml' in hex
+    //     fwrite(&magic, sizeof(magic), 1, fp);
+    //
+    //     const int ne0   = tensor->get_shape()[0];
+    //     const int ne1   = tensor->get_shape()[1];
+    //     const int ne2   = tensor->get_shape()[2];
+    //     const int ne3   = tensor->get_shape()[3];
+    //     int32_t   ne[4] = { ne0, ne1, ne2, ne3 };
+    //     fwrite(ne, sizeof(int32_t), 4, fp);
+    //
+    //     const int nb0   = tensor->get_strides()[0];
+    //     const int nb1   = tensor->get_strides()[1];
+    //     const int nb2   = tensor->get_strides()[2];
+    //     const int nb3   = tensor->get_strides()[3];
+    //     int32_t   nb[4] = { nb0, nb1, nb2, nb3 };
+    //     fwrite(nb, sizeof(int32_t), 4, fp);
+    //
+    //     int32_t type_i32 = (int32_t) tensor->get_data_type();
+    //     fwrite(&type_i32, sizeof(int32_t), 1, fp);
+    //
+    //     size_t total_bytes = 0;
+    //     for (int i = 3; i >= 0; --i) {
+    //         if (ne[i] > 1) {
+    //             total_bytes = nb[i] * ne[i];
+    //             break;
+    //         }
+    //     }
+    //     if (total_bytes == 0) {
+    //         // scalar
+    //         total_bytes = tensor->get_bytes();
+    //     }
+    //     void *data = malloc(total_bytes);
+    //     tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), data, total_bytes);
+    //     fwrite(data, 1, total_bytes, fp);
+    //     free(data);data = nullptr;
+    //     fclose(fp);
+    //     printf("%s: saved tensor '%s' to %s (%zu bytes)\n", __func__, filename, filename, total_bytes);
+    // }
+
 }
 #endif //TFFINFER_KERNEL_UTIL_H

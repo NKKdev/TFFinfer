@@ -173,9 +173,9 @@ namespace tff::core::model {
         aligned_node->set_node_meta(NodeMetadata{input_node->name() + "_aligned_node"});
         aligned_node->bind_devices(device);
         input_node->get_tensor()->set_memory_type(memory::MemoryType::TFF_MEM_TYPE_WORKSPACE);
-        auto tensor = std::make_shared<memory::Tensor>(input_node->get_tensor()->dims(), alinged_data_type,
-            core::memory::MemoryType::TFF_MEM_TYPE_WEIGHT,
-                                                       input_node->get_tensor()->get_shape());
+        auto tensor = std::make_shared<memory::Tensor>(input_node->get_tensor());
+        tensor->set_data_type(alinged_data_type);
+        tensor->set_memory_type(memory::MemoryType::TFF_MEM_TYPE_WEIGHT);
         aligned_node->set_tensor(tensor);
         aligned_node->add_input_node(input_node);
 
@@ -205,7 +205,7 @@ namespace tff::core::model {
                 out_put_node[TFF_GRAPH_NODE_CPU2GPU] = gpu_node;
             }
         } else {
-            out_put_node[TFF_GRAPH_NODE_MAP2CPU]->set_mem_type(core::memory::MemoryType::TFF_MEM_TYPE_WEIGHT);
+            out_put_node[TFF_GRAPH_NODE_MAP2CPU]->get_tensor()->set_memory_type(core::memory::MemoryType::TFF_MEM_TYPE_WEIGHT);
             out_put_node[TFF_GRAPH_NODE_CPU2GPU] = out_put_node[TFF_GRAPH_NODE_MAP2CPU];
         }
 

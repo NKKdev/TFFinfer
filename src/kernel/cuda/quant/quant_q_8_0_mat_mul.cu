@@ -111,12 +111,12 @@ namespace tff::kernel {
     }
 
     template<const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K,
-        const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE, const int ALIGNED_FLAG>
+        const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE>
     __device__ void load_tile_double_buffer(const int ld, const int dim,
                                             const int thread_x, const int warp_id,
                                             const int start_block,
                                             const int k, const int kk,
-                                            const tff::core::quant::Q_8_0_ALIGNED *__restrict__ global_mem,
+                                            const void *global_mem,
                                             int *quant_sm, half *scale_sm) {
         const int quant_block_id = thread_x / THREAD_NUM_PER_QUANT_BLOCK;
         const int block_inter_index = thread_x % THREAD_NUM_PER_QUANT_BLOCK;
@@ -127,6 +127,8 @@ namespace tff::kernel {
         const int scale_col_stride = QUANT_BLKS_PER_WARP / VEC_DIM_K;
 
         const int dim0_base = start_block + warp_id;
+
+        const auto *g_ptr = reinterpret_cast<const Q8_0_ALIGNED *>(global_mem);
         //load quant data;
 #pragma unroll
         for (int j = 0; j < VEC_DIM_LD; ++j) {
@@ -134,14 +136,8 @@ namespace tff::kernel {
 
             int dim1 = k + quant_block_id;
             if (dim1 < ld && dim0 < dim) {
-                int32_t quant_data = 0;
-                if constexpr (ALIGNED_FLAG == 1) {
-                    quant_data = *reinterpret_cast<const int32_t *>(&global_mem[dim0 * ld + dim1].qs[
-                        block_inter_index * 4]);
-                } else {
-                    load_vec<int8_t, int32_t>(&global_mem[dim0 * ld + dim1].qs[block_inter_index * 4], &quant_data,
-                                              4);
-                }
+                int32_t quant_data = *reinterpret_cast<const int32_t *>(&g_ptr[dim0 * ld + dim1].qs[
+                    block_inter_index * 4]);
                 quant_sm[(warp_id + j * row_stride) * quant_col_width + thread_x +
                          kk * quant_col_stride] = quant_data;
             } else {
@@ -157,7 +153,7 @@ namespace tff::kernel {
 
             int dim1 = k + quant_block_id;
             if (dim1 < ld && dim0 < dim) {
-                const tff::core::quant::Q_8_0_ALIGNED *val = global_mem + dim0 * ld + dim1;
+                const Q8_0_ALIGNED *val = &g_ptr[dim0 * ld + dim1];
                 scale_sm[(warp_id + j * row_stride) * scale_col_width + quant_block_id +
                          kk * scale_col_stride] = val->d;
             } else {
@@ -219,59 +215,58 @@ namespace tff::kernel {
         }
     }
 
-    template<const int VEC_DIM_M, const int VEC_DIM_N, const int VEC_DIM_K,
-        const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K,
-        const int QUANT_BLKS_PER_WARP, const int PAD_SIZE,
-        const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT, const int THREAD_NUM_PER_QUANT_BLOCK>
-    __device__ void compute_tile_double_buffer(const int k_size, const int thread_x, const int warp_id,
-                                               const int k_block_index,
-                                               const int *quant_a_sm, half *a_scale_sm,
-                                               const int *quant_b_sm, half *b_scale_sm,
-                                               float *c_reg) {
-        const int quant_col_width = (BLOCK_DIM_K / sizeof(int) + PAD_SIZE);
-        const int scale_col_width = (QUANT_BLKS_PER_WARP + PAD_SIZE);
-        const int m_row_stride = BLOCK_DIM_M / VEC_DIM_M;
-        const int n_row_stride = BLOCK_DIM_N / VEC_DIM_N;
-        const int quant_col_stride = (QUANT_BLKS_PER_WARP / VEC_DIM_K) * THREAD_NUM_PER_QUANT_BLOCK;
-        const int scale_col_stride = QUANT_BLKS_PER_WARP / VEC_DIM_K;
-        const int4 *quant_a_sm_ptr = reinterpret_cast<const int4 *>(quant_a_sm);
-        const int4 *quant_b_sm_ptr = reinterpret_cast<const int4 *>(quant_b_sm);
+    template<const int VEC_DIM_M, const int VEC_DIM_N,const int VEC_DIM_K,
+    const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K,
+    const int QUANT_BLKS_PER_WARP, const int PAD_SIZE,
+    const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT, const int THREAD_NUM_PER_QUANT_BLOCK>
+__device__ void compute_tile_double_buffer(const int k_size, const int thread_x, const int warp_id,
+                                           const int k_block_index,
+                                           const int *quant_a_sm, half *a_scale_sm,
+                                           const int *quant_b_sm, half *b_scale_sm,
+                                           float *c_reg) {
+    const int quant_col_width = (BLOCK_DIM_K / sizeof(int) + PAD_SIZE);
+    const int scale_col_width = (QUANT_BLKS_PER_WARP + PAD_SIZE);
+    const int m_row_stride = BLOCK_DIM_M / VEC_DIM_M;
+    const int n_row_stride = BLOCK_DIM_N / VEC_DIM_N;
+    const int quant_col_stride = (QUANT_BLKS_PER_WARP / VEC_DIM_K) * THREAD_NUM_PER_QUANT_BLOCK;
+    const int scale_col_stride = QUANT_BLKS_PER_WARP / VEC_DIM_K;
+    const int4 *quant_a_sm_ptr = reinterpret_cast<const int4 *>(quant_a_sm);
+    const int4 *quant_b_sm_ptr = reinterpret_cast<const int4 *>(quant_b_sm);
 
-        for (int mm = 0; mm < VEC_DIM_M; mm++) {
-            for (int nn = 0; nn < VEC_DIM_N; nn++) {
-                float sum = 0;
+    for (int mm = 0; mm < VEC_DIM_M; mm++) {
+        for (int nn = 0; nn < VEC_DIM_N; nn++) {
+            float sum = 0;
+//#pragma unroll
+            for (int kk = 0; kk < k_size; kk++) {
+                float a_scale;
+                float b_scale;
+                a_scale = __half2float(
+                    a_scale_sm[(warp_id + mm * m_row_stride) * scale_col_width + kk +
+                               k_block_index * scale_col_stride]);
+                b_scale = __half2float(
+                    b_scale_sm[(thread_x + nn * n_row_stride) * scale_col_width + kk +
+                               k_block_index * scale_col_stride]);
+                int block_sum = 0;
 #pragma unroll
-                for (int kk = 0; kk < k_size; kk++) {
-                    float a_scale[VEC_DIM_M];
-                    float b_scale[VEC_DIM_N];
-                    a_scale[mm] = __half2float(
-                        a_scale_sm[(warp_id + mm * m_row_stride) * scale_col_width + kk +
-                                   k_block_index * scale_col_stride]);
-                    b_scale[nn] = __half2float(
-                        b_scale_sm[(thread_x + nn * n_row_stride) * scale_col_width + kk +
-                                   k_block_index * scale_col_stride]);
-                    int block_sum = 0;
-#pragma unroll
-                    for (int kk_q = 0; kk_q < VEC_DOT_PRODUCT; kk_q += 4) {
-                        const int kk_index = kk * VEC_DOT_PRODUCT + kk_q + k_block_index * quant_col_stride;
-                        int4 a_reg[VEC_DIM_M] = {make_int4(0, 0, 0, 0)};
-                        int4 b_reg[VEC_DIM_N] = {make_int4(0, 0, 0, 0)};
-                        a_reg[mm] = quant_a_sm_ptr[(warp_id + mm * m_row_stride) * quant_col_width / 4 + kk_index / 4];
-                        b_reg[nn] = quant_b_sm_ptr[(thread_x + nn * n_row_stride) * quant_col_width / 4 + kk_index / 4];
+                for (int kk_q = 0; kk_q < VEC_DOT_PRODUCT; kk_q += 4) {
+                    const int kk_index = kk * VEC_DOT_PRODUCT + kk_q + k_block_index * quant_col_stride;
+                    int4 a_reg = {make_int4(0, 0, 0, 0)};
+                    int4 b_reg = {make_int4(0, 0, 0, 0)};
+                    a_reg = quant_a_sm_ptr[(warp_id + mm * m_row_stride) * quant_col_width / 4 + kk_index / 4];
+                    b_reg = quant_b_sm_ptr[(thread_x + nn * n_row_stride) * quant_col_width / 4 + kk_index / 4];
 
-                        block_sum = vec_dot_product(a_reg[mm].x, b_reg[nn].x, block_sum);
-                        block_sum = vec_dot_product(a_reg[mm].y, b_reg[nn].y, block_sum);
-                        block_sum = vec_dot_product(a_reg[mm].z, b_reg[nn].z, block_sum);
-                        block_sum = vec_dot_product(a_reg[mm].w, b_reg[nn].w, block_sum);
-                    }
-
-                    sum += (block_sum) * (a_scale[mm]) * (b_scale[nn]);
+                    block_sum = vec_dot_product(a_reg.x, b_reg.x, block_sum);
+                    block_sum = vec_dot_product(a_reg.y, b_reg.y, block_sum);
+                    block_sum = vec_dot_product(a_reg.z, b_reg.z, block_sum);
+                    block_sum = vec_dot_product(a_reg.w, b_reg.w, block_sum);
                 }
-
-                c_reg[mm * VEC_DIM_N + nn] += sum;
+                sum += static_cast<float>(block_sum) * a_scale * b_scale;
             }
+
+            c_reg[mm * VEC_DIM_N + nn] += sum;
         }
     }
+}
 
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int VEC_DIM_K,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K,
@@ -340,12 +335,12 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N, const int VEC_DIM_K,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K,
         const int QUANT_BLKS_PER_WARP, const int THREAD_NUM_PER_QUANT_BLOCK, const int PAD_SIZE,
-        const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT, const int ALIGNED_FLAG>
+        const int QUANT_BLOCK_SIZE, const int VEC_DOT_PRODUCT>
     __global__ void mat_mul_quant_q_8_0_double_buffer(
         int M, int N, int K,
         int a_ld, int b_ld, int c_ld,
-        const tff::core::quant::Q_8_0_ALIGNED *__restrict__ a,
-        const tff::core::quant::Q_8_0_ALIGNED *__restrict__ b,
+        const void *a,
+        const void *b,
         T *__restrict__ c) {
         const int g_thread_id = threadIdx.x + threadIdx.y * blockDim.x;
 
@@ -365,11 +360,11 @@ namespace tff::kernel {
 
         load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
             THREAD_NUM_PER_QUANT_BLOCK,
-            PAD_SIZE, ALIGNED_FLAG>(
+            PAD_SIZE>(
             a_ld, M, thread_x, warp_id, start_m, 0, flip_flag, a, &a_quant_data_sm[0][0], &a_scale_data_sm[0][0]);
         load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
             THREAD_NUM_PER_QUANT_BLOCK,
-            PAD_SIZE, ALIGNED_FLAG>(
+            PAD_SIZE>(
             b_ld, N, thread_x, warp_id, start_n, 0, flip_flag, b, &b_quant_data_sm[0][0], &b_scale_data_sm[0][0]);
         __syncthreads();
 
@@ -389,12 +384,12 @@ namespace tff::kernel {
                 //printf("error:  next_k: %d,flip_flag: %d !flip_flag: %d \n", next_k, flip_flag, !flip_flag);
                 load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
                     THREAD_NUM_PER_QUANT_BLOCK,
-                    PAD_SIZE, ALIGNED_FLAG>(
+                    PAD_SIZE>(
                     a_ld, M, thread_x, warp_id, start_m, next_k, !flip_flag, a, &a_quant_data_sm[0][0],
                     &a_scale_data_sm[0][0]);
                 load_tile_double_buffer<VEC_DIM_M, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, QUANT_BLKS_PER_WARP,
                     THREAD_NUM_PER_QUANT_BLOCK,
-                    PAD_SIZE, ALIGNED_FLAG>(
+                    PAD_SIZE>(
                     b_ld, N, thread_x, warp_id, start_n, next_k, !flip_flag, b, &b_quant_data_sm[0][0],
                     &b_scale_data_sm[0][0]);
             }
@@ -416,7 +411,7 @@ namespace tff::kernel {
                     half old_value = c[dst_m_index * c_ld + dst_n_index];
                     c[dst_m_index * c_ld + dst_n_index] = old_value + __float2half(c_reg[mm][nn]);
                 } else if (std::is_same_v<T, float>) {
-                    c[dst_m_index * c_ld + dst_n_index] += c_reg[mm][nn];
+                    c[dst_m_index * c_ld + dst_n_index] = c_reg[mm][nn];
                 }
             }
         }
@@ -445,86 +440,24 @@ namespace tff::kernel {
         mat_mul_quant_q_8_0_double_buffer<T, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_M_DIM, BLOCK_N_DIM,
             BLOCK_K_DIM,
             QUANT_BLKS_PER_WARP, THREAD_NUM_PER_QUANT_BLOCK, PAD_SIZE, QUANT_BLOCK_SIZE,
-            VEC_DOT_PRODUCT, 1><<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
+            VEC_DOT_PRODUCT><<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
             M, N, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, K / QUANT_BLOCK_SIZE, N,
-            static_cast<tff::core::quant::Q_8_0_ALIGNED *>(quant_a->get_buffer()->ptr()),
-            static_cast<tff::core::quant::Q_8_0_ALIGNED *>(quant_b->get_buffer()->ptr()),
+            (quant_a->get_buffer()->ptr()),
+            (quant_b->get_buffer()->ptr()),
             static_cast<T *>(c->get_buffer()->ptr()));
     }
 
-#ifdef _DEBUG
-    static void varify(std::string &filename, std::shared_ptr<core::memory::Tensor> &tensor) {
-        switch (tensor->get_data_type()) {
-            case core::memory::DataType::TFF_DATA_TYPE_F32: {
-                std::vector<float> weight_cpu_result;
-                weight_cpu_result.resize(
-                    tensor->get_shape()[0] * tensor->get_shape()[1] * tensor->get_shape()[2] *
-                    tensor->get_shape()[3]);
-                load_tensor_raw(filename.c_str(), weight_cpu_result.data());
-
-                std::vector<float> weight_gpu_result;
-                weight_gpu_result.resize(weight_cpu_result.size());
-                tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
-                                                 tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
-
-                for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
-                    for (int nn = 0; nn < tensor->get_shape()[0]; nn++) {
-                        float delta = weight_gpu_result[mm * tensor->get_shape()[0] + nn] - weight_cpu_result[
-                                          mm * tensor->get_shape()[0] + nn];
-                        if (fabs(delta) > 0.001f) {
-                            tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf", filename.c_str(), nn, delta);
-                            throw std::runtime_error("error");
-                        }
-                    }
-                }
-                break;
-            }
-            case core::memory::DataType::TFF_DATA_TYPE_Q8_0_ALIGNED: {
-                std::vector<Q8_0> weight_cpu_result;
-                weight_cpu_result.resize(
-                    tensor->get_shape()[0] / Q8_0::BLOCK_SIZE * tensor->get_shape()[1] * tensor->get_shape()[2] *
-                    tensor->get_shape()[3]);
-                load_tensor_raw(filename.c_str(), weight_cpu_result.data());
-
-                std::vector<Q8_0_ALIGNED> weight_gpu_result;
-                weight_gpu_result.resize(weight_cpu_result.size());
-                tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
-                                                 tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
-
-                for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
-                    for (int nn = 0; nn < tensor->get_shape()[0]/Q8_0::BLOCK_SIZE; nn++) {
-                        float delta = weight_gpu_result[mm * tensor->get_shape()[0] /Q8_0::BLOCK_SIZE  + nn].d -
-                            __half2float(weight_cpu_result[
-                                          mm * tensor->get_shape()[0]/Q8_0::BLOCK_SIZE + nn].d);
-                        if (fabs(delta) > 0.001f) {
-                            tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf", filename.c_str(),mm, nn, delta);
-                            throw std::runtime_error("error");
-                        }
-                    }
-                }
-                break;
-            }
-            default:
-                break;
-        }
-
-        tff::log::Logger::info("layer node op varify (%s) success!", filename.c_str());
-    }
-#endif
     template<typename T>
     void tff::kernel::QuantQ8MatMul<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-
         auto weight_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
+            0, para_ptr);
         auto x_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            2, para_ptr);
+            1, para_ptr);
         auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            3, para_ptr);
-        auto mem_buffer_manager_ptr = kernel::base::get_param_value<
-            std::shared_ptr<
-                tff::core::runtime::LLMMemManager> >(4, para_ptr);
+            2, para_ptr);
+
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                        para_ptr->get_param_count() - 1, para_ptr);
+            para_ptr->get_param_count() - 1, para_ptr);
 
         if (weight_tensor == nullptr || x_tensor == nullptr || output_tensor == nullptr) {
             return;
@@ -539,44 +472,54 @@ namespace tff::kernel {
             return;
         }
         const int K = weight_tensor->get_shape()[0];
-        const int M = weight_tensor->get_shape()[1];
+        const int M = x_tensor->get_shape()[1];
         const int B = weight_tensor->get_shape()[2]; //todo impl batches
-        const int N = x_tensor->get_shape()[1];
+        const int N = weight_tensor->get_shape()[1];
 
-        //
-        quant_q_8_0_matmul<T>(M, N, K, weight_tensor,
-                              x_tensor, output_tensor,
+        quant_q_8_0_matmul<T>(M, N, K, x_tensor,
+                              weight_tensor, output_tensor,
                               stream);
 
 #ifdef _DEBUG
+        stream->synchronize();
         const auto &name = kernel::base::get_param_value<std::string>(para_ptr->get_param_count() - 5, para_ptr);
         std::string filename = "";
         if (name == "blk.0.attn_q_mul_w") {
             filename = "Qcur-0_src_0.ggml";
+            varify(filename, weight_tensor);
         } else if (name == "blk.0.attn_k_mul_w") {
             filename = "Kcur-0_src_0.ggml";
+            varify(filename, weight_tensor);
         } else if (name == "blk.0.attn_v_mul_w") {
             filename = "Vcur-0_src_0.ggml";
+            varify(filename, weight_tensor);
         }
-        varify(filename, weight_tensor);
-        if (name == "blk.0.attn_q_mul_w") {
 
-            filename = "Qcur-0_src_1.ggml";
+        if (name == "blk.0.attn_q_mul_w") {
+            filename = "quant_q8_0.ggml";
+            varify(filename, x_tensor);
         } else if (name == "blk.0.attn_k_mul_w") {
-            filename = "Kcur-0_src_1.ggml";
+            filename = "quant_q8_0.ggml";
+            varify(filename, x_tensor);
         } else if (name == "blk.0.attn_v_mul_w") {
-            filename = "Vcur-0_src_1.ggml";
+            filename = "quant_q8_0.ggml";
+            varify(filename, x_tensor);
         }
-        //varify(filename, x_tensor);
+
+        //save_tensor("q_weight_quant.tff", weight_tensor);
+        //save_tensor("x_tensor.tff", x_tensor);
 
         if (name == "blk.0.attn_q_mul_w") {
             filename = "Qcur-0_result.ggml";
+            varify(filename, output_tensor);
         } else if (name == "blk.0.attn_k_mul_w") {
             filename = "Kcur-0_result.ggml";
+            varify(filename, output_tensor);
         } else if (name == "blk.0.attn_v_mul_w") {
             filename = "Vcur-0_result.ggml";
+            varify(filename, output_tensor);
         }
-        varify(filename, output_tensor);
+        //cudaFree(tmp);
 #endif
     }
 

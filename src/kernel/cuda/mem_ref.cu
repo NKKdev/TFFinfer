@@ -21,9 +21,6 @@ namespace tff::kernel {
         if (output_tensors == nullptr) {
             return;
         }
-        if (output_tensors->get_buffer() == nullptr) {
-            return;
-        }
         if (input_tensors == nullptr) {
             return;
         }

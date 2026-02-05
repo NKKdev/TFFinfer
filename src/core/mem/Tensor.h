@@ -34,6 +34,7 @@ namespace tff::core::memory {
             _n_dims = other->_n_dims;
             _shape = other->_shape;
             _strides = other->_strides;
+            _allocator = other->_allocator;
         }
 
         Tensor(const int n_dim = 4,
@@ -150,21 +151,8 @@ namespace tff::core::memory {
             return _type_size * this->_shape[0] / type_traits_auto[_data_type]._blck_size;
         }
 
-        [[nodiscard]] inline size_t get_bytes() const {
-            size_t nbytes = 0;
-            const size_t blck_size = type_traits_auto[_data_type]._blck_size;
-            if (blck_size == 1) {
-                for (int i = _n_dims - 1; i < _n_dims; ++i) {
-                    nbytes += (this->_shape[i]) * this->_strides[i];
-                }
-            } else {
-                nbytes = this->_shape[0] * this->_strides[0] / blck_size;
-                for (int i = _n_dims - 1; i < _n_dims; ++i) {
-                    nbytes += (this->_shape[i] - 1) * this->_strides[i];
-                }
-            }
-
-            return nbytes;
+        [[nodiscard]] inline int64_t get_bytes() const {
+            return  this->_strides[1] * this->_shape[1] * this->_shape[2] * this->_shape[3];
         }
 
         inline void set_dims(const size_t &n_dims) {

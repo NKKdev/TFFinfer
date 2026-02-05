@@ -27,7 +27,7 @@ namespace tff::core::runtime {
         this->load_hparams(params._is_fuse_op, params._kv_data_type);
         this->load_vocab();
         this->build_layers();
-        this->load_tensor_data();
+        //this->load_tensor_data();
         return bRet;
     }
 
@@ -97,7 +97,9 @@ namespace tff::core::runtime {
 
     bool LLMInferRuntime::init_runtime_context() {
         bool ret = true;
+        ret &= this->init_device();
         ret &= this->init_kvcache();
+        ret &= this->load_tensor_data();
         return ret;
     }
 
@@ -112,78 +114,83 @@ namespace tff::core::runtime {
         kv_cfg._max_tokens = this->_model_config._n_ctx;
         kv_cfg._use_f16 = this->_model_config._use_f16;
         kv_cfg._data_type = this->_model_config._kv_data_type;
-        const auto device = *this->_devices.begin(); //优先构建设备优先级高的kv cache
-        if (!device) {
-            tff::log::Logger::error("No valid device found in _devices.");
-            return false;
-        }
-        //
-        auto type_size = memory::type_traits_auto[kv_cfg._data_type]._type_size;
-
-        const float one_page_size = kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE * type_size;
-        tff::log::Logger::info("KV Cache: Size per page: {%lf} bytes", one_page_size);
-
-        //
-        std::vector<int> device_ids;
-        device->get_device_id(device_ids);
-        if (device_ids.empty()) {
-            tff::log::Logger::error("Failed to get device IDs.");
-            return false;
-        }
-        tff::log::Logger::info("KV Cache: Target devices: {%d}", device_ids[0]);
-
-        auto model_ctx = this->_model_loader->get_model_ctx();
-        for (const auto device_id: device_ids) {
-            size_t free_mem = 0;
-            size_t total_mem = 0;
-            device->get_device_mem(device_id, &free_mem, &total_mem);
-            tff::log::Logger::info("Device {%d}: Total memory: {%lld} bytes, Free memory: {%lld} bytes",
-                                   device_id, total_mem, free_mem);
+        for (auto device: this->_devices) {
+            if (!device) {
+                tff::log::Logger::error("No valid device found in _devices.");
+                return false;
+            }
             //
+            auto type_size = memory::type_traits_auto[kv_cfg._data_type]._type_size;
 
-            //预留模型上下文权重和其他开销的显存;
-            const size_t context_reserve = model_ctx->_max_tensor_byte_size * model_ctx->_tensor_info.size();
-            free_mem -= context_reserve;
-            tff::log::Logger::info("Reserved memory for model context and overhead: {%lld} bytes", context_reserve);
+            const float one_page_size = kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE * type_size;
+            tff::log::Logger::info("KV Cache: Size per page: {%lf} bytes", one_page_size);
 
-            if (free_mem <= 0) {
-                tff::log::Logger::error(
-                    "Insufficient GPU memory. After reservation, free memory is {%lf} bytes (<= 0).",
-                    free_mem);
+            //
+            std::vector<int> device_ids;
+            device->get_device_id(device_ids);
+            if (device_ids.empty()) {
+                tff::log::Logger::error("Failed to get device IDs.");
                 return false;
             }
+            tff::log::Logger::info("KV Cache: Target devices: {%d}", device_ids[0]);
 
-            //计算总页数并创建KV Cache
-            kv_cfg._total_pages = min(static_cast<int>(free_mem / one_page_size), kv_cfg._max_tokens / PAGE_SIZE);
-            tff::log::Logger::info("KV Cache: Total available free memory for KV: {%lld} bytes",
-                                   static_cast<size_t>(free_mem));
-            tff::log::Logger::info("KV Cache: Total pages calculated: {%d} ({%lld} bytes per page)",
-                                   kv_cfg._total_pages, static_cast<size_t>(one_page_size));
+            auto model_ctx = this->_model_loader->get_model_ctx();
+            for (const auto device_id: device_ids) {
+                size_t free_mem = 0;
+                size_t total_mem = 0;
+                device->get_device_mem(device_id, &free_mem, &total_mem);
+                tff::log::Logger::info("Device {%d}: Total memory: {%lld} bytes, Free memory: {%lld} bytes",
+                                       device_id, total_mem, free_mem);
+                //
 
-            if (kv_cfg._total_pages == 0) {
-                tff::log::Logger::error(
-                    "Calculated total KV cache pages is 0. Available memory ({%lld}) is less than one page size ({%lld}).",
-                    static_cast<size_t>(free_mem), static_cast<size_t>(one_page_size));
-                return false;
-            }
+                //预留模型上下文权重和其他开销的显存;
+                const size_t context_reserve = model_ctx->_max_tensor_byte_size * model_ctx->_tensor_info.size();
+                free_mem -= context_reserve;
+                tff::log::Logger::info("Reserved memory for model context and overhead: {%lld} bytes", context_reserve);
 
-            try {
-                this->_kv_cache_ptr[device_id] = std::make_shared<LLMKVCache>(
-                    this->_model_config._kv_data_type,
-                    kv_cfg);
-                tff::log::Logger::info("KV Cache successfully initialized with {%d} pages.", kv_cfg._total_pages);
-            } catch (const std::exception &e) {
-                tff::log::Logger::error("Failed to create LLMKVCache instance. Exception: {%s}", e.what());
-                return false;
-            } catch (...) {
-                tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
-                return false;
-            }
-            if (this->_mem_manager_ptr == nullptr) {
-                tff::log::Logger::info("Memory Manager created failed.");
-                return false;
+                if (free_mem <= 0) {
+                    tff::log::Logger::error(
+                        "Insufficient GPU memory. After reservation, free memory is {%lf} bytes (<= 0).",
+                        free_mem);
+                    return false;
+                }
+
+                //计算总页数并创建KV Cache
+                kv_cfg._total_pages = min(static_cast<int>(free_mem / one_page_size), kv_cfg._max_tokens / PAGE_SIZE);
+                tff::log::Logger::info("KV Cache: Total available free memory for KV: {%lld} bytes",
+                                       static_cast<size_t>(free_mem));
+                tff::log::Logger::info("KV Cache: Total pages calculated: {%d} ({%lld} bytes per page)",
+                                       kv_cfg._total_pages, static_cast<size_t>(one_page_size));
+
+                if (kv_cfg._total_pages == 0) {
+                    tff::log::Logger::error(
+                        "Calculated total KV cache pages is 0. Available memory ({%lld}) is less than one page size ({%lld}).",
+                        static_cast<size_t>(free_mem), static_cast<size_t>(one_page_size));
+                    return false;
+                }
+                if (!this->_mem_manager_ptr->init(device_id)) {
+                    tff::log::Logger::error("device %d memory manager init failed!!", device_id);
+                    return false;
+                }
+                try {
+                    this->_kv_cache_ptr[device_id] = std::make_shared<LLMKVCache>(
+                        this->_model_config._kv_data_type,
+                        kv_cfg);
+                    tff::log::Logger::info("KV Cache successfully initialized with {%d} pages.", kv_cfg._total_pages);
+                } catch (const std::exception &e) {
+                    tff::log::Logger::error("Failed to create LLMKVCache instance. Exception: {%s}", e.what());
+                    return false;
+                } catch (...) {
+                    tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
+                    return false;
+                }
+                if (this->_mem_manager_ptr == nullptr) {
+                    tff::log::Logger::info("Memory Manager created failed.");
+                    return false;
+                }
             }
         }
+
         //
 
         return true; // 初始化成功
@@ -275,7 +282,7 @@ namespace tff::core::runtime {
             }
         }
         if (!is_cpu_init) {
-            bRet &= _mem_manager_ptr->init(-1);//cpu id = -1;
+            bRet &= _mem_manager_ptr->init(-1); //cpu id = -1;
         }
         this->_model_creator->_model_ctx._mem_manager_ptr = _mem_manager_ptr;
         return bRet;
@@ -299,15 +306,8 @@ namespace tff::core::runtime {
         this->build_output();
         if (!this->_infer_graph_ptr) {
             this->init_graph();
-            if (!this->_mem_manager_ptr->is_initialized()) {
-                if (!this->init_mem_manager(this->_infer_graph_ptr, this->_mem_manager_ptr)) {
-                    tff::log::Logger::error("Failed to initialize memory manager.");
-                    return false;
-                }
-            }
         }
         try {
-
             this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER,
                                                      this->_infer_graph_ptr,
                                                      this->_model_config._is_fuse_op);
@@ -320,7 +320,7 @@ namespace tff::core::runtime {
     }
 
     bool LLMInferRuntime::decode(std::shared_ptr<LLMBatch> &ubatch,
-        const int &n_predict, std::string &generate_str) {
+                                 const int &n_predict, std::string &generate_str) {
         this->_model_creator->_model_ctx._is_prefill = false;
         return true;
     }
@@ -504,6 +504,7 @@ namespace tff::core::runtime {
             auto layer = std::make_shared<tff::core::model::layer::ModelLayerObject>();
             layer->_type = layer_info.first;
             layer->_layer_name = get_layer_name(weight.first);
+            layer->_layer_index = layer_index;
             layer->_tensor = weight.second._tensor_ptr;
             layer->_model_file_index = weight.second._idx;
             layer->_offset = weight.second._offs;
@@ -579,12 +580,6 @@ namespace tff::core::runtime {
 
     bool LLMInferRuntime::load_tensor_data() {
         this->init_io_graph();
-
-        if (!this->init_mem_manager(this->_mem_graph_ptr, this->_mem_manager_ptr)) {
-            tff::log::Logger::error("Failed to initialize memory manager.");
-            return false;
-        }
-
         try {
             this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_IO, this->_mem_graph_ptr);
             this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_IO);

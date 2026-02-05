@@ -19,7 +19,6 @@ int main(int argc, char *argv[]) {
     std::string model_config_file_path(argv[1]);
     std::string model_file(argv[2]);
     tff::core::runtime::LLMInferRuntime llm_runtime;
-    llm_runtime.init_device();
     tff::core::model::ModelConfig cfg;
     cfg._use_mmap = true;
     cfg._use_f16 = true;

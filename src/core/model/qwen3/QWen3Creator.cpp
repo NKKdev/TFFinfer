@@ -61,6 +61,7 @@ namespace tff::core::model {
                     {
                         auto attn_q_node = build_qkv_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q,
                                                           layer_map, attn_norm_node);
+
                         auto attn_k_node = build_qkv_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K,
                                                           layer_map, attn_norm_node);
                         auto attn_v_node = build_qkv_node(tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V,
@@ -160,6 +161,7 @@ namespace tff::core::model {
                 std::array<int64_t, MAX_TENSOR_DIM>{
                     embedding_dim, max_seq_len, 1, 1
                 }));
+            rope_table_node->get_tensor()->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_ROPE_FREQS);
         }
         return rope_table_node;
     }
@@ -240,8 +242,8 @@ namespace tff::core::model {
              weight_data_type == tff::core::memory::DataType::TFF_DATA_TYPE_Q8_0_ALIGNED) &&
             b_node->get_tensor()->get_data_type() == tff::core::memory::DataType::TFF_DATA_TYPE_F32) {
             auto quantize_node = ADD_NODE(TFF_OP_QUANTIZE_Q8);
-            quantize_node->bind_devices(layer->_device_list);
             quantize_node->set_node_meta(NodeMetadata{"quantize_q_8_0_node"});
+            quantize_node->bind_devices(layer->_device_list);
             quantize_node->add_input_node(b_node);
             std::array<int64_t, MAX_TENSOR_DIM> shape = {
                 b_node->get_tensor()->get_shape()[0], b_node->get_tensor()->get_shape()[1], 1, 1
@@ -318,6 +320,7 @@ namespace tff::core::model {
                                                        memory::DataType::TFF_DATA_TYPE_F32,
                                                        memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
                                                        input_node->get_tensor()->get_shape());
+        tensor->set_tensor_type(input_node->get_tensor()->get_tensor_type());
         rope_node->set_tensor(tensor);
 
         return rope_node;
@@ -441,10 +444,11 @@ namespace tff::core::model {
         attn_mask_node->bind_devices(layer->_device_list);
         attn_mask_node->get_params()->set_param<const int>(core::graph::TFFMaskType::TFF_MASK_TYPE_CAUSAL);
         std::array<int64_t, MAX_TENSOR_DIM> shapes = {
-            q_node->get_tensor()->get_shape()[2], q_node->get_tensor()->get_shape()[2], 1, 1
+            q_node->get_tensor()->get_shape()[1], q_node->get_tensor()->get_shape()[1], 1, 1
         };
         auto mask_tensor = std::make_shared<memory::Tensor>(data_type, memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
             shapes);
+        mask_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_ATTN_OUT);
         attn_mask_node->set_tensor(mask_tensor);
 
         auto flash_attn_node = ADD_NODE(tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT);
@@ -464,6 +468,7 @@ namespace tff::core::model {
                                                            q_node->get_tensor()->get_shape()[2],
                                                            q_node->get_tensor()->get_shape()[3]
                                                        });
+        tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_ATTN_OUT);
         flash_attn_node->set_tensor(tensor);
 
         auto flash_attn_mul_w_node = build_mul_mat_node(layer, flash_attn_node);

@@ -26,7 +26,6 @@ namespace tff::core::runtime {
     public:
         explicit LLMMemManager(size_t alignment = 256)
             : _alignment(alignment), _is_initialized(false), _buffer_byte_size(0) {
-
         }
 
         ~LLMMemManager() {
@@ -54,11 +53,14 @@ namespace tff::core::runtime {
                                 const memory::MemoryType &type);
 
         //
-        int64_t allocate_memory_offset(int64_t size, const int &device_id);
+        int64_t allocate_memory_offset(int64_t size, const int &device_id,
+                                          const core::memory::MemoryType &type);
 
-        std::pair<int64_t, void *> allocate_memory(int64_t size, const int &device_id);
+        std::pair<int64_t, void *> allocate_memory(int64_t size, const int &device_id,
+                                          const core::memory::MemoryType &type);
 
         void release_memory(const int &device_id, const int64_t &offset);
+
         //
         void aquire_memory(const int &device_id, const size_t &offset,
                            const size_t &actual_size, std::shared_ptr<device::DeviceEvent> &event);
@@ -79,6 +81,7 @@ namespace tff::core::runtime {
 
         //
         void reclaim_async(int device_id);
+
     private:
         struct MemoryBlock {
             int64_t _offset;
@@ -91,7 +94,7 @@ namespace tff::core::runtime {
                 return _free_time > other._free_time;
             }
 
-            MemoryBlock(const int64_t offset,const  int64_t size, const int free_time)
+            MemoryBlock(const int64_t offset, const int64_t size, const int free_time)
                 : _offset(offset), _size(size), _free_time(free_time), _ref_count(1) {
             }
         };
@@ -105,16 +108,18 @@ namespace tff::core::runtime {
                 return offset < other.offset;
             }
         };
+
     private:
         void new_memory_block(const int &device_id, const int64_t &offset, const int64_t &actual_size, const int &end);
 
         void collect(const int &device_id);
+
         //
         void pop_pending_block(const int &device_id);
 
-        bool
-        reclaim_async(int device_id, const size_t &offset);
-
+        bool reclaim_async(int device_id, const size_t &offset);
+        //
+        void reset(const int &device_id);
 
 
         size_t _alignment;
@@ -127,12 +132,12 @@ namespace tff::core::runtime {
         std::unordered_map<int, std::unordered_set<int64_t> > _const_mem_offset;
 
 
-        std::unordered_map<int, std::priority_queue<MemoryBlock, std::vector<MemoryBlock>, std::greater<>>>
-         _memory_heap;
+        std::unordered_map<int, std::priority_queue<MemoryBlock, std::vector<MemoryBlock>, std::greater<> > >
+        _memory_heap;
         std::unordered_map<int, std::multiset<FreeBlock> > _free_set;
 
 
-        std::unordered_map<int,std::unordered_map<int64_t, MemoryBlock>> __async_pending_offset_map;
+        std::unordered_map<int, std::unordered_map<int64_t, MemoryBlock> > __async_pending_offset_map;
 
         std::unordered_map<int, std::shared_ptr<tff::core::device::DeviceBaseObject> > _devices_map;
     };

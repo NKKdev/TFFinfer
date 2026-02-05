@@ -16,9 +16,10 @@ namespace tff::kernel::base {
 
     template<typename T>
     static T get_param_value(const int &index, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto name = para_ptr->get_param<std::string>(para_ptr->get_param_count() - 5);
         auto opt = para_ptr->get_param<T>(index);
         if (!opt.has_value()) {
-            tff::log::Logger::error("op Failed to get param[%d]", index);
+            tff::log::Logger::error("op %s Failed to get param[%d]", std::string(name.value()).c_str(), index);
             return T{};
         }
         return opt.value();
@@ -132,8 +133,11 @@ namespace tff::kernel::base {
                 if (wait_event == nullptr) {
                     continue;
                 }
+                tff::log::Logger::info("stream %s wait event %s",stream->name().c_str(), wait_event->name().c_str());
                 stream->wait_event(wait_event->get_native_event());
             }
+            tff::log::Logger::info("node %s output_tensor pointer %p",name.c_str(),
+                static_cast<void *>(tensor.get()));
         }
 
         static void op_after_hook(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {

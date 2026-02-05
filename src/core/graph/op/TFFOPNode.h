@@ -350,11 +350,13 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("ReshapeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
                 return nullptr;
             }
-            for (auto &input : this->input_nodes()) {
-                this->add_inputs(input->get_tensor());
+            if (this->input_nodes().size() != 1) {
+                tff::log::Logger::error("ReshapeNode op expect 1 input!!");
+                return nullptr;
             }
+
             auto params_ptr = this->get_params();
-            params_ptr->set_param(this->_inputs);
+            params_ptr->set_param(this->input_nodes()[0]->get_tensor());
             auto callback = GraphNode::forward();
             return callback;
         }

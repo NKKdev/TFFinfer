@@ -36,7 +36,7 @@ namespace tff::kernel {
             auto &shape_dim = batch_token->get_shape()[0];
             for (size_t j = 0; j < shape_dim; ++j) {
                 int32_t token_id = batch_token->at<int32_t>(j);
-                tff::log::Logger::info("embedding token id=%d", token_id);
+                //tff::log::Logger::info("embedding token id=%d", token_id);
                 auto quant_data_ptr = (const void *) (
                     (char *) token_embed_buffer->ptr() + token_id * token_embed->get_strides()[1]);
 
