@@ -61,6 +61,8 @@ namespace tff::core::runtime {
 
         void release_memory(const int &device_id, const int64_t &offset);
 
+        void release_kv_cache(const int &device_id, const int64_t &offset);
+
         //
         void aquire_memory(const int &device_id, const size_t &offset,
                            const size_t &actual_size, std::shared_ptr<device::DeviceEvent> &event);
@@ -130,6 +132,7 @@ namespace tff::core::runtime {
         std::unordered_map<int, int64_t> _current_offset;
         std::unordered_map<int, int64_t> _pool_size;
         std::unordered_map<int, std::unordered_set<int64_t> > _const_mem_offset;
+        std::unordered_map<int, std::unordered_set<int64_t> > _kv_cache_offset;
 
 
         std::unordered_map<int, std::priority_queue<MemoryBlock, std::vector<MemoryBlock>, std::greater<> > >

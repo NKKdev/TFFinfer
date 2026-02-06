@@ -13,7 +13,7 @@ namespace tff::core::graph {
         }
         auto device_id = this->_devices.begin()->first;
         auto device_ptr = this->_devices.begin()->second;
-        if (this->_tensor->get_buffer() == nullptr && this->op_type() != TFF_OP_MAP2CPU &&
+        if (this->_tensor != nullptr && this->_tensor->get_buffer() == nullptr && this->op_type() != TFF_OP_MAP2CPU &&
             this->op_type() != TFF_OP_VIEW && this->op_type() != TFF_OP_MEM_REF && this->op_type() != TFF_OP_RESHAPE) {
             auto buffer = this->_mem_manager_ptr->allocate_memory(
                 this->_tensor->get_bytes(), device_id, this->_tensor->memory_type());

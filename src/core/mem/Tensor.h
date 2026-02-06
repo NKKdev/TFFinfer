@@ -36,31 +36,6 @@ namespace tff::core::memory {
             _strides = other->_strides;
             _allocator = other->_allocator;
         }
-
-        Tensor(const int n_dim = 4,
-               const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
-               const MemoryType memory_type = MemoryType::TFF_MEM_TYPE_WORKSPACE,
-               std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
-               bool use_external = true,
-               std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> alloc =
-                       nullptr) : _is_allocated(false), _use_external(use_external), _data_type(data_type),
-                                  _shape(std::move(shapes)),
-                                  _allocator(std::move(alloc)),
-                                  _memory_type(memory_type) {
-            if (_shape.empty()) {
-                tff::log::Logger::error("tensor shape is invalid!!");
-                return;
-            }
-            this->set_dims(n_dim);
-            for (size_t i = 0; i < this->_shape.size(); ++i) {
-                this->set_shape(this->_shape[i], i);
-            }
-            this->set_data_type(data_type);
-            if (!use_external) {
-                this->allocate();
-            }
-        }
-
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
         const MemoryType memory_type = MemoryType::TFF_MEM_TYPE_WORKSPACE,
                std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
@@ -74,10 +49,7 @@ namespace tff::core::memory {
                 tff::log::Logger::error("tensor shape is invalid!!");
                 return;
             }
-            this->set_dims(shapes.size());
-            for (size_t i = 0; i < this->_shape.size(); ++i) {
-                this->set_shape(this->_shape[i], i);
-            }
+            this->check();
             this->set_data_type(data_type);
             if (!use_external) {
                 this->allocate();
@@ -152,7 +124,20 @@ namespace tff::core::memory {
         }
 
         [[nodiscard]] inline int64_t get_bytes() const {
-            return  this->_strides[1] * this->_shape[1] * this->_shape[2] * this->_shape[3];
+            size_t nbytes = 0;
+            const size_t blck_size = type_traits_auto[_data_type]._blck_size;
+            if (blck_size == 1) {
+                for (int i = _n_dims - 1; i < _n_dims; ++i) {
+                    nbytes += (this->_shape[i]) * this->_strides[i];
+                }
+            } else {
+                nbytes = this->_shape[0] * this->_strides[0] / blck_size;
+                for (int i = _n_dims - 1; i < _n_dims; ++i) {
+                    nbytes += (this->_shape[i] - 1) * this->_strides[i];
+                }
+            }
+
+            return nbytes;
         }
 
         inline void set_dims(const size_t &n_dims) {
@@ -325,7 +310,7 @@ namespace tff::core::memory {
 
     private:
         template<typename... Args>
-        size_t compute_offset(Args... indices) const {
+        inline size_t compute_offset(Args... indices) const {
             constexpr size_t num_indices = sizeof...(indices);
             if (num_indices > _shape.size()) {
                 throw std::invalid_argument(
@@ -341,7 +326,15 @@ namespace tff::core::memory {
 
             return offset;
         }
-
+        //
+        inline void check() {
+            this->_n_dims = _shape.size();
+            for (size_t i = 0; i < _shape.size(); ++i) {
+                if (_shape[i] == 1) {
+                    this->_n_dims--;
+                }
+            }
+        }
     private:
         //
         //

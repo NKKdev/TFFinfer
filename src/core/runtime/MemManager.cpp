@@ -105,6 +105,8 @@ namespace tff::core::runtime {
             _current_offset[device_id] += actual_size;
             if (type == core::memory::MemoryType::TFF_MEM_TYPE_WEIGHT) {
                 this->_const_mem_offset[device_id].insert(offset);
+            }else if (type == core::memory::MemoryType::TFF_MEM_TYPE_KV_CACHE) {
+                this->_kv_cache_offset[device_id].insert(offset);
             }
             auto mem_allocator =
                 this->_devices_map[device_id]->get_device_buffer_allocator(device_id);
@@ -122,10 +124,26 @@ namespace tff::core::runtime {
 
     void LLMMemManager::release_memory(const int &device_id, const int64_t &offset) {
         std::lock_guard<std::mutex> lock(_mutex);
-        if (this->_const_mem_offset[device_id].empty()) {
+        if (this->_const_mem_offset[device_id].find(offset) != this->_const_mem_offset[device_id].end() ||
+            this->_kv_cache_offset[device_id].find(offset) != this->_kv_cache_offset[device_id].end()) {
             return;
         }
-        if (this->_const_mem_offset[device_id].find(offset) != this->_const_mem_offset[device_id].end()) {
+        auto iter = this->__async_pending_offset_map[device_id].find(offset);
+        if (iter != this->__async_pending_offset_map[device_id].end()) {
+            iter->second._ref_count--;
+            if (iter->second._ref_count == 0) {
+                tff::log::Logger::info("device %d release memory offset %d", device_id, offset);
+                if (reclaim_async(device_id, offset)) {
+                    this->_memory_heap[device_id].push(iter->second);
+                    this->__async_pending_offset_map[device_id].erase(iter);
+                }
+            }
+        }
+    }
+    //
+    void LLMMemManager::release_kv_cache(const int &device_id, const int64_t &offset) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        if (this->_kv_cache_offset[device_id].find(offset) == this->_kv_cache_offset[device_id].end()) {
             return;
         }
         auto iter = this->__async_pending_offset_map[device_id].find(offset);

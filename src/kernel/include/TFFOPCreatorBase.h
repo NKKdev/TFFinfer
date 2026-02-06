@@ -133,11 +133,11 @@ namespace tff::kernel::base {
                 if (wait_event == nullptr) {
                     continue;
                 }
-                tff::log::Logger::info("stream %s wait event %s",stream->name().c_str(), wait_event->name().c_str());
+                //tff::log::Logger::info("stream %s wait event %s",stream->name().c_str(), wait_event->name().c_str());
                 stream->wait_event(wait_event->get_native_event());
             }
-            tff::log::Logger::info("node %s output_tensor pointer %p",name.c_str(),
-                static_cast<void *>(tensor.get()));
+            // tff::log::Logger::info("node %s output_tensor pointer %p",name.c_str(),
+            //     static_cast<void *>(tensor.get()));
         }
 
         static void op_after_hook(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {

@@ -731,19 +731,13 @@ namespace tff::core::graph::op {
                 tff::log::Logger::error("SetOfRowsOPNode op type (expect TFF_OP_SET_ROWS) is wrong");
                 return nullptr;
             }
-            std::shared_ptr<core::memory::Tensor> k_tensor;
-            std::shared_ptr<core::memory::Tensor> v_tensor;
-            for (auto &input : this->_input_nodes) {
-                if (input->get_tensor()->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
-                    k_tensor = input->get_tensor();
-                }
-                if (input->get_tensor()->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
-                    v_tensor = input->get_tensor();
-                }
+            if (this->input_nodes().size() != 1) {
+                tff::log::Logger::error("SetOfRowsOPNode input_nodes size (expect 1)");
+                return nullptr;
             }
+
             auto params = this->get_params();
-            params->set_param(k_tensor);
-            params->set_param(v_tensor);
+            params->set_param(this->_input_nodes[0]->get_tensor());
 
             auto callback = GraphNode::forward();
             return callback;

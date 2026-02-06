@@ -6,12 +6,12 @@
 #define TFFINFER_LLMKVCACHE_H
 #include <memory>
 #include <mutex>
-#include "../mem/Tensor.h"
-#include "global/OPDefine.h"
+#include "mem/Tensor.h"
 #include "global/GlobalDefine.h"
 #include "device/DeviceBaseObject.h"
 #include "MemManager.h"
-namespace tff::core::runtime  {
+
+namespace tff::core::runtime {
 #define INVALID_PAGE_ID uint64_t(-1)
 #define PAGE_SIZE 32
 #define MAX_TOKENS
@@ -29,22 +29,31 @@ namespace tff::core::runtime  {
 
     class PageManager : public std::enable_shared_from_this<PageManager> {
     public:
-        PageManager(const tff::core::memory::DataType data_type,
+        PageManager(const int &device_id,
+                    const tff::core::memory::DataType data_type,
                     int total_pages, int _d_h, int _h_kv,
-                   int page_size = PAGE_SIZE)
-            : _total_pages(total_pages), _page_size(page_size), _n_d_h(_d_h), _n_h_kv(_h_kv) {
+                    std::shared_ptr<tff::core::runtime::LLMMemManager> &mem_manager_ptr,
+                    int page_size = PAGE_SIZE)
+            : _device_id(device_id), _total_pages(total_pages), _page_size(page_size), _n_d_h(_d_h), _n_h_kv(_h_kv),
+              _mem_manager_ptr(mem_manager_ptr) {
             _pages.resize(total_pages);
             for (int i = 0; i < total_pages; ++i) {
-                _pages[i] = std::make_unique<KVPage>();
+                _pages[i] = std::make_shared<KVPage>();
                 std::array<int64_t, MAX_TENSOR_DIM> shapes = {
-                    static_cast<int64_t>(_d_h) * static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size), 1, 1
+                    static_cast<int64_t>(_d_h) , static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size), 1
                 };
-                _pages[i]->_k = std::make_unique<tff::core::memory::Tensor>(
-                    4, data_type, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
+                _pages[i]->_k = std::make_shared<tff::core::memory::Tensor>(
+                    data_type, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
                     shapes);
-                _pages[i]->_v = std::make_unique<tff::core::memory::Tensor>(
-                    4, data_type, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
+                _pages[i]->_k->set_external_memory_index(mem_manager_ptr->allocate_memory_offset(
+                    _pages[i]->_k->get_bytes(),
+                    _device_id, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE));
+                _pages[i]->_v = std::make_shared<tff::core::memory::Tensor>(
+                    data_type, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
                     shapes);
+                _pages[i]->_v->set_external_memory_index(mem_manager_ptr->allocate_memory_offset(
+                    _pages[i]->_v->get_bytes(),
+                    _device_id, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE));
                 _pages[i]->_n_tokens = 0;
                 _pages[i]->_is_used = false;
                 _free_list.push_back(i);
@@ -60,7 +69,7 @@ namespace tff::core::runtime  {
 
     public:
         // 分配一个新 page
-        PageID allocate() {
+        inline PageID allocate() {
             std::lock_guard<std::mutex> lock(_mutex);
             if (_free_list.empty()) return INVALID_PAGE_ID;
             PageID id = _free_list.back();
@@ -70,7 +79,7 @@ namespace tff::core::runtime  {
         }
 
         // 释放一个 page
-        void free(PageID id) {
+        inline void free(PageID id) {
             std::lock_guard<std::mutex> lock(_mutex);
             if (id >= 0 && id < (int) _pages.size() && _pages[id]->_is_used) {
                 _pages[id]->_is_used = false;
@@ -79,12 +88,38 @@ namespace tff::core::runtime  {
         }
 
         // 获取某个 page 的指针（用于 kernel 调用）
-        const std::shared_ptr<tff::core::memory::Tensor> get_k(PageID id) const {
-            return id != INVALID_PAGE_ID ? _pages[id]->_k : nullptr;
+        inline std::shared_ptr<tff::core::memory::Tensor> get_k(PageID id) const {
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (id != INVALID_PAGE_ID && id < static_cast<int>(_pages.size()) && _pages[id]->_is_used) {
+                if (_pages[id]->_k->get_buffer() == nullptr) {
+                    const auto [fst, snd] = _mem_manager_ptr->allocate_memory(_pages[id]->_k->get_bytes(),
+                                                                          this->_device_id,
+                                                                          memory::MemoryType::TFF_MEM_TYPE_KV_CACHE);
+                    _pages[id]->_k->set_buffer_data(snd, _pages[id]->_k->get_bytes(),
+                                                    fst);
+                }
+
+                return _pages[id]->_k;
+            } else {
+                return nullptr;
+            }
         }
 
-        const std::shared_ptr<tff::core::memory::Tensor> get_v(PageID id) const {
-            return id != INVALID_PAGE_ID ? _pages[id]->_v : nullptr;
+        inline std::shared_ptr<tff::core::memory::Tensor> get_v(PageID id) const {
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (id != INVALID_PAGE_ID && id < static_cast<int>(_pages.size()) && _pages[id]->_is_used) {
+                if (_pages[id]->_v->get_buffer() == nullptr) {
+                    const auto [fst, snd] = _mem_manager_ptr->allocate_memory(_pages[id]->_v->get_bytes(),
+                                                                          this->_device_id,
+                                                                          memory::MemoryType::TFF_MEM_TYPE_KV_CACHE);
+                    _pages[id]->_v->set_buffer_data(snd, _pages[id]->_v->get_bytes(),
+                                                    fst);
+                }
+
+                return _pages[id]->_v;
+            } else {
+                return nullptr;
+            }
         }
 
         int used_count() const {
@@ -96,11 +131,13 @@ namespace tff::core::runtime  {
         inline int32_t get_page_size() const { return _page_size; }
 
     private:
+        int _device_id;
         uint32_t _total_pages = 0;
-        std::vector<std::unique_ptr<KVPage> > _pages;
+        std::vector<std::shared_ptr<KVPage> > _pages;
         std::vector<PageID> _free_list; // 空闲 page 的 ID 列表
         int _page_size;
         int _n_d_h, _n_h_kv;
+        std::shared_ptr<tff::core::runtime::LLMMemManager> _mem_manager_ptr;
         mutable std::mutex _mutex;
     };
 
@@ -117,8 +154,9 @@ namespace tff::core::runtime  {
         ~LayerKVContext() = default;
 
     public:
-        int get_num_pages() const { return (int) _page_table.size(); }
-        int get_max_tokens() const { return _page_table.size() * _page_manager->get_page_size(); }
+        inline int get_num_pages() const { return static_cast<int>(_page_table.size()); }
+        inline int get_max_tokens() const { return _page_table.size() * _page_manager->get_page_size(); }
+        inline int get_token_count() const { return _num_tokens; }
         //
         // 获取第 idx 个 token 所在的 page_id 和 page 内偏移
         inline std::pair<PageID, int> get_location(int token_idx) const {
@@ -175,13 +213,17 @@ namespace tff::core::runtime  {
         };
 
     public:
-        explicit LLMKVCache(const tff::core::memory::DataType data_type, const LLMKVCache::KVConfig &cfg)
-            : _config(cfg), _seq_length(MAX_SEQ_LENGTH) {
+        explicit LLMKVCache(const int &device_id, const tff::core::memory::DataType data_type,
+                            const LLMKVCache::KVConfig &cfg,
+                            std::shared_ptr<tff::core::runtime::LLMMemManager> &mem_manager_ptr)
+            : _device_id(device_id), _config(cfg), _seq_length(MAX_SEQ_LENGTH) {
             this->_page_manager = std::make_shared<PageManager>(
+                device_id,
                 data_type,
                 cfg._total_pages,
                 cfg._n_embd_head,
                 cfg._n_head_kv,
+                mem_manager_ptr,
                 cfg._page_size
             );
         }
@@ -233,37 +275,21 @@ namespace tff::core::runtime  {
             return ptr;
         }
 
-        std::unordered_map<int, std::shared_ptr<core::memory::Tensor> > set_k(int seq_id, int layer_id,
-                                                                              const std::shared_ptr<
-                                                                                  core::memory::Tensor> &cur_k,
-                                                                              std::unordered_map<int, std::shared_ptr<
-                                                                                  tff::core::device::DeviceBaseObject> >
-                                                                              &device);
-
+        bool set_kv(int seq_id, int layer_id,
+                   const int &token_num);
         //
-        bool set_v(int seq_id, int layer_id, const DeviceTensor *cur_v) {
+        inline int get_kv_token_num(int seq_id, int layer_id) {
             LayerKVContext *ctx = get_context(seq_id, layer_id);
-            if (!ctx->append_token()) {
-                return false; // 内存不足
+            if (ctx == nullptr) {
+                return -1;
             }
-
-            int token_pos = ctx->_num_tokens - 1;
-
-            auto index_pair = ctx->get_location(token_pos);
-            const int page_idx = index_pair.first;
-            const int offset = index_pair.second;
-
-            PageID page_id = ctx->_page_table[page_idx];
-            //DeviceTensor* dst_k = slice_page(_page_manager->get_k(page_id), offset);
-            //DeviceTensor* dst_v = slice_page(_page_manager->get_v(page_id), offset);
-
-            // 执行拷贝：cur_k -> dst_k（形状 [d_h, h_kv, 1]）
-            //copy_tensor(cur_k, dst_k);
-            //copy_tensor(cur_v, dst_v);
-
-            return true;
+            return ctx->get_token_count();
         }
-
+        //
+        inline std::pair<PageID, int> get_location(int seq_id, int layer_id, const int token_idx) {
+            return get_context(seq_id, layer_id)->get_location(token_idx);
+        }
+        //
         inline std::shared_ptr<memory::Tensor> get_k(int seq_id, int layer_id, PageID page_id) {
             const LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (ctx == nullptr) {
@@ -297,6 +323,7 @@ namespace tff::core::runtime  {
         const LLMKVCache::KVConfig &get_config() const { return _config; }
 
     public:
+        int _device_id;
         size_t _seq_length;
         size_t _current_batch_size;
         bool _is_prefilling;

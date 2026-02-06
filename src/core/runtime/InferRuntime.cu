@@ -173,9 +173,9 @@ namespace tff::core::runtime {
                     return false;
                 }
                 try {
-                    this->_kv_cache_ptr[device_id] = std::make_shared<LLMKVCache>(
+                    this->_kv_cache_ptr[device_id] = std::make_shared<LLMKVCache>(device_id,
                         this->_model_config._kv_data_type,
-                        kv_cfg);
+                        kv_cfg,this->_mem_manager_ptr);
                     tff::log::Logger::info("KV Cache successfully initialized with {%d} pages.", kv_cfg._total_pages);
                 } catch (const std::exception &e) {
                     tff::log::Logger::error("Failed to create LLMKVCache instance. Exception: {%s}", e.what());
@@ -374,7 +374,7 @@ namespace tff::core::runtime {
         auto &tokens_data = batch->_tokens;
         auto &input_pos = batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(
-            MAX_TENSOR_DIM, tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+            tff::core::memory::DataType::TFF_DATA_TYPE_I32,
             memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
             std::array<int64_t, MAX_TENSOR_DIM>{
                 static_cast<int64_t>(tokens_data.size()), 1, 1, 1
@@ -384,7 +384,7 @@ namespace tff::core::runtime {
                                           tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
         token_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
 
-        auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(MAX_TENSOR_DIM,
+        auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(
                                                                             tff::core::memory::DataType::TFF_DATA_TYPE_I32,
                                                                             memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
                                                                             std::array<int64_t, MAX_TENSOR_DIM>{
@@ -427,7 +427,7 @@ namespace tff::core::runtime {
 
     void LLMInferRuntime::build_output() {
         auto output_tensor = std::make_shared<tff::core::memory::Tensor>(
-            MAX_TENSOR_DIM, tff::core::memory::DataType::TFF_DATA_TYPE_F32,
+            tff::core::memory::DataType::TFF_DATA_TYPE_F32,
             memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
             std::array<int64_t, MAX_TENSOR_DIM>{
                 static_cast<int64_t>(this->_model_config._n_embd), this->_vocabulary_ptr->get_vocab_size(), 1, 1
@@ -482,9 +482,6 @@ namespace tff::core::runtime {
             size_t layer_index = 0;
             std::shared_ptr<tff::core::graph::GraphNode> layer_node;
             auto tensor = weight.second._tensor_ptr;
-            if (tensor->get_tensor_type() == memory::ModelTensorType::LLM_TENSOR_ATTN_K_NORM) {
-                int tmp = 9;
-            }
             auto &layer_info = tff::core::global::LLM_LAYER_OP_INFOS.find(tensor->get_tensor_type())->second;
             if (layer_info.first == tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING) {
                 auto get_layer_index = [](const std::string &layer_name) -> size_t {

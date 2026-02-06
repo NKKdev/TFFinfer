@@ -172,7 +172,7 @@ namespace tff::core::model {
             int32_t data_type = 0;
             file_loader->read(data_type);
             auto type = static_cast<tff::core::memory::DataType>(data_type);
-            tensor_info._tensor_ptr = std::make_shared<tff::core::memory::Tensor>(n_dims, type,
+            tensor_info._tensor_ptr = std::make_shared<tff::core::memory::Tensor>( type,
                 core::memory::MemoryType::TFF_MEM_TYPE_WEIGHT, shapes, true);
             tensor_info._tensor_ptr->set_tensor_type(this->get_model_tensor_type(tensor_info._name));
 
