@@ -480,7 +480,7 @@ __device__ void compute_tile_double_buffer(const int k_size, const int thread_x,
                               weight_tensor, output_tensor,
                               stream);
 
-#ifdef _DEBUG
+#ifdef _DEBUG1
         stream->synchronize();
         const auto &name = kernel::base::get_param_value<std::string>(para_ptr->get_param_count() - 5, para_ptr);
         std::string filename = "";
@@ -490,7 +490,8 @@ __device__ void compute_tile_double_buffer(const int k_size, const int thread_x,
         } else if (name == "blk.0.attn_k_mul_w") {
             filename = "Kcur-0_src_0.ggml";
             varify(filename, weight_tensor);
-        } else if (name == "blk.0.attn_v_mul_w") {
+        } else
+        if (name == "blk.0.attn_v_mul_w") {
             filename = "Vcur-0_src_0.ggml";
             varify(filename, weight_tensor);
         }
@@ -501,7 +502,8 @@ __device__ void compute_tile_double_buffer(const int k_size, const int thread_x,
         } else if (name == "blk.0.attn_k_mul_w") {
             filename = "quant_q8_0.ggml";
             varify(filename, x_tensor);
-        } else if (name == "blk.0.attn_v_mul_w") {
+        } else
+        if (name == "blk.0.attn_v_mul_w") {
             filename = "quant_q8_0.ggml";
             varify(filename, x_tensor);
         }
@@ -515,7 +517,8 @@ __device__ void compute_tile_double_buffer(const int k_size, const int thread_x,
         } else if (name == "blk.0.attn_k_mul_w") {
             filename = "Kcur-0_result.ggml";
             varify(filename, output_tensor);
-        } else if (name == "blk.0.attn_v_mul_w") {
+        } else
+        if (name == "blk.0.attn_v_mul_w") {
             filename = "Vcur-0_result.ggml";
             varify(filename, output_tensor);
         }

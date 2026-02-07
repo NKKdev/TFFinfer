@@ -65,6 +65,7 @@ add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         swiglu.cu
         quant_fp32_gemm.cu
         varify_gemm_quant_q8_0.cu
+        set_of_rows.cu
 )
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE

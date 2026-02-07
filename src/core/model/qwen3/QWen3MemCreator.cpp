@@ -41,7 +41,13 @@ namespace tff::core::model {
                 const auto &repeating_layer_map = repeating_layer_iter->second;
 
                 for (size_t layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
-
+#ifdef _DEBUG
+                    {
+                        if (layer_id >= 1) {
+                            continue;
+                        }
+                    }
+#endif
                     auto &layer_map = repeating_layer_map.find(layer_id)->second;
                     //
                     auto attn_norm_node = build_layer_node(memory::ModelTensorType::LLM_TENSOR_ATTN_NORM,

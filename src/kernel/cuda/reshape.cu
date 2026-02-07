@@ -19,6 +19,7 @@ namespace tff::kernel {
         }
         output_tensor->set_buffer_data(x->get_buffer()->ptr(), x->get_bytes(),
             x->get_external_memory_index());
+        output_tensor->set_allocator(x->get_allocator());
     }
 
     template class tff::kernel::Reshape<float>;

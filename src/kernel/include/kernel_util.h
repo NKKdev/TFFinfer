@@ -153,6 +153,48 @@ namespace tff::kernel {
 #ifdef _DEBUG
     static void varify(std::string &filename, std::shared_ptr<core::memory::Tensor> &tensor) {
         switch (tensor->get_data_type()) {
+            case core::memory::DataType::TFF_DATA_TYPE_F16: {
+                std::vector<float> weight_cpu_result;
+                weight_cpu_result.resize(
+                    tensor->get_shape()[0] * tensor->get_shape()[1] * tensor->get_shape()[2] *
+                    tensor->get_shape()[3]);
+                load_tensor_raw(filename.c_str(), weight_cpu_result.data());
+
+                std::vector<half> weight_gpu_result;
+                weight_gpu_result.resize(weight_cpu_result.size());
+                tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
+                                                 tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+
+                float error_raio = 0.0f;
+                for (int b = 0; b < tensor->get_shape()[3]; b++) {
+                    for (int s = 0; s < tensor->get_shape()[2]; s++) {
+                        half *gpu_ptr = weight_gpu_result.data() + b * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0]
+                        + s * tensor->get_shape()[1] * tensor->get_shape()[0];
+                        float *cpu_ptr = weight_cpu_result.data() + b * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0]
+                        + s * tensor->get_shape()[1] * tensor->get_shape()[0];
+                        for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
+                            for (int nn = 0; nn < tensor->get_shape()[0]; nn++) {
+                                float delta = __half2float(gpu_ptr[mm * tensor->get_shape()[0] + nn]) - cpu_ptr[
+                                                  mm * tensor->get_shape()[0] + nn];
+                                if (fabs(delta) > 0.01f) {
+                                    // tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf, gpu: %lf, cpu: %lf",
+                                    //     filename.c_str(),mm, nn, delta, gpu_ptr[mm * tensor->get_shape()[0] + nn],
+                                    //     cpu_ptr[mm * tensor->get_shape()[0] + nn]);
+
+                                    error_raio++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                error_raio /= tensor->get_shape()[3] * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0];
+                if (error_raio > 0.01) {
+                    tff::log::Logger::error("filename: %s, error_raio: %lf",filename.c_str(), error_raio);
+                    return;
+                }
+                break;
+            }
             case core::memory::DataType::TFF_DATA_TYPE_F32: {
                 std::vector<float> weight_cpu_result;
                 weight_cpu_result.resize(
@@ -190,7 +232,7 @@ namespace tff::kernel {
 
                 error_raio /= tensor->get_shape()[3] * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0];
                 if (error_raio > 0.01) {
-                    tff::log::Logger::error("error_raio: %lf", error_raio);
+                    tff::log::Logger::error("filename: %s, error_raio: %lf",filename.c_str(), error_raio);
                     return;
                 }
                 break;
@@ -206,19 +248,28 @@ namespace tff::kernel {
                 weight_gpu_result.resize(weight_cpu_result.size());
                 tensor->get_allocator()->memcopy(tensor->get_buffer()->ptr(), weight_gpu_result.data(),
                                                  tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
-
+                float error_raio = 0.0f;
                 for (int mm = 0; mm < tensor->get_shape()[1]; mm++) {
                     for (int nn = 0; nn < tensor->get_shape()[0] / Q8_0::BLOCK_SIZE; nn++) {
                         float delta = weight_gpu_result[mm * tensor->get_shape()[0] / Q8_0::BLOCK_SIZE + nn].d -
                                       __half2float(weight_cpu_result[
                                           mm * tensor->get_shape()[0] / Q8_0::BLOCK_SIZE + nn].d);
                         if (fabs(delta) > 0.001f) {
-                            tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf", filename.c_str(),
-                                                    mm, nn, delta);
+                            tff::log::Logger::error("filename: %s, error: m: %d n: %d, gpu: %lf, cpu: %lf, delta: %lf", filename.c_str(),
+                                                    mm, nn,
+                                                    weight_gpu_result[mm * tensor->get_shape()[0] / Q8_0::BLOCK_SIZE + nn].d,
+                                                    __half2float(weight_cpu_result[
+                                          mm * tensor->get_shape()[0] / Q8_0::BLOCK_SIZE + nn].d),
+                                                    delta);
                             //throw std::runtime_error("error");
-                            return;
+                            error_raio++;
                         }
                     }
+                }
+                error_raio /= tensor->get_shape()[3] * tensor->get_shape()[2] * tensor->get_shape()[1] * tensor->get_shape()[0];
+                if (error_raio > 0.01) {
+                    tff::log::Logger::error("filename: %s, error_raio: %lf",filename.c_str(), error_raio);
+                    return;
                 }
                 break;
             }

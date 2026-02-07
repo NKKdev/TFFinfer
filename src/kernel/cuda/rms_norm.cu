@@ -4,7 +4,6 @@
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
 #include "kernel/include/kernel_util.h"
-#include "utils/util.h"
 
 namespace tff::kernel {
     template<typename T, int BLOCK_DIM_M, int WARP_SIZE>

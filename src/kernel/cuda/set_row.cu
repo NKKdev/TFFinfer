@@ -4,7 +4,7 @@
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
 #include "core/runtime/KVCache.h"
-
+#include "kernel/include/kernel_util.h"
 namespace tff::kernel {
     template<typename T, const int WARP_SIZE, const int BLOCK_ROW_SIZE, const int BLOCK_COL_SIZE>
     __global__ __forceinline__ void set_of_rows_kernel(const float *__restrict__ src, T *__restrict__ dst,
@@ -21,8 +21,9 @@ namespace tff::kernel {
 
         const int thread_x = thread_id % WARP_SIZE;
         const int warp_id = thread_id / WARP_SIZE;
-        const int VEC_DIM_ROW = BLOCK_ROW_SIZE / blockDim.y;// 4
-        const int VEC_DIM_COL = BLOCK_COL_SIZE / blockDim.x;// 1
+        const int VEC_DIM_ROW = BLOCK_ROW_SIZE / blockDim.y; // 4
+        const int VEC_DIM_COL = BLOCK_COL_SIZE / blockDim.x; // 1
+
         const int src_row_base = start_row + block_row_index;
         const int src_col_base = head_index * dim0 / 2;
         const int g_index = batch_index * dim2 * dim1 * dim0;
@@ -39,17 +40,18 @@ namespace tff::kernel {
 #pragma unroll
             for (int j = 0; j < VEC_DIM_COL; j++) {
                 const int col = src_col_base + thread_x + j * BLOCK_COL_SIZE / VEC_DIM_COL;
-                if (col >= dim0) {
+                if (col >= dim1 * dim0) {
                     continue;
                 }
-                const int dst_row = start_offset + warp_id + i * BLOCK_ROW_SIZE / VEC_DIM_ROW;
-                if (dst_row < token_num) {
+                const int dst_row_base = warp_id + i * BLOCK_ROW_SIZE / VEC_DIM_ROW;
+                const int dst_row = start_offset + dst_row_base;
+                if (dst_row_base < token_num) {
                     if (std::is_same_v<T, float>) {
-                        auto *dst_ptr = reinterpret_cast<float2*>(dst_block_ptr);
-                        dst_ptr[dst_row * dim1 * dim0 + col] = src_ptr[row * dim1 * dim0 + col];
-                    }else if (std::is_same_v<T, half>) {
-                        auto *dst_ptr = reinterpret_cast<half2*>(dst_block_ptr);
-                        dst_ptr[dst_row * dim1 * dim0 + col] = __float22half2_rn(src_ptr[row * dim1 * dim0 + col]);
+                        auto *dst_ptr = reinterpret_cast<float2 *>(dst_block_ptr);
+                        dst_ptr[dst_row * dim1 * dim0 / 2 + col] = src_ptr[row * dim1 * dim0 / 2 + col];
+                    } else if (std::is_same_v<T, half>) {
+                        auto *dst_ptr = reinterpret_cast<half2 *>(dst_block_ptr);
+                        dst_ptr[dst_row * dim1 * dim0 / 2 + col] = __float22half2_rn(src_ptr[row * dim1 * dim0 / 2 + col]);
                     }
                 }
             }
@@ -65,7 +67,6 @@ namespace tff::kernel {
         if (input_tensor == nullptr || output_tensor == nullptr || output_tensor->get_buffer() == nullptr) {
             return;
         }
-        *output_tensor = *input_tensor;
         const auto dim0  = input_tensor->get_shape()[0];
         const auto dim1  = input_tensor->get_shape()[1];
         const auto dim2  = input_tensor->get_shape()[2];
@@ -78,7 +79,8 @@ namespace tff::kernel {
             constexpr int BLOCK_COL_SIZE = PAGE_SIZE;
             constexpr int BLOCK_ROW_SIZE = PAGE_SIZE;
 
-            const auto &[page_id, offset] = kv_cache_ctx->get_location(seq_id, layer_id, i);
+            const auto &[page_id, offset] =
+                kv_cache_ctx->get_location(seq_id, layer_id, pre_token_num + i);
 
             int token_num = PAGE_SIZE;
             if ((i + PAGE_SIZE) > dim2) {
@@ -136,6 +138,7 @@ namespace tff::kernel {
         }
 
         set_of_rows<T>(seq_id, layer_id, kv_cache_ctx, input_tensor,output_tensor, stream);
+
     }
 
 

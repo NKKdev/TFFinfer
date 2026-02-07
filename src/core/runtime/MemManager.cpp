@@ -132,7 +132,7 @@ namespace tff::core::runtime {
         if (iter != this->__async_pending_offset_map[device_id].end()) {
             iter->second._ref_count--;
             if (iter->second._ref_count == 0) {
-                tff::log::Logger::info("device %d release memory offset %d", device_id, offset);
+                //tff::log::Logger::info("device %d release memory offset %d", device_id, offset);
                 if (reclaim_async(device_id, offset)) {
                     this->_memory_heap[device_id].push(iter->second);
                     this->__async_pending_offset_map[device_id].erase(iter);
@@ -150,7 +150,7 @@ namespace tff::core::runtime {
         if (iter != this->__async_pending_offset_map[device_id].end()) {
             iter->second._ref_count--;
             if (iter->second._ref_count == 0) {
-                tff::log::Logger::info("device %d release memory offset %d", device_id, offset);
+                //tff::log::Logger::info("device %d release memory offset %d", device_id, offset);
                 if (reclaim_async(device_id, offset)) {
                     this->_memory_heap[device_id].push(iter->second);
                     this->__async_pending_offset_map[device_id].erase(iter);

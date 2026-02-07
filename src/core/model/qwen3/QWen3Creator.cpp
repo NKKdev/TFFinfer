@@ -45,7 +45,7 @@ namespace tff::core::model {
             if (repeating_layer_iter != layer_map.end() && repeating_layer_iter->second.size() > 1) {
                 const auto &repeating_layer_map = repeating_layer_iter->second; // Assume it's a std::set or similar
                 for (int layer_id = 0; layer_id < repeating_layer_map.size(); ++layer_id) {
-#ifdef _DEBUG1
+#ifdef _DEBUG
                     {
                         if (layer_id >= 1) {
                             continue;
