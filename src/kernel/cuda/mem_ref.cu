@@ -9,14 +9,27 @@
 
 namespace tff::kernel {
     template<typename T>
-    void tff::kernel::MemRef<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto input_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            0, para_ptr);
+    class MemRef<T,
+                core::device::GPUTag> : public base::OPCreatorBase<MemRef<T, core::device::GPUTag>, T,
+                core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_MEM_REF;
+        }
+    };
+
+    template<typename T>
+    void tff::kernel::MemRef<T, core::device::GPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto input_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            MemRefBuilder::Params::In, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
+            MemRefBuilder::Params::Out, para_ptr);
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                         para_ptr->get_param_count() - 1, para_ptr);
+            kernel::builder::OpParamBuilderBase<MemRefBuilder>::CommonParams::Stream, para_ptr);
 
         if (output_tensors == nullptr) {
             return;
@@ -34,8 +47,12 @@ namespace tff::kernel {
     template class tff::kernel::MemRef<Q8_0_ALIGNED, core::device::GPUTag>;
     template class tff::kernel::MemRef<Q8_0, core::device::GPUTag>;
     REGISTER_OP_OBJECT_DEVICE(MemRef, float, core::device::GPUTag);
+
     REGISTER_OP_OBJECT_DEVICE(MemRef, double, core::device::GPUTag);
+
     REGISTER_OP_OBJECT_DEVICE(MemRef, int32_t, core::device::GPUTag);
+
     REGISTER_OP_OBJECT_DEVICE(MemRef, Q8_0_ALIGNED, core::device::GPUTag);
+
     REGISTER_OP_OBJECT_DEVICE(MemRef, Q8_0, core::device::GPUTag);
 }

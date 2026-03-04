@@ -14,17 +14,30 @@
 #include "ModelLoaderBase.h"
 #include "ModelCreatorBase.h"
 namespace tff::core::model {
+    /**
+     * 模型检测器基类
+     */
     class ModelDetectorBase {
         public:
         ModelDetectorBase() = default;
 
         virtual ~ModelDetectorBase() = default;
     public:
-        // 检查模型是否匹配此格式
-        virtual bool matches(const std::string &file_format) const = 0;
-        // 获取该模型格式的名称
-        virtual const char* name() const = 0;
-        // 创建该模型的加载器
+        /**
+         * 模型格式是否匹配
+         * @param file_format 文件格式
+         * @return
+         */
+        [[nodiscard]] virtual bool matches(const std::string &file_format) const = 0;
+        /**
+         * 模型名称
+         * @return
+         */
+        [[nodiscard]] virtual const char* name() const = 0;
+        /**
+         * 创建模型加载器
+         * @return
+         */
         virtual std::shared_ptr<ModelLoaderBase> create_loader() = 0;
 
     };

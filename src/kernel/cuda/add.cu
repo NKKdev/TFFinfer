@@ -4,22 +4,43 @@
 
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
+
 namespace tff::kernel {
+    template<typename T>
+    __global__ __forceinline__ void add_kernel(const float *__restrict__) {
+
+    }
+    template<typename T>
+    class Add<T,
+                core::device::GPUTag> : public base::OPCreatorBase<Add<T, core::device::GPUTag>, T,
+                core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_ADD;
+        }
+    };
+
     //
     template<typename T>
-    void tff::kernel::Add<T>::compute( std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        //auto name = para_ptr->get_param<std::string>(0);
-        tff::log::Logger::info("layer node op:%s compute!",tff::kernel::Add<T>::get_op_name().c_str());
+    void tff::kernel::Add<T, core::device::GPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+
     }
 
-    template class tff::kernel::Add<float>;
-    template class tff::kernel::Add<double>;
-    template class tff::kernel::Add<int32_t>;
-    template class tff::kernel::Add<int64_t>;
-    template class tff::kernel::Add<Q8_0>;
-    REGISTER_OP_OBJECT(Add, float);
-    REGISTER_OP_OBJECT(Add, double);
-    REGISTER_OP_OBJECT(Add, int32_t);
-    REGISTER_OP_OBJECT(Add, int64_t);
-    REGISTER_OP_OBJECT(Add, Q8_0);
+    template class tff::kernel::Add<float, core::device::GPUTag>;
+    template class tff::kernel::Add<double, core::device::GPUTag>;
+    template class tff::kernel::Add<int32_t, core::device::GPUTag>;
+    template class tff::kernel::Add<int64_t, core::device::GPUTag>;
+    template class tff::kernel::Add<Q8_0, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(Add, float, core::device::GPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(Add, double, core::device::GPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(Add, int32_t, core::device::GPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(Add, int64_t, core::device::GPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(Add, Q8_0, core::device::GPUTag);
 }

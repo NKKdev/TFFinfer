@@ -8,115 +8,102 @@
 #include "ModuleFactory.h"
 
 #include "FunctionFactory.h"
+#include "device/DeviceManager.h"
 #include "kernel/include/TFFOPCreator.h"
+#include "runtime/KVCache.h"
 
 namespace tff::core::graph::op {
     class MatMulNode final : public tff::core::graph::GraphNode {
     public:
         explicit MatMulNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_MUL_MAT);
+            this->_builder = std::make_shared<kernel::MatMulBuilder>();
         }
 
         ~MatMulNode() = default;
 
     public:
-        template<typename T>
-        auto get_xgemm_callback() {
-            return tff::factory::FunctionFactory::instance()->get_callback(
-                CREATE_LAYER_FLAG, tff::kernel::XGemm<T>::get_opthis->_node_metadata._name());
-        }
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_MUL_MAT) {
                 tff::log::Logger::error("MatMulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
             }
+            auto builder = std::dynamic_pointer_cast<kernel::MatMulBuilder>(this->_builder);
+            auto a = builder->a<std::shared_ptr<core::memory::Tensor> >();
+            auto b = builder->b<std::shared_ptr<core::memory::Tensor> >();
+        }
 
-            std::shared_ptr<core::memory::Tensor> _weight;
-            std::shared_ptr<core::memory::Tensor> x;
-            for (auto &input : this->input_nodes()) {
-                if (input->op_type() == TFF_OP_MEM_REF) {
-                    _weight = input->get_tensor();
-                }else {
-                    x = input->get_tensor();
-                }
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::MatMulBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MatMulBuilder) is wrong!!");
+                return;
             }
-            auto params = this->get_params();
-            params->set_param(_weight);
-            params->set_param(x);
-            auto callback = GraphNode::forward();
-            return callback;
+            auto a = builder->a<std::shared_ptr<core::memory::Tensor> >();
+            auto b = builder->b<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(a, kernel::MatMulBuilder::Params::A));
+            this->_tensor_param_map.insert(std::make_pair(b, kernel::MatMulBuilder::Params::B));
+            std::array<int64_t, MAX_TENSOR_DIM> shape = {
+                a->get_shape()[1], b->get_shape()[1], 1, 1
+            };
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<tff::core::memory::Tensor>(
+                    memory::DataType::TFF_DATA_TYPE_F32,
+                    memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                    shape);
+                this->_tensor->set_tensor_type(a->get_tensor_type());
+                this->_tensor->set_allocator(a->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
+
     //
-    class Q8MatMulNode final : public tff::core::graph::GraphNode {
+    class QuantMatMulNode final : public tff::core::graph::GraphNode {
     public:
-        explicit Q8MatMulNode(const std::string &name = "") : GraphNode(name) {
-            set_op_type(TFF_OP_QUANTIZE_Q8_MATMUL);
+        explicit QuantMatMulNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_QUANTIZE_MATMUL);
+            this->_builder = std::make_shared<kernel::QuantMatMulBuilder>();
         }
 
-        ~Q8MatMulNode() override = default;
+        ~QuantMatMulNode() override = default;
 
     public:
-        template<typename T>
-        auto get_xgemm_callback() {
-            return tff::factory::FunctionFactory::instance()->get_callback(
-                CREATE_LAYER_FLAG, tff::kernel::XGemm<T>::get_opthis->_node_metadata._name());
-        }
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_op_type != TFF_OP_QUANTIZE_Q8_MATMUL) {
-                tff::log::Logger::error("MatMulNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_QUANTIZE_MATMUL) {
+                tff::log::Logger::error("QuantMatMulNode op type(expect TFF_OP_QUANTIZE_MATMUL) is wrong!!");
+                return;
             }
 
-            std::shared_ptr<core::memory::Tensor> _weight;
-            std::shared_ptr<core::memory::Tensor> x;
-            for (auto &input : this->input_nodes()) {
-                if (input->op_type() == TFF_OP_MEM_REF) {
-                    _weight = input->get_tensor();
-                }else {
-                    x = input->get_tensor();
-                }
-            }
-            auto params = this->get_params();
-            params->set_param(_weight);
-            params->set_param(x);
-            auto callback = GraphNode::forward();
-            return callback;
-        }
-    };
-    //
-    class UploadBuffer final : public tff::core::graph::GraphNode {
-    public:
-        explicit UploadBuffer(const std::string &name = "") : GraphNode(name) {
-            set_op_type(TFF_OP_GET_ROWS);
+            auto builder = std::dynamic_pointer_cast<kernel::QuantMatMulBuilder>(this->_builder);
+            auto weight = builder->weight<std::shared_ptr<core::memory::Tensor> >();
+            auto x = builder->x<std::shared_ptr<core::memory::Tensor> >();
         }
 
-        ~UploadBuffer() override = default;
-
-    public:
-        template<typename T>
-        auto get_read_buffer_callback() {
-            return tff::factory::FunctionFactory::instance()->get_callback(
-                CREATE_LAYER_FLAG, tff::kernel::XGemm<T>::get_opthis->_node_metadata._name());
-        }
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("UploadBuffer param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::QuantMatMulBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MatMulBuilder) is wrong!!");
+                return;
             }
-            if (this->_op_type != TFF_OP_GET_ROWS) {
-                tff::log::Logger::error("UploadBuffer op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+            auto weight = builder->weight<std::shared_ptr<core::memory::Tensor> >();
+            auto x = builder->x<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(weight, kernel::QuantMatMulBuilder::Params::Weight));
+            this->_tensor_param_map.insert(std::make_pair(x, kernel::QuantMatMulBuilder::Params::X));
+            std::array<int64_t, MAX_TENSOR_DIM> shape = {
+                weight->get_shape()[1], x->get_shape()[1], 1, 1
+            };
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<tff::core::memory::Tensor>(
+                    memory::DataType::TFF_DATA_TYPE_F32,
+                    memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                    shape);
+                this->_tensor->set_tensor_type(weight->get_tensor_type());
+                this->_tensor->set_allocator(weight->get_allocator());
+                builder->out(this->_tensor);
             }
-            auto callback = GraphNode::forward();
-            return callback;
         }
     };
 
@@ -125,19 +112,43 @@ namespace tff::core::graph::op {
     public:
         explicit AddNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_ADD);
+            this->_builder = std::make_shared<kernel::AddBuilder>();
         };
 
         ~AddNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_ADD) {
                 tff::log::Logger::error("AddNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
+            }
+            if (this->input_nodes().size() != 2) {
+                tff::log::Logger::error("AddNode (%s) params is invalid!!");
+                return;
             }
 
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::AddBuilder>(this->_builder);
+            auto x1 = builder->x1<std::shared_ptr<core::memory::Tensor> >();
+            auto x2 = builder->x2<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::AddBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MatMulBuilder) is wrong!!");
+                return;
+            }
+            auto x1 = builder->x1<std::shared_ptr<core::memory::Tensor> >();
+            auto x2 = builder->x2<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(x1, kernel::AddBuilder::Params::X1));
+            this->_tensor_param_map.insert(std::make_pair(x2, kernel::AddBuilder::Params::X2));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(x1);
+                this->_tensor->set_allocator(x1->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
 
@@ -146,358 +157,368 @@ namespace tff::core::graph::op {
     public:
         explicit RMSNormNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_RMS_NORM);
+            this->_builder = std::make_shared<kernel::NormBuilder>();
         }
 
         ~RMSNormNode() override = default;
+
     public:
-        std::shared_ptr<core::memory::Tensor> _weight;// 可选;
-        std::shared_ptr<core::memory::Tensor> _bias;// 可选;
-        std::shared_ptr<core::memory::Tensor> _x;
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_RMS_NORM) {
                 tff::log::Logger::error("RMSNormNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
             }
-            if (this->input_nodes().size() != 2) {
-                tff::log::Logger::error("node (%s) params is invalid!!");
-                return nullptr;
+
+            auto builder = std::dynamic_pointer_cast<kernel::NormBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::NormBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MatMulBuilder) is wrong!!");
+                return;
             }
-            std::shared_ptr<core::memory::Tensor> weight;
-            std::shared_ptr<core::memory::Tensor> x;
-            for (auto &input : this->input_nodes()) {
-                if (input->op_type() == TFF_OP_MEM_REF) {
-                    weight = input->get_tensor();
-                }else {
-                    x = input->get_tensor();
-                }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::NormBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(
+                    memory::DataType::TFF_DATA_TYPE_F32,
+                    memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                    input_tensor->get_shape());
+                this->_tensor->set_tensor_type(input_tensor->get_tensor_type());
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
             }
-            auto params = this->get_params();
-            params->set_param(weight);
-            params->set_param(x);
-            auto callback = GraphNode::forward();
-            return callback;
         }
     };
 
     //
-    class NoneNode final : public tff::core::graph::GraphNode {
+    class RMSNormWNode final : public tff::core::graph::GraphNode {
     public:
-        explicit NoneNode(const std::string &name = "") : GraphNode(name) {
-            set_op_type(TFF_OP_NONE);
+        explicit RMSNormWNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_RMS_NORM_W);
+            this->_builder = std::make_shared<kernel::NormBuilder>();
         }
 
-        ~NoneNode() override = default;
+        ~RMSNormWNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("NoneNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_RMS_NORM_W) {
+                tff::log::Logger::error("RMSNormNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
+                return;
             }
-            if (this->_op_type != TFF_OP_NONE) {
-                tff::log::Logger::error("NoneNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
-            }
-            auto callback = GraphNode::forward();
-            return callback;
-        }
-    };
 
-    //
-    class DupNode final : public tff::core::graph::GraphNode {
-    public:
-        explicit DupNode(const std::string &name = "") : GraphNode(name) {
-            set_op_type(TFF_OP_DUP);
+            auto builder = std::dynamic_pointer_cast<kernel::NormBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
         }
 
-
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("DupNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::NormBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MatMulBuilder) is wrong!!");
+                return;
             }
-            if (this->_op_type != TFF_OP_DUP) {
-                tff::log::Logger::error("DupNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::NormBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = builder->out<std::shared_ptr<core::memory::Tensor> >();
+                builder->out(this->_tensor);
             }
-            auto callback = GraphNode::forward();
-            return callback;
-        }
-    };
-
-    //
-    class SqrNode final : public tff::core::graph::GraphNode {
-    public:
-        explicit SqrNode(const std::string &name = "") : GraphNode(name) {
-            set_op_type(TFF_OP_SQR);
-        }
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("SqrNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
-            }
-            if (this->_op_type != TFF_OP_SQR) {
-                tff::log::Logger::error("SqrNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
-            }
-            auto callback = GraphNode::forward();
-            return callback;
-        }
-    };
-
-    //
-    class SqrtNode final : public tff::core::graph::GraphNode {
-    public:
-        explicit SqrtNode(const std::string &name = "") : GraphNode(name) {
-            set_op_type(TFF_OP_SQRT);
-        }
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("SqrtNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
-            }
-            if (this->_op_type != TFF_OP_SQRT) {
-                tff::log::Logger::error("SqrtNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
-            }
-            auto callback = GraphNode::forward();
-            return callback;
-        }
-    };
-
-    //
-    class SubNode final : public tff::core::graph::GraphNode {
-    public:
-        explicit SubNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_SUB); }
-
-        ~SubNode() override = default;
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("SubNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
-            }
-            if (this->_op_type != TFF_OP_SUB) {
-                tff::log::Logger::error("SubNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
-            }
-            auto callback = GraphNode::forward();
-            return callback;
         }
     };
 
     //
     class MulNode final : public tff::core::graph::GraphNode {
     public:
-        explicit MulNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_MUL); }
+        explicit MulNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_MUL);
+            this->_builder = std::make_shared<kernel::MulBuilder>();
+        }
 
         ~MulNode() override = default;
 
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+    public:
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_MUL) {
                 tff::log::Logger::error("MulNode op type(expect TFF_OP_MUL) is wrong!!");
-                return nullptr;
+                return;
             }
-
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::MulBuilder>(this->_builder);
+            auto weight = builder->weight<const std::shared_ptr<memory::Tensor>>();
+            auto x = builder->x<const std::shared_ptr<memory::Tensor>>();
         }
-    };
 
-    //
-    class DivNode final : public tff::core::graph::GraphNode {
-    public:
-        explicit DivNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_DIV); }
-
-        ~DivNode() override = default;
-
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("DivNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::MulBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MulBuilder) is wrong!!");
+                return;
             }
-            if (this->_op_type != TFF_OP_DIV) {
-                tff::log::Logger::error("DivNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+            auto weight = builder->weight<const std::shared_ptr<memory::Tensor>>();
+            auto x = builder->x<const std::shared_ptr<memory::Tensor>>();
+            this->_tensor_param_map.insert(std::make_pair(weight, kernel::MulBuilder::Params::Weight));
+            this->_tensor_param_map.insert(std::make_pair(x, kernel::MulBuilder::Params::X));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(
+                    memory::DataType::TFF_DATA_TYPE_F32,
+                    memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                    x->get_shape());
+                this->_tensor->set_tensor_type(weight->get_tensor_type());
+                this->_tensor->set_allocator(x->get_allocator());
+                builder->out(this->_tensor);
             }
-            auto callback = GraphNode::forward();
-            return callback;
         }
     };
 
     //
     class ReshapeNode final : public tff::core::graph::GraphNode {
     public:
-        explicit ReshapeNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_RESHAPE); }
+        explicit ReshapeNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_RESHAPE);
+            this->_builder = std::make_shared<kernel::ReshapeBuilder>();
+        }
 
         ~ReshapeNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_RESHAPE) {
                 tff::log::Logger::error("ReshapeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
             }
             if (this->input_nodes().size() != 1) {
                 tff::log::Logger::error("ReshapeNode op expect 1 input!!");
-                return nullptr;
+                return;
             }
 
-            auto params_ptr = this->get_params();
-            params_ptr->set_param(this->input_nodes()[0]->get_tensor());
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::ReshapeBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::ReshapeBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect ReshapeBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::ReshapeBuilder::Params::In));
+            std::array<int64_t, MAX_TENSOR_DIM> shape = {
+                builder->embd_head_num<const int>(), builder->head_num<const int>(), builder->token_num<const int>(), 1
+            };
+            if (this->_tensor == nullptr) {
+                this->_tensor = input_tensor;
+                this->_tensor->set_shape(shape);
+                builder->out(this->_tensor);
+            }
         }
     };
 
-    //
-    class TransposeNode final : public tff::core::graph::GraphNode {
-    public:
-        explicit TransposeNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_TRANSPOSE); }
 
-        ~TransposeNode() override = default;
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("TransposeNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
-            }
-            if (this->_op_type != TFF_OP_TRANSPOSE) {
-                tff::log::Logger::error("TransposeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
-            }
-            auto callback = GraphNode::forward();
-            return callback;
-        }
-    };
-
-    //
-    class SoftmaxNode final : public tff::core::graph::GraphNode {
-    public:
-        explicit SoftmaxNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_SOFT_MAX); }
-
-        ~SoftmaxNode() override = default;
-
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_params_ptr->get_param_count() < 4) {
-                tff::log::Logger::error("SoftmaxNode param count is %d(expect 1)",
-                                        this->_params_ptr->get_param_count());
-                return nullptr;
-            }
-            if (this->_op_type != TFF_OP_SOFT_MAX) {
-                tff::log::Logger::error("SoftmaxNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
-            }
-            auto callback = GraphNode::forward();
-            return callback;
-        }
-    };
-
-    //
+    //`
     class RopeNode final : public tff::core::graph::GraphNode {
     public:
-        explicit RopeNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_ROPE); }
+        explicit RopeNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_ROPE);
+            this->_builder = std::make_shared<kernel::RopeBuilder>();
+        }
 
         ~RopeNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_ROPE) {
-                tff::log::Logger::error("RopeNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                tff::log::Logger::error("RopeNode op type(expect TFF_OP_ROPE) is wrong!!");
+                return;
             }
+            if (this->input_nodes().size() != 1) {
+                tff::log::Logger::error("RopeNode input_nodes size (expect 1)");
+                return;
+            }
+            auto builder = std::dynamic_pointer_cast<kernel::RopeBuilder>(this->_builder);
+            auto rope_table = builder->rope_table<std::shared_ptr<core::memory::Tensor> >();
+            auto rope_type = builder->rope_type<const int>();
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
 
-            auto callback = GraphNode::forward();
-            return callback;
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::RopeBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect RopeBuilder) is wrong!!");
+                return;
+            }
+            auto rope_table = builder->rope_table<std::shared_ptr<core::memory::Tensor> >();
+            auto rope_type = builder->rope_type<const int>();
+            auto token_idx = builder->token_idx<int32_t*>();
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::RopeBuilder::Params::In));
+            this->_tensor_param_map.insert(std::make_pair(rope_table, kernel::RopeBuilder::Params::RopeTable));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<core::memory::Tensor>(memory::DataType::TFF_DATA_TYPE_F32,
+                                                                       memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                                                                       input_tensor->get_shape());
+                this->_tensor->set_tensor_type(input_tensor->get_tensor_type());
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
 
     //
     class MapCPUBufferNode final : public tff::core::graph::GraphNode {
     public:
-        explicit MapCPUBufferNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_MAP2CPU); }
+        explicit MapCPUBufferNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_MAP2CPU);
+            this->_builder = std::make_shared<kernel::Map2CpuBuilder>();
+        }
 
         ~MapCPUBufferNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_MAP2CPU) {
                 tff::log::Logger::error("MapCPUBufferNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
             }
-            auto callback = GraphNode::forward();
-            return callback;
+
+            auto builder = std::dynamic_pointer_cast<kernel::Map2CpuBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::Map2CpuBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect Map2CpuBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::Map2CpuBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<core::memory::Tensor>(input_tensor);
+
+                auto device = tff::factory::ModuleFactory::instance()->create_shared<
+                    tff::core::device::DeviceBaseObject>(
+                    DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
+                std::vector<int> device_ids;
+                device->get_device_id(device_ids);
+                this->_tensor->set_allocator(device->get_device_buffer_allocator(device_ids[0]));
+                builder->out(this->_tensor);
+            }
         }
     };
 
     //
     class MemCpyNode final : public tff::core::graph::GraphNode {
     public:
-        explicit MemCpyNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_MEM_CPY); }
+        explicit MemCpyNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_MEM_CPY);
+            this->_builder = std::make_shared<kernel::MemCpyBuilder>();
+        }
 
         ~MemCpyNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_MEM_CPY) {
                 tff::log::Logger::error("MemCpyNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
+            }
+            std::vector<std::shared_ptr<core::memory::Tensor> > inputs;
+            for (auto &input: this->_input_nodes) {
+                inputs.push_back(input->get_tensor());
             }
 
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::MemCpyBuilder>(this->_builder);
+            auto mem_cpy_kind = static_cast<memory::MemCpyKind>(builder->memcpy_kind<core::memory::MemCpyKind>());
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::MemCpyBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MemCpyBuilder) is wrong!!");
+                return;
+            }
+            auto mem_cpy_kind = static_cast<memory::MemCpyKind>(builder->memcpy_kind<core::memory::MemCpyKind>());
+            auto source_device_id = builder->source_id<int>();
+            auto dest_device_id = builder->dest_id<int>();
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::MemCpyBuilder::Params::In));
+            auto out_tensor = builder->out<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::MemCpyBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                if (out_tensor != nullptr) {
+                    this->_tensor = out_tensor;
+                } else {
+                    this->_tensor = std::make_shared<memory::Tensor>(input_tensor);
+                    builder->out(this->_tensor);
+                }
+            }
+            auto device_manager = std::dynamic_pointer_cast<device::DeviceManager>(
+                tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
+                    DEVICE_MANAGER_FLAG,
+                    tff::factory::ModuleKeyType(DEVICE_MANAGER_FLAG)));
+            this->_tensor->set_allocator(device_manager->get_device(dest_device_id)
+                ->get_device_buffer_allocator(dest_device_id));
         }
     };
 
     //
     class EmbeddingNode final : public tff::core::graph::GraphNode {
     public:
-        explicit EmbeddingNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_EMBEDDING); }
+        explicit EmbeddingNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_EMBEDDING);
+            this->_builder = std::make_shared<kernel::EmbeddingBuilder>();
+        }
 
         ~EmbeddingNode() override = default;
+
     public:
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_EMBEDDING) {
                 tff::log::Logger::error("EmbeddingNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
             }
 
-            if (this->_input_nodes.size() != 2) {
-                tff::log::Logger::error("error: EmbeddingNode input_node size(expect 2)");
-                return nullptr;
+            auto builder = std::dynamic_pointer_cast<kernel::EmbeddingBuilder>(this->_builder);
+            auto input_token = builder->input_token<const std::shared_ptr<memory::Tensor>>();
+            auto weight = builder->weight<const std::shared_ptr<memory::Tensor>>();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::EmbeddingBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect EmbeddingBuilder) is wrong!!");
+                return;
             }
-            std::shared_ptr<core::memory::Tensor> _embedding_weight;
-            std::shared_ptr<core::memory::Tensor> _input_token;
-            for (auto &input : this->_input_nodes) {
-                if (input->get_tensor()->get_tensor_type() == tff::core::memory::ModelTensorType::LLM_TENSOR_TOKEN_EMBD) {
-                    _embedding_weight = input->get_tensor();
-                }
-                if (input->get_tensor()->get_tensor_type() == tff::core::memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN) {
-                    _input_token = input->get_tensor();
-                }
+            auto input_token = builder->input_token<const std::shared_ptr<memory::Tensor>>();
+            auto weight = builder->weight<const std::shared_ptr<memory::Tensor>>();
+            this->_tensor_param_map.insert(std::make_pair(input_token, kernel::EmbeddingBuilder::Params::InputToken));
+            this->_tensor_param_map.insert(std::make_pair(weight, kernel::EmbeddingBuilder::Params::Weight));
+            std::array<int64_t, MAX_TENSOR_DIM> shape = {
+                weight->get_shape()[0], input_token->get_shape()[0],
+                input_token->get_shape()[1], 1
+            };
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<tff::core::memory::Tensor>(
+                    memory::DataType::TFF_DATA_TYPE_F32,
+                    memory::MemoryType::TFF_MEM_TYPE_WORKSPACE, shape);
+                this->_tensor->set_tensor_type(weight->get_tensor_type());
+                this->_tensor->set_allocator(weight->get_allocator());
+                builder->out(this->_tensor);
             }
-            auto params_ptr = this->get_params();
-            params_ptr->set_param(_embedding_weight);
-            params_ptr->set_param(_input_token);
-            auto callback = GraphNode::forward();
-            return callback;
         }
     };
 
@@ -506,269 +527,543 @@ namespace tff::core::graph::op {
     public:
         explicit MemRefNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_MEM_REF);
+            this->_builder = std::make_shared<kernel::MemRefBuilder>();
         }
 
         ~MemRefNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_MEM_REF) {
                 tff::log::Logger::error("MemRefNode op type(expect TFF_OP_MEM_REF) is wrong!!");
-                return nullptr;
+                return;
             }
-            std::shared_ptr<core::memory::Tensor> x_tensor;
-            for (auto &input : this->_input_nodes) {
-                x_tensor = input->get_tensor();
-            }
-            auto params = this->get_params();
-            params->set_param(x_tensor);
 
-            auto callback = GraphNode::forward();
-            return callback;
+
+            auto builder = std::dynamic_pointer_cast<kernel::MemRefBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::MemRefBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MemRefBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            auto output_tensor = builder->out<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::MemRefBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = output_tensor;
+                builder->out(this->_tensor);
+            }
         }
     };
 
     //
     class FlashAttnNode final : public tff::core::graph::GraphNode {
     public:
-        explicit FlashAttnNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_FLASH_ATTN_EXT); }
+        explicit FlashAttnNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_FLASH_ATTN_EXT);
+            this->_builder = std::make_shared<kernel::FlashAttnBuilder>();
+        }
 
         ~FlashAttnNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_FLASH_ATTN_EXT) {
                 tff::log::Logger::error("FlashAttnNode op type(expect TFF_OP_MAP2CPU) is wrong!!");
-                return nullptr;
+                return;
             }
-            std::shared_ptr<core::memory::Tensor> q;
-            std::shared_ptr<core::memory::Tensor> k;
-            std::shared_ptr<core::memory::Tensor> v;
-            std::shared_ptr<core::memory::Tensor> rope_table;
-            std::shared_ptr<core::memory::Tensor> mask;
-            for (auto &input : this->_input_nodes) {
-                auto tensor_type = input->get_tensor()->get_tensor_type();
-                if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q) {
-                    q = input->get_tensor();
-                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
-                    k = input->get_tensor();
-                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
-                    v = input->get_tensor();
-                }
-                if (input->op_type() == TFF_OP_PRE_ROPE_TABLE) {
-                    rope_table = input->get_tensor();
-                }
-                if (input->op_type() == TFF_OP_ATTN_MASK) {
-                    mask = input->get_tensor();
-                }
-            }
-            //
-            // if (rope_table->get_buffer() == nullptr) {
-            //     rope_table->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
-            //         this->_tensor->get_external_memory_index(), type),
-            //         this->_tensor->get_bytes());
-            //     rope_table->set_allocator(this->device().begin()->second->get_device_buffer_allocator(this->device().begin()->first));
-            // }
-            // if (mask->get_buffer() == nullptr) {
-            //     mask->set_buffer_data(this->_mem_manager_ptr->get_ptr_by_offset(this->_devices.begin()->first,
-            //         this->_tensor->get_external_memory_index(), type),
-            //         this->_tensor->get_bytes());
-            //     mask->set_allocator(this->device().begin()->second->get_device_buffer_allocator(this->device().begin()->first));
-            // }
 
-            auto params = this->get_params();
-            params->set_param(q);
-            params->set_param(k);
-            params->set_param(v);
-            params->set_param(rope_table);
-            params->set_param(mask);
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::FlashAttnBuilder>(this->_builder);
+            auto q = builder->q<std::shared_ptr<core::memory::Tensor> >();
+            auto k = builder->k<std::shared_ptr<core::memory::Tensor> >();
+            auto v = builder->v<std::shared_ptr<core::memory::Tensor> >();
+            auto mask = builder->mask<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::FlashAttnBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect FlashAttnBuilder) is wrong!!");
+                return;
+            }
+            auto q = builder->q<std::shared_ptr<core::memory::Tensor> >();
+            auto k = builder->k<std::shared_ptr<core::memory::Tensor> >();
+            auto v = builder->v<std::shared_ptr<core::memory::Tensor> >();
+            auto mask = builder->mask<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(q, kernel::FlashAttnBuilder::Params::Q));
+            this->_tensor_param_map.insert(std::make_pair(k, kernel::FlashAttnBuilder::Params::K));
+            this->_tensor_param_map.insert(std::make_pair(v, kernel::FlashAttnBuilder::Params::V));
+            this->_tensor_param_map.insert(std::make_pair(mask, kernel::FlashAttnBuilder::Params::Mask));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(memory::DataType::TFF_DATA_TYPE_F32,
+                                                                 memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                                                                 q->get_shape());
+                this->_tensor->set_allocator(q->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
-        //
+
+    //
     class PagedFlashAttnNode final : public tff::core::graph::GraphNode {
     public:
         explicit PagedFlashAttnNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_FLASH_ATTN_PAGED);
+            this->_builder = std::make_shared<kernel::PagedFlashAttnBuilder>();
         }
 
         ~PagedFlashAttnNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_FLASH_ATTN_PAGED) {
                 tff::log::Logger::error("PagedFlashAttnNode op type(expect TFF_OP_FLASH_ATTN_PAGED) is wrong!!");
-                return nullptr;
-            }
-            std::shared_ptr<core::memory::Tensor> q;
-            std::shared_ptr<core::memory::Tensor> k;
-            std::shared_ptr<core::memory::Tensor> v;
-            std::shared_ptr<core::memory::Tensor> rope_table;
-            std::shared_ptr<core::memory::Tensor> mask;
-            for (auto &input : this->_input_nodes) {
-                auto tensor_type = input->get_tensor()->get_tensor_type();
-                if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q) {
-                    q = input->get_tensor();
-                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
-                    k = input->get_tensor();
-                }else if (tensor_type == tff::core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
-                    v = input->get_tensor();
-                }
-                if (input->op_type() == TFF_OP_PRE_ROPE_TABLE) {
-                    rope_table = input->get_tensor();
-                }
-                if (input->op_type() == TFF_OP_ATTN_MASK) {
-                    mask = input->get_tensor();
-                }
+                return;
             }
 
-            auto params = this->get_params();
-            params->set_param(q);
-            params->set_param(k);
-            params->set_param(v);
-            params->set_param(rope_table);
-            params->set_param(mask);
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::PagedFlashAttnBuilder>(this->_builder);
+            auto q = builder->q<std::shared_ptr<core::memory::Tensor> >();
+            auto k = builder->k<std::shared_ptr<core::memory::Tensor> >();
+            auto v = builder->v<std::shared_ptr<core::memory::Tensor> >();
+            auto mask = builder->mask<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::PagedFlashAttnBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect PagedFlashAttnBuilder) is wrong!!");
+                return;
+            }
+            auto q = builder->q<std::shared_ptr<core::memory::Tensor> >();
+            auto k = builder->k<std::shared_ptr<core::memory::Tensor> >();
+            auto v = builder->v<std::shared_ptr<core::memory::Tensor> >();
+            auto mask = builder->mask<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(q, kernel::PagedFlashAttnBuilder::Params::Q));
+            this->_tensor_param_map.insert(std::make_pair(k, kernel::PagedFlashAttnBuilder::Params::K));
+            this->_tensor_param_map.insert(std::make_pair(v, kernel::PagedFlashAttnBuilder::Params::V));
+            this->_tensor_param_map.insert(std::make_pair(mask, kernel::PagedFlashAttnBuilder::Params::Mask));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(memory::DataType::TFF_DATA_TYPE_F32,
+                                                                 memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                                                                 q->get_shape());
+                this->_tensor->set_allocator(q->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
+
+    //
+    class PagedFlashAttnRopeNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit PagedFlashAttnRopeNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_FLASH_ATTN_PAGED_ROPE);
+            this->_builder = std::make_shared<kernel::PagedFlashAttnBuilder>();
+        }
+
+        ~PagedFlashAttnRopeNode() override = default;
+
+    public:
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_FLASH_ATTN_PAGED_ROPE) {
+                tff::log::Logger::error("PagedFlashAttnNode op type(expect TFF_OP_FLASH_ATTN_PAGED) is wrong!!");
+                return;
+            }
+
+            auto builder = std::dynamic_pointer_cast<kernel::PagedFlashAttnBuilder>(this->_builder);
+            auto q = builder->q<std::shared_ptr<core::memory::Tensor> >();
+            auto k = builder->k<std::shared_ptr<core::memory::Tensor> >();
+            auto v = builder->v<std::shared_ptr<core::memory::Tensor> >();
+            auto mask = builder->mask<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::PagedFlashAttnBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect PagedFlashAttnBuilder) is wrong!!");
+                return;
+            }
+            auto q = builder->q<std::shared_ptr<core::memory::Tensor> >();
+            auto k = builder->k<std::shared_ptr<core::memory::Tensor> >();
+            auto v = builder->v<std::shared_ptr<core::memory::Tensor> >();
+            auto mask = builder->mask<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(q, kernel::PagedFlashAttnBuilder::Params::Q));
+            this->_tensor_param_map.insert(std::make_pair(k, kernel::PagedFlashAttnBuilder::Params::K));
+            this->_tensor_param_map.insert(std::make_pair(v, kernel::PagedFlashAttnBuilder::Params::V));
+            this->_tensor_param_map.insert(std::make_pair(mask, kernel::PagedFlashAttnBuilder::Params::Mask));
+            if (this->_tensor == nullptr) {
+                this->_tensor = builder->out<std::shared_ptr<memory::Tensor> >();
+                builder->out(this->_tensor);
+            }
+        }
+    };
+
     //
     class PreRopeTableNode final : public tff::core::graph::GraphNode {
     public:
-        explicit PreRopeTableNode(const std::string &name = "") : GraphNode(name) { set_op_type(TFF_OP_PRE_ROPE_TABLE); }
+        explicit PreRopeTableNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_PRE_ROPE_TABLE);
+            this->_builder = std::make_shared<kernel::PreRopeTableBuilder>();
+        }
 
         ~PreRopeTableNode() override = default;
 
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_PRE_ROPE_TABLE) {
                 tff::log::Logger::error("PreRopeTableNode op type(expect TFF_OP_PRE_ROPE_TABLE) is wrong!!");
-                return nullptr;
+                return;
             }
 
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::PreRopeTableBuilder>(this->_builder);
+            auto table = builder->rope_table<std::shared_ptr<core::memory::Tensor> >();
+            auto max_seq_len = builder->max_seq_len<int>();
+            auto embedding_dim = builder->hidden_dim<int>();
+            auto rope_base = builder->freqs<float>();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::PreRopeTableBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect PreRopeTableBuilder) is wrong!!");
+                return;
+            }
+            auto table = builder->rope_table<std::shared_ptr<core::memory::Tensor> >();
+            auto max_seq_len = builder->max_seq_len<int>();
+            auto embedding_dim = builder->hidden_dim<int>();
+            auto rope_base = builder->freqs<float>();
+            this->_tensor_param_map.insert(std::make_pair(table, kernel::PreRopeTableBuilder::Params::RopeTable));
+            if (this->_tensor == nullptr) {
+                this->_tensor = table;
+                builder->out(this->_tensor);
+            }
         }
     };
+
     //
     class UnaryOPNode final : public tff::core::graph::GraphNode {
-        public:
+    public:
         explicit UnaryOPNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_UNARY);
-        }
-        ~UnaryOPNode() override = default;
-    public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_op_type != TFF_OP_UNARY) {
-                tff::log::Logger::error("UnaryOPNode op type(expect TFF_OP_UNARY) is wrong!!");
-                return nullptr;
-            }
-            std::shared_ptr<core::memory::Tensor> ffn_up_x;
-            std::shared_ptr<core::memory::Tensor> ffn_gate_x;
-            for (auto &input : this->_input_nodes) {
-                if (input->get_tensor()->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_FFN_UP) {
-                    ffn_up_x = input->get_tensor();
-                }
-                if (input->get_tensor()->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_FFN_GATE) {
-                    ffn_gate_x = input->get_tensor();
-                }
-            }
-            auto params = this->get_params();
-            params->set_param(ffn_gate_x);
-            params->set_param(ffn_up_x);
-            auto callback = GraphNode::forward();
-            return callback;
+            this->_builder = std::make_shared<kernel::UnaryOPBuilder>();
         }
 
+        ~UnaryOPNode() override = default;
+
+    public:
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_UNARY) {
+                tff::log::Logger::error("UnaryOPNode op type(expect TFF_OP_UNARY) is wrong!!");
+                return;
+            }
+
+            auto builder = std::dynamic_pointer_cast<kernel::UnaryOPBuilder>(this->_builder);
+            auto x1 = builder->x1<std::shared_ptr<core::memory::Tensor> >();
+            auto x2 = builder->x2<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::UnaryOPBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect UnaryOPBuilder) is wrong!!");
+                return;
+            }
+            auto x1 = builder->x1<std::shared_ptr<core::memory::Tensor> >();
+            auto x2 = builder->x2<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(x1, kernel::UnaryOPBuilder::Params::X1));
+            this->_tensor_param_map.insert(std::make_pair(x2, kernel::UnaryOPBuilder::Params::X2));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<tff::core::memory::Tensor>(x1);
+                builder->out(this->_tensor);
+            }
+        }
     };
+
+    //
+    class BinaryOPNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit BinaryOPNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_BINARY);
+            this->_builder = std::make_shared<kernel::BinaryOPBuilder>();
+        }
+
+        ~BinaryOPNode() override = default;
+
+    public:
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_BINARY) {
+                tff::log::Logger::error("BinaryOPNode op type(expect TFF_OP_BINARY) is wrong!!");
+                return;
+            }
+            if (this->input_nodes().size() != 2) {
+                tff::log::Logger::error("BinaryOPNode input node size(expect 2) is wrong!!");
+                return;
+            }
+
+            auto builder = std::dynamic_pointer_cast<kernel::BinaryOPBuilder>(this->_builder);
+            auto x1 = builder->x1<std::shared_ptr<core::memory::Tensor> >();
+            auto x2 = builder->x2<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::BinaryOPBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect BinaryOPBuilder) is wrong!!");
+                return;
+            }
+            auto x1 = builder->x1<std::shared_ptr<core::memory::Tensor> >();
+            auto x2 = builder->x2<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(x1, kernel::BinaryOPBuilder::Params::X1));
+            this->_tensor_param_map.insert(std::make_pair(x2, kernel::BinaryOPBuilder::Params::X2));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<tff::core::memory::Tensor>(x1);
+                builder->out(this->_tensor);
+            }
+        }
+    };
+
     //
     class MaskOPNode final : public tff::core::graph::GraphNode {
     public:
         explicit MaskOPNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_ATTN_MASK);
+            this->_builder = std::make_shared<kernel::MaskOPBuilder>();
         }
+
         ~MaskOPNode() override = default;
+
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_ATTN_MASK) {
                 tff::log::Logger::error("MaskOPNode op type(expect TFF_OP_ATTN_MASK) is wrong!!");
-                return nullptr;
+                return;
             }
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::MaskOPBuilder>(this->_builder);
+            auto data_type = static_cast<memory::DataType>(builder->data_type<memory::DataType>());
+            auto token_num = builder->token_num<const int>();
+            auto input_tensor = builder->in<std::shared_ptr<memory::Tensor> >();
         }
 
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::MaskOPBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MaskOPBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::MaskOPBuilder::Params::In));
+            auto data_type = (builder->data_type<memory::DataType>());
+            auto token_num = builder->token_num<const int>();
+            if (this->_tensor == nullptr) {
+                this->_tensor = input_tensor;
+                builder->out(this->_tensor);
+            }
+        }
     };
+
     //
     class GetOfRowsOPNode final : public tff::core::graph::GraphNode {
-        public:
+    public:
         explicit GetOfRowsOPNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_GET_ROWS);
+            this->_builder = std::make_shared<kernel::GetRowBuilder>();
         }
+
         ~GetOfRowsOPNode() override = default;
-        public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+
+    public:
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_GET_ROWS) {
                 tff::log::Logger::error("GetOfRowsOPNode op type (expect TFF_OP_GET_ROWS) is wrong");
-                return nullptr;
+                return;
             }
+            if (this->input_nodes().size() != 1) {
+                tff::log::Logger::error("GetOfRowsOPNode input_nodes size (expect 1)");
+                return;
+            }
+            auto builder = std::dynamic_pointer_cast<kernel::GetRowBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            auto seq_id = builder->seq_id<const int>();
+            auto layer_id = builder->layer_id<const int>();
+            auto kv_cache_ctx =
+                    builder->kv_cache_ctx<std::shared_ptr<runtime::LLMKVCache> >();
+        }
 
-            auto callback = GraphNode::forward();
-            return callback;
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::GetRowBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect GetRowBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::GetRowBuilder::Params::In));
+            auto seq_id = builder->seq_id<int>();
+            auto layer_id = builder->layer_id<int>();
+            auto kv_cache_ctx =
+                    builder->kv_cache_ctx<std::shared_ptr<runtime::LLMKVCache> >();
+            auto max_seq_len = builder->max_seq_len<int>();
+            std::array<int64_t, MAX_TENSOR_DIM> shape = {
+                1, input_tensor->get_shape()[1], max_seq_len, input_tensor->get_shape()[3]
+            };
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(memory::DataType::TFF_DATA_TYPE_I64,
+                                                                 memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                                                                 shape);
+                this->_tensor->set_tensor_type(input_tensor->get_tensor_type());
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
+
     //
     class SetOfRowsOPNode final : public tff::core::graph::GraphNode {
-        public:
+    public:
         explicit SetOfRowsOPNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_SET_ROWS);
+            this->_builder = std::make_shared<kernel::SetRowBuilder>();
         }
+
         ~SetOfRowsOPNode() override = default;
-        public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+
+    public:
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_SET_ROWS) {
                 tff::log::Logger::error("SetOfRowsOPNode op type (expect TFF_OP_SET_ROWS) is wrong");
-                return nullptr;
+                return;
             }
             if (this->input_nodes().size() != 1) {
                 tff::log::Logger::error("SetOfRowsOPNode input_nodes size (expect 1)");
-                return nullptr;
+                return;
             }
+            auto builder = std::dynamic_pointer_cast<kernel::SetRowBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            auto seq_id = builder->seq_id<int>();
+            auto layer_id = builder->layer_id<int>();
+            auto kv_cache_ctx =
+                    builder->kv_cache_ctx<std::shared_ptr<runtime::LLMKVCache> >();
 
-            auto params = this->get_params();
-            params->set_param(this->_input_nodes[0]->get_tensor());
+            const auto dim0 = input_tensor->get_shape()[0];
+            const auto dim1 = input_tensor->get_shape()[1];
+            const auto dim2 = input_tensor->get_shape()[2];
+            const auto batch = input_tensor->get_shape()[3];
 
-            auto callback = GraphNode::forward();
-            return callback;
+            const int total_token_num = kv_cache_ctx->get_kv_token_num(seq_id, layer_id);
+            const int pre_token_num = total_token_num - dim2;
+            if (pre_token_num < 0) {
+                log::Logger::error("invalid kv cache");
+                return;
+            }
+            for (int i = 0; i < dim2; i += PAGE_SIZE) {
+                const auto &[page_id, offset] =
+                        kv_cache_ctx->get_location(seq_id, layer_id, pre_token_num + i);
+
+                if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_K_NORM) {
+                    auto cache_tensor = kv_cache_ctx->get_k(seq_id, layer_id, page_id, this->event());
+                    if (cache_tensor == nullptr) {
+                        tff::log::Logger::error("k cache is invalid");
+                        continue;
+                    }
+                    if (cache_tensor->get_buffer() == nullptr) {
+                        tff::log::Logger::error("k cache buffer is invalid");
+                        continue;
+                    }
+                } else if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
+                    auto cache_tensor = kv_cache_ctx->get_v(seq_id, layer_id, page_id, this->event());
+                    if (cache_tensor == nullptr) {
+                        tff::log::Logger::error("v cache is invalid");
+                        continue;
+                    }
+                    if (cache_tensor->get_buffer() == nullptr) {
+                        tff::log::Logger::error("v cache buffer is invalid");
+                        continue;
+                    }
+                }
+            }
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::SetRowBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect SetRowBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::SetRowBuilder::Params::In));
+            auto seq_id = builder->seq_id<const int>();
+            auto layer_id = builder->layer_id<const int>();
+            auto kv_cache_ctx =
+                    builder->kv_cache_ctx<std::shared_ptr<runtime::LLMKVCache> >();
+            auto data_type = builder->data_type<memory::DataType>();
+            auto tensor_type = builder->tensor_type<memory::ModelTensorType>();
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(data_type,
+                                                                 memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                                                                 input_tensor->get_shape());
+                this->_tensor->set_tensor_type(tensor_type);
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
+
     //
-    class QuantQ80Node final : public tff::core::graph::GraphNode {
+    class QuantNode final : public tff::core::graph::GraphNode {
     public:
-        explicit QuantQ80Node(const std::string &name = "") : GraphNode(name) {
-            set_op_type(TFF_OP_QUANTIZE_Q8);
+        explicit QuantNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_QUANTIZE);
+            this->_builder = std::make_shared<kernel::QuantBuilder>();
         }
-        ~QuantQ80Node() override = default;
+
+        ~QuantNode() override = default;
+
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
-            if (this->_op_type != TFF_OP_QUANTIZE_Q8) {
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_QUANTIZE) {
                 tff::log::Logger::error("QuantQ80Node op type (expect TFF_OP_QUANTIZE_Q8) is wrong");
-                return nullptr;
+                return;
             }
             if (this->_input_nodes.size() != 1) {
                 tff::log::Logger::error("QuantQ80Node op type (expect 1) is wrong");
-                return nullptr;
+                return;
             }
-            std::shared_ptr<core::memory::Tensor> x_tensor;
-            for (auto &input : this->_input_nodes) {
-                x_tensor = input->get_tensor();
-            }
-            auto params = this->get_params();
-            params->set_param(x_tensor);
 
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::QuantBuilder>(this->_builder);
+            auto quant_data_type = (builder->quant_data_type<memory::DataType>());
+            const auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::QuantBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect QuantBuilder) is wrong!!");
+                return;
+            }
+            auto quant_data_type = (builder->quant_data_type<memory::DataType>());
+            const auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::QuantBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(quant_data_type,
+                                                                 memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                                                                 input_tensor->get_shape());
+                this->_tensor->set_tensor_type(input_tensor->get_tensor_type());
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
 
@@ -777,48 +1072,224 @@ namespace tff::core::graph::op {
     public:
         explicit QuantAlignedNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_QUANTIZE_ALIGNED);
+            this->_builder = std::make_shared<kernel::QuantAlignedBuilder>();
         }
+
         ~QuantAlignedNode() override = default;
+
     public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_QUANTIZE_ALIGNED) {
-                tff::log::Logger::error("QuantQ80Node op type (expect TFF_OP_QUANTIZE_Q8) is wrong");
-                return nullptr;
+                tff::log::Logger::error("QuantAlignedNode op type (expect TFF_OP_QUANTIZE_ALIGNED) is wrong");
+                return;
             }
             if (this->_input_nodes.size() != 1) {
-                tff::log::Logger::error("QuantQ80Node op type (expect 1) is wrong");
-                return nullptr;
+                tff::log::Logger::error("QuantAlignedNode op type (expect 1) is wrong");
+                return;
             }
-            std::shared_ptr<core::memory::Tensor> x_tensor;
-            for (auto &input : this->_input_nodes) {
-                x_tensor = input->get_tensor();
-            }
-            auto params = this->get_params();
-            params->set_param(x_tensor);
 
-            auto callback = GraphNode::forward();
-            return callback;
+
+            auto builder =
+                    std::dynamic_pointer_cast<kernel::QuantAlignedBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::QuantAlignedBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect QuantAlignedBuilder) is wrong!!");
+                return;
+            }
+            auto quant_data_type = (builder->quant_data_type<memory::DataType>());
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::QuantAlignedBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(quant_data_type,
+                                                                 input_tensor->memory_type(),
+                                                                 input_tensor->get_shape());
+                input_tensor->set_memory_type(memory::MemoryType::TFF_MEM_TYPE_WORKSPACE);
+                this->_tensor->set_tensor_type(input_tensor->get_tensor_type());
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
+            }
         }
     };
+
     //
     class ViewNode final : public tff::core::graph::GraphNode {
-        public:
+    public:
         explicit ViewNode(const std::string &name = "") : GraphNode(name) {
             set_op_type(TFF_OP_VIEW);
+            this->_builder = std::make_shared<kernel::ViewOPBuilder>();
         }
+
         ~ViewNode() override = default;
-        public:
-        std::function<tff::kernel::base::OP_CALLBACK_TYPE> forward() override {
+
+    public:
+        void prepare_params() override {
             if (this->_op_type != TFF_OP_VIEW) {
                 tff::log::Logger::error("");
-                return nullptr;
+                return;
+            }
+            if (this->input_nodes().size() != 1) {
+                tff::log::Logger::error("ViewNode input is invalid");
+                return;
             }
 
-            auto callback = GraphNode::forward();
-            return callback;
+            auto builder = std::dynamic_pointer_cast<kernel::ViewOPBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::ViewOPBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect ViewOPBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::ViewOPBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = input_tensor;
+                builder->out(this->_tensor);
+            }
         }
     };
 
+    //
+    class MemOptNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit MemOptNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_MEM_RECYCLE);
+            this->_builder = std::make_shared<kernel::MemOptOPBuilder>();
+        }
+
+        ~MemOptNode() override = default;
+
+    public:
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_MEM_RECYCLE) {
+                tff::log::Logger::error("");
+                return;
+            }
+            auto device_id = this->_tensor->get_allocator()->_device_id;
+            this->_mem_manager_ptr->reclaim_memory(device_id);
+            auto builder = std::dynamic_pointer_cast<kernel::MemOptOPBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::MemOptOPBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect MemOptOPBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::MemOptOPBuilder::Params::In));
+            if (this->_tensor == nullptr) {
+                this->_tensor = input_tensor;
+                builder->out(this->_tensor);
+            }
+        }
+    };
+
+    //
+    class ConvertNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit ConvertNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_CONVERT);
+            this->_builder = std::make_shared<kernel::ConvertOPBuilder>();
+        }
+
+        ~ConvertNode() override = default;
+
+    public:
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_CONVERT) {
+                tff::log::Logger::error("");
+                return;
+            }
+            if (this->input_nodes().size() != 1) {
+                tff::log::Logger::error("ConvertNode input is invald");
+                return;
+            }
+            auto builder = std::dynamic_pointer_cast<kernel::ConvertOPBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            auto data_type = static_cast<memory::DataType>(builder->convert_data_type<memory::DataType>());
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::ConvertOPBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect ConvertOPBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::ConvertOPBuilder::Params::In));
+            auto data_type = static_cast<memory::DataType>(builder->convert_data_type<memory::DataType>());
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<core::memory::Tensor>(data_type,
+                                                                       memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+                                                                       input_tensor->get_shape());
+                this->_tensor->set_tensor_type(input_tensor->get_tensor_type());
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
+            }
+        }
+    };
+
+    //
+    //
+    class GatherNode final : public tff::core::graph::GraphNode {
+    public:
+        explicit GatherNode(const std::string &name = "") : GraphNode(name) {
+            set_op_type(TFF_OP_GATHER);
+            this->_builder = std::make_shared<kernel::GatherOPBuilder>();
+        }
+
+        ~GatherNode() override = default;
+
+    public:
+        void prepare_params() override {
+            if (this->_op_type != TFF_OP_GATHER) {
+                tff::log::Logger::error("");
+                return;
+            }
+            if (this->input_nodes().size() != 1) {
+                tff::log::Logger::error("GatherNode input is invalid");
+                return;
+            }
+            auto builder = std::dynamic_pointer_cast<kernel::GatherOPBuilder>(this->_builder);
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            auto row_index = builder->row_index<const std::vector<int>>();
+        }
+
+        void shape_infer() {
+            this->_tensor_param_map.clear();
+            auto builder = std::dynamic_pointer_cast<kernel::GatherOPBuilder>(this->_builder);
+            if (builder == nullptr) {
+                tff::log::Logger::error("MatMulNode prepare_params op type(expect GatherOPBuilder) is wrong!!");
+                return;
+            }
+            auto input_tensor = builder->in<std::shared_ptr<core::memory::Tensor> >();
+            this->_tensor_param_map.insert(std::make_pair(input_tensor, kernel::GatherOPBuilder::Params::In));
+            auto row_index = builder->row_index<const std::vector<int>>();
+            std::array<int64_t, MAX_TENSOR_DIM> shape = {
+                input_tensor->get_shape()[0], static_cast<int64_t>(row_index.size()),
+                input_tensor->get_shape()[2], input_tensor->get_shape()[3]
+            };
+            if (this->_tensor == nullptr) {
+                this->_tensor = std::make_shared<memory::Tensor>(input_tensor->get_data_type(),
+                                                                 memory::MemoryType::TFF_MEM_TYPE_WORKSPACE, shape);
+                this->_tensor->set_tensor_type(input_tensor->get_tensor_type());
+                this->_tensor->set_allocator(input_tensor->get_allocator());
+                builder->out(this->_tensor);
+            }
+        }
+    };
 }
 
 

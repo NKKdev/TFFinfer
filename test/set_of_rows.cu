@@ -330,7 +330,8 @@ void get_of_rows(std::vector<float> weight_cpu_result, const int d, const int h,
         dim3 block(PAGE_SIZE, 1);
 
         get_of_rows_kernel<BLOCK_SIZE><<<grid, block>>>(cache_tensor, block_table,
-                                                        d, 1, h, s, 1, i, i, token_num);
+                                                        d, 1, h, s, 1,
+                                                        i, i, token_num);
 
         get_of_rows_cpu(cache_cpu_result_cpu.data(), block_table_cpu.data(),
                         d, 1, h, s, i, i, token_num);
@@ -397,7 +398,7 @@ void get_of_rows(std::vector<float> weight_cpu_result, const int d, const int h,
     block_table_value_result = nullptr;
 }
 
-int main435(int argc, char *argv[]) {
+int main86578(int argc, char *argv[]) {
     constexpr int PAGE_SIZE = 32;
     std::string filename = "Kcur_normed-0_result.ggml";
     int d = 128;

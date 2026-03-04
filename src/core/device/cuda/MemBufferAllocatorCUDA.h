@@ -13,6 +13,10 @@ namespace tff::core::device {
     static constexpr size_t ALIGNMENT = 128;
     class MemBufferAllocatorCUDA : public tff::core::device::MemBufferAllocatorBaseObject {
     public:
+        /**
+         * 创建一个GPU内存分配器
+         * @param device_id 设备ID
+         */
         MemBufferAllocatorCUDA(int device_id) : MemBufferAllocatorBaseObject(device_id), _vmm_ptr(0),
                                                 _vmm_size(0), _vmm_used(0) {
             int device_vmm = 0;
@@ -38,29 +42,66 @@ namespace tff::core::device {
 
         ~MemBufferAllocatorCUDA() {
             if (this->_vmm_ptr != 0) {
-                cuMemUnmap(this->_vmm_ptr, this->_vmm_size);
-                cuMemAddressFree(this->_vmm_ptr, VMM_INITIAL_RESERVE);
+                auto error = cuMemUnmap(this->_vmm_ptr, this->_vmm_size);
+                if (error != CUDA_SUCCESS) {
+                    tff::log::Logger::warning("current device vmm addr unmap failed!");
+                }
+                error = cuMemAddressFree(this->_vmm_ptr, VMM_INITIAL_RESERVE);
+                if (error != CUDA_SUCCESS) {
+                    tff::log::Logger::warning("current device vmm addr free failed!");
+                }
             }
         }
 
     public:
+        /**
+         * 获取设备类型
+         * @return
+         */
         [[nodiscard]] inline tff::core::device::DeviceType device_type() const override {
             return tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU;
         }
-
+        /**
+         * 释放内存
+         * @param ptr
+         */
         void release(void *ptr) const override;
-
+        /**
+         * 分配内存
+         * @param byte_size 内存大小
+         * @return
+         */
         [[nodiscard]] void *allocate(size_t byte_size) const override;
-
+        /**
+         * 创建一个虚拟内存
+         * @param byte_size 内存大小
+         * @return
+         */
         void *allocate_vvm(size_t byte_size) override;
-
+        /**
+         * 内存拷贝
+         * @param src_ptr 源内存指针
+         * @param dest_ptr 目标内存指针
+         * @param byte_size 内存大小
+         * @param _memcpy_kind 拷贝类型
+         */
         void memcopy(void *src_ptr, void *dest_ptr, size_t byte_size,
                      tff::core::memory::MemCpyKind _memcpy_kind = memory::MemCpyKind::TFF_MEM_CPY_TYPE_NORMAL) const override;
-
-        //
+        /**
+         * 异步内存拷贝
+         * @param src_ptr 源内存指针
+         * @param dest_ptr 目标内存指针
+         * @param byte_size 内存大小
+         * @param memcpy_kind 拷贝类型
+         * @param stream_handle 流句柄
+         */
         void memcpy_async(const void *src_ptr, void *dest_ptr, size_t byte_size,
-                          tff::core::memory::MemCpyKind _memcpy_kind, void *stream_handle = nullptr) const override;
-
+                          tff::core::memory::MemCpyKind memcpy_kind, void *stream_handle = nullptr) const override;
+        /**
+         * 内存清零
+         * @param ptr 内存指针
+         * @param byte_size 内存大小
+         */
         void memset_zero(void *ptr, size_t byte_size) override;
 
     private:

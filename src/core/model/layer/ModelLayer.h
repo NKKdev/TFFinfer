@@ -10,6 +10,9 @@
 #include "device/DeviceBaseObject.h"
 #include "mem/Tensor.h"
 namespace tff::core::model::layer {
+    /**
+     * @brief 模型层对象
+     */
     class ModelLayerObject {
     public:
         ModelLayerObject() = default;

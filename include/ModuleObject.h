@@ -10,6 +10,9 @@
 #include <any>
 #include <iostream>
 namespace tff::module {
+    /**
+     * 模块对象基类
+     */
     class DEEP_TFF_API ModuleObject : public std::enable_shared_from_this<ModuleObject> {
     public:
         ModuleObject() = default;

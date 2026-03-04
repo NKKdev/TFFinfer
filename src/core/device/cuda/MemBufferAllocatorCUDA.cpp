@@ -59,16 +59,27 @@ namespace tff::core::device {
             prop.location.type       = CU_MEM_LOCATION_TYPE_DEVICE;
             prop.location.id         = this->_device_id;
             CUmemGenericAllocationHandle handle;
-            cuMemCreate(&handle, reserve_size, &prop, 0);
-
+            auto error = cuMemCreate(&handle, reserve_size, &prop, 0);
+            if (error != CUDA_SUCCESS) {
+                tff::log::Logger::error("cuMemCreate() returned error code %d", error);
+                return nullptr;
+            }
             CUdeviceptr start_ptr = (CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_size);
-            cuMemMap(start_ptr, reserve_size, 0, handle, 0);
+            error = cuMemMap(start_ptr, reserve_size, 0, handle, 0);
+            if (error != CUDA_SUCCESS) {
+                tff::log::Logger::error("cuMemMap() returned error code %d", error);
+                return nullptr;
+            }
             cuMemRelease(handle);
             CUmemAccessDesc access = {};
             access.location.type   = CU_MEM_LOCATION_TYPE_DEVICE;
             access.location.id     = this->_device_id;
             access.flags           = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
-            cuMemSetAccess((CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_size), reserve_size, &access, 1);
+            error = cuMemSetAccess((CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_size), reserve_size, &access, 1);
+            if (error != CUDA_SUCCESS) {
+                tff::log::Logger::error("cuMemSetAccess() returned error code %d", error);
+                return nullptr;
+            }
             this->_vmm_size += reserve_size;
         }
         void * ptr   = (void *) ((CUdeviceptr) ((char *) (this->_vmm_ptr) + this->_vmm_used));
@@ -99,13 +110,13 @@ namespace tff::core::device {
     }
 
     void MemBufferAllocatorCUDA::memcpy_async(const void *src_ptr, void *dest_ptr, size_t byte_size,
-                                              memory::MemCpyKind _memcpy_kind, void *stream_handle) const {
+                                              memory::MemCpyKind memcpy_kind, void *stream_handle) const {
         CudaSafeCall(cudaSetDevice(this->_device_id));
-        if (_memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
+        if (memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE) {
             CudaSafeCall(
                 cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyHostToDevice, static_cast<
                     cudaStream_t>(stream_handle)));
-        } else if (_memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
+        } else if (memcpy_kind == memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST) {
             CudaSafeCall(
                 cudaMemcpyAsync(dest_ptr, src_ptr, byte_size, cudaMemcpyKind::cudaMemcpyDeviceToHost, static_cast<
                     cudaStream_t>(stream_handle)));

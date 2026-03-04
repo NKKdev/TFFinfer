@@ -8,6 +8,9 @@
 #include <memory>
 #include <functional>
 namespace tff::factory {
+    /**
+     * 模型工厂
+     */
     class ModelRegistry {
     public:
         static ModelRegistry& get() {

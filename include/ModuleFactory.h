@@ -20,7 +20,9 @@
 
 namespace tff::factory {
     using ModuleKeyType = std::variant<std::string, int>;
-
+    /**
+     * ModuleKeyHash and ModuleKeyEqual are used to allow ModuleKeyType to be used as a key in an unordered_map.
+     */
     struct ModuleKeyHash {
         using is_transparent = void;
 
@@ -36,7 +38,9 @@ namespace tff::factory {
             return std::visit([this](const auto &k) { return (*this)(k); }, key);
         }
     };
-
+    /**
+     * ModuleKeyHash and ModuleKeyEqual are used to allow ModuleKeyType to be used as a key in an unordered_map.
+     */
     struct ModuleKeyEqual {
         using is_transparent = void;
 
@@ -79,8 +83,9 @@ namespace tff::factory {
         std::function<std::shared_ptr<Base>()> creator;
         CreationPolicy policy;
     };
-
-
+    /**
+     * @brief 模块工厂
+     */
     class DEEP_TFF_API ModuleFactory {
     public:
         static std::shared_ptr<ModuleFactory> &instance();
@@ -96,13 +101,17 @@ namespace tff::factory {
 
     private:
         ModuleFactory() = default;
-
+        /**
+         * @brief 模块工厂单例
+         */
         template<typename Base>
         struct SingletonInstanceMap {
             static std::unordered_map<ModuleKeyType, std::weak_ptr<Base>, ModuleKeyHash, ModuleKeyEqual> instances;
             //static std::mutex mtx;
         };
-
+        /**
+         * @brief 获取单例实例
+         */
         template<typename Base>
         std::shared_ptr<Base> get_singleton_instance(const ModuleKeyType &key,
                                                      const std::function<std::shared_ptr<Base>()> &creator) {
@@ -126,16 +135,36 @@ namespace tff::factory {
         }
 
     public:
+        /**
+         * @brief 注册类型
+         * @param  type  类型
+         * @param  key   键
+         * @param  args   参数
+         */
         template<typename T, typename Base, typename... Args>
         static void register_type(const std::string &type, const ModuleKeyType &key, Args &&... args) {
             register_type_with_policy<T, Base>(type, key, CreationPolicy::PROTOTYPE, std::forward<Args>(args)...);
         }
-
+        /**
+         * @brief 注册类型
+         * @param  type  类型
+         * @param  key   键
+         */
         template<typename T, typename Base>
         static void register_type(const std::string &type, const ModuleKeyType &key) {
             register_type_with_policy<T, Base>(type, key, CreationPolicy::PROTOTYPE);
         }
 
+        /**
+         *
+         * @tparam T   子类类型
+         * @tparam Base 基类
+         * @tparam Args 参数
+         * @param type 模块类型
+         * @param key 键
+         * @param policy 创建策略
+         * @param args 参数
+         */
         template<typename T, typename Base, typename... Args>
         static void register_type_with_policy(const std::string &type, const ModuleKeyType &key, CreationPolicy policy,
                                               Args &&... args) {
@@ -147,7 +176,12 @@ namespace tff::factory {
                 policy
             };
         }
-
+        /**
+         * @brief 注册类型
+         * @param  type  类型
+         * @param  key   键
+         * @param  policy   创建策略
+         */
         template<typename T, typename Base>
         static void register_type_with_policy(const std::string &type, const ModuleKeyType &key,
                                               CreationPolicy policy) {
@@ -161,6 +195,12 @@ namespace tff::factory {
         }
 
     public:
+        /**
+         * @brief 创建对象
+         * @param  type  类型
+         * @param  key   键
+         * @return  对象
+         */
         template<typename Base>
         std::shared_ptr<Base> create_shared(const std::string &type, const ModuleKeyType &key) {
             auto it = instance()->_typed_factories.find(type);
@@ -184,13 +224,21 @@ namespace tff::factory {
 
             return nullptr;
         }
-
+        /**
+         * @brief 创建对象
+         * @param  type  类型
+         * @param  key   键
+         * @return  对象
+         */
         template<typename Base>
         std::shared_ptr<Base> create_shared(const std::string &type, const std::string &key_string) {
             return create_shared<Base>(type, ModuleKeyType(key_string));
         }
-
-        //
+        /**
+         * @brief 创建对象列表
+         * @param  type  类型
+         * @return  对象列表
+         */
         template<typename Base>
         std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash, ModuleKeyEqual>
         create_shared_list(const std::string &type_string) {
@@ -211,6 +259,11 @@ namespace tff::factory {
         }
 
     private:
+        /**
+         * @brief 获取类型ID
+         * @tparam T   类型
+         * @return  类型ID
+         */
         template<typename T>
         static const std::type_info *type_id() { return &typeid(T); }
 
@@ -225,7 +278,10 @@ namespace tff::factory {
             std::hash<std::string>,
             std::equal_to<std::string>
         > _typed_factories;
-
+        /**
+         * @brief 获取类型列表
+         * @return  类型列表
+         */
         template<typename Base>
         std::unordered_map<ModuleKeyType, CreatorInfo<Base>, ModuleKeyHash, ModuleKeyEqual> &
         get_or_create_creator_list(const std::string &type_category) {

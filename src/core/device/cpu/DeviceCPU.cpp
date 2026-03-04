@@ -108,7 +108,7 @@ namespace tff::core::device::cpu {
         return device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU;
     }
 
-    tff::core::device::DeviceType DeviceCPU::device_type() {
+    DeviceType DeviceCPU::device_type() {
         std::vector<int> device_list;
         get_device_id(device_list);
         if (device_list.empty()) {
@@ -139,11 +139,11 @@ namespace tff::core::device::cpu {
     }
 
     std::shared_ptr<DeviceStream> DeviceCPU::create_stream(int device_id) {
-        return nullptr;
+        return std::make_shared<CPUStream>(device_id);
     }
 
     std::shared_ptr<DeviceEvent> DeviceCPU::create_event(int device_id) {
-        return nullptr;
+        return std::make_shared<CPUEvent>(device_id);
     }
     float DeviceCPU::elapsed_time(const std::shared_ptr<DeviceEvent> &start, const std::shared_ptr<DeviceEvent> &stop) {
         return 0.0f;

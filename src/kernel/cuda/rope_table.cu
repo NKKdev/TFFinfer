@@ -37,7 +37,15 @@ namespace tff::kernel {
             }
         }
     }
+    template<typename T>
+       class PreRopeTable<T, core::device::GPUTag> : public base::OPCreatorBase<PreRopeTable<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_PRE_ROPE_TABLE;
+        }
+    };
     template<typename T>
     void precompute_rope_table(const int max_seq_len, const int dim, const float base,
                                std::shared_ptr<tff::core::memory::Tensor> &out_table,
@@ -57,26 +65,25 @@ namespace tff::kernel {
     }
 
     template<typename T>
-    void tff::kernel::PreRopeTable<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto max_seq_len = kernel::base::get_param_value<const uint32_t>(0, para_ptr);
-        auto dim = kernel::base::get_param_value<const uint32_t>(1, para_ptr);
-        auto base = kernel::base::get_param_value<float>(2, para_ptr);
-        auto scale = kernel::base::get_param_value<float>(3, para_ptr); //todo 支持rope_scale；
-        auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            4, para_ptr);
+    void tff::kernel::PreRopeTable<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto max_seq_len = kernel::base::get_param_value<int>(PreRopeTableBuilder::Params::MaxSeqLen, para_ptr);
+        auto dim = kernel::base::get_param_value<int>(PreRopeTableBuilder::Params::HiddenDim, para_ptr);
+        auto base = kernel::base::get_param_value<float>(PreRopeTableBuilder::Params::Freqs, para_ptr);
+        auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PreRopeTableBuilder::Params::RopeTable, para_ptr);
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                        para_ptr->get_param_count() - 1, para_ptr);
+                        kernel::builder::OpParamBuilderBase<PreRopeTableBuilder>::CommonParams::Stream, para_ptr);
 
-        if (output_tensors == nullptr) {
+        if (output_tensor == nullptr) {
             tff::log::Logger::error("Output tensor size mismatch");
             return;
         }
 
-        precompute_rope_table<T>(max_seq_len, dim, base, output_tensors,stream);
+        precompute_rope_table<T>(max_seq_len, dim, base, output_tensor,stream);
     }
 
 
-    template class tff::kernel::PreRopeTable<float>;
-    REGISTER_OP_OBJECT(PreRopeTable, float);
+    template class tff::kernel::PreRopeTable<float, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(PreRopeTable, float, core::device::GPUTag);
 }

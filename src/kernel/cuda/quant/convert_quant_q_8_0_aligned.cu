@@ -48,16 +48,24 @@ namespace tff::kernel {
                      static_cast<T *>(dst->get_buffer()->ptr()), M, N / BLOCK_SIZE);
         }
     }
-
     template<typename T>
-    void tff::kernel::QuantAligned<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    class QuantAligned<T, core::device::GPUTag> : public base::OPCreatorBase<QuantAligned<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_QUANTIZE_ALIGNED;
+        }
+    };
+    template<typename T>
+    void tff::kernel::QuantAligned<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         auto input_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            0, para_ptr);
+            QuantAlignedBuilder::Params::In, para_ptr);
         auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
+            QuantAlignedBuilder::Params::Out, para_ptr);
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-               para_ptr->get_param_count() - 1, para_ptr);
+               kernel::builder::OpParamBuilderBase<QuantAlignedBuilder>::CommonParams::Stream, para_ptr);
 
         if (input_tensor == nullptr || input_tensor->get_buffer() == nullptr) {
             tff::log::Logger::error("input_tensor buffer is nullptr!");
@@ -72,24 +80,9 @@ namespace tff::kernel {
         const int N = input_tensor->get_shape()[0];
         quant_aligned<T>(M, N, input_tensor, output_tensor, stream);
 
-#ifdef _DEBUG
-        // cudaDeviceSynchronize();
-        // cudaStreamSynchronize(static_cast<cudaStream_t>(stream->
-        //             get_native_stream()));
-        // std::string filename = "";
-        // if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_Q) {
-        //     filename = "Qcur-0_src_0.ggml";
-        // } else if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_K) {
-        //     filename = "Kcur-0_src_0.ggml";
-        // } else if (input_tensor->get_tensor_type() == core::memory::ModelTensorType::LLM_TENSOR_ATTN_V) {
-        //     filename = "Vcur-0_src_0.ggml";
-        // }
-        // varify(filename, input_tensor);
-        // varify(filename, output_tensor);
-#endif
     }
 
 
-    template class tff::kernel::QuantAligned<Q8_0_ALIGNED>;
-    REGISTER_OP_OBJECT(QuantAligned, Q8_0_ALIGNED);
+    template class tff::kernel::QuantAligned<Q8_0_ALIGNED, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(QuantAligned, Q8_0_ALIGNED, core::device::GPUTag);
 }

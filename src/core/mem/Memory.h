@@ -9,6 +9,9 @@
 #include <utility>
 #include "../device/MemBufferAllocatorBaseObject.h"
 namespace tff::core::memory {
+    /**
+     * 内存管理
+     */
     class Memory :public std::enable_shared_from_this<Memory>{
     public:
         explicit Memory() = default;
@@ -31,12 +34,16 @@ namespace tff::core::memory {
                 this->_byte_size = 0;
                 _device_type = tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_UNKNOWN;
                 _allocator = nullptr;
-                //tff::log::Logger::warning("memory buffer destroy");
             }
-            //tff::log::Logger::warning("memory destroy");
         }
     public:
-        //
+        /**
+         * 设置内存
+         * @param byte_size
+         * @param ptr
+         * @param use_external
+         * @param allocator
+         */
         inline void set(size_t byte_size, void* ptr = nullptr,bool use_external = false,
             std::shared_ptr<device::MemBufferAllocatorBaseObject> allocator = nullptr) {
             this->_byte_size = byte_size;
@@ -47,41 +54,79 @@ namespace tff::core::memory {
             }
             this->reset();
         }
+        /**
+         * 分配内存
+         * @return
+         */
         bool allocate();
-
-        void copy_from(const Memory &_mem);
-
+        /**
+         * 拷贝数据
+         * @param mem
+         */
+        void copy_from(const Memory &mem);
+        /**
+         * 获取指针
+         * @return
+         */
         void *ptr();
-
+        /**
+         * 获取指针
+         * @return
+         */
         const void *ptr() const;
-
+        /**
+         * 设置指针
+         * @param buffer_ptr
+         */
         inline void set_buffer(void *buffer_ptr) {
             this->_ptr = buffer_ptr;
         }
-
+        /**
+         * 获取字节数
+         * @return
+         */
         size_t byte_size() const;
-
+        /**
+         * 获取分配器
+         * @return
+         */
         std::shared_ptr<device::MemBufferAllocatorBaseObject> allocator() const;
-
+        /**
+         * 获取设备类型
+         * @return
+         */
         tff::core::device::DeviceType device_type() const;
 
-
+        /**
+         *
+         * @return
+         */
         std::shared_ptr<Memory> get_shared_from_this();
 
+        /**
+         * @brief 是否是外部指针
+         * @return
+         */
         bool is_external() const;
-        //
+        /**
+         * @brief 是否被使用
+         * @return
+         */
         inline bool is_used() const {
             return this->_is_used;
         }
-        //
+        /**
+         * @brief 重置内存
+         */
         inline void reset() {
             this->_is_used = false;
         }
-        //
+        /**
+         * @brief 占用内存
+         */
         inline void occupy() {
             this->_is_used = true;
         }
-
     private:
         size_t _byte_size = 0;
         void* _ptr = nullptr;
@@ -102,16 +147,16 @@ namespace tff::core::memory {
         return _ptr != nullptr;
     }
 
-    inline void Memory::copy_from(const Memory &_mem) {
-        if (_mem._allocator && _mem._byte_size > 0) {
-            this->_allocator = _mem._allocator;
-            this->_byte_size = _mem._byte_size;
+    inline void Memory::copy_from(const Memory &mem) {
+        if (mem._allocator && mem._byte_size > 0) {
+            this->_allocator = mem._allocator;
+            this->_byte_size = mem._byte_size;
             if (this->_device_type == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU
-                && _mem._device_type == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU) {
-                _mem._allocator->memcopy(_mem._ptr, this->_ptr, this->_byte_size, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE);
+                && mem._device_type == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU) {
+                mem._allocator->memcopy(mem._ptr, this->_ptr, this->_byte_size, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE);
                 }else if (this->_device_type == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU
-                    && _mem._device_type == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU) {
-                    _mem._allocator->memcopy(_mem._ptr, this->_ptr, this->_byte_size, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST);
+                    && mem._device_type == tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU) {
+                    mem._allocator->memcopy(mem._ptr, this->_ptr, this->_byte_size, tff::core::memory::MemCpyKind::TFF_MEM_CPY_TYPE_DEVICE2HOST);
                 }
         }
     }

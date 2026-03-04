@@ -441,7 +441,10 @@
 // #endif
 //                     float2 k_rot = __half22float2(b_sm[k_addr]);
 //
-//                     const float mask_value = __ldg(&mask[(start_m + m_row_base) * N + start_n + n_row_base]);
+//                     float mask_value = 0.0f;
+//                     if (((start_m + m_row_base) < N) && ((start_n + n_row_base) < N)) {
+//                         mask_value = __half2float(__ldg(&mask[(start_m + m_row_base) * N + start_n + n_row_base]));
+//                     }
 //
 //                     c_reg[mm * reg_stride + nn + head_index * VEC_DIM_N] += fmaf(q_rot.x, k_rot.x,fmaf(q_rot.y, k_rot.y,
 //                            mask_value));
@@ -1137,6 +1140,7 @@
 //     //     }
 //     //     printf("\n");
 //     // }
+//     float error_ratio = 0.0f;
 //     for (int b = 0; b < batch; b++) {
 //         for (int q = 0; q < num_q_heads; q++) {
 //             float *cpu_result_single = cpu_result.data() + (b * num_q_heads) * M * D + q * D;
@@ -1145,14 +1149,18 @@
 //                 for (int i = 0; i < D; ++i) {
 //                     float delta = cpu_result_single[j * num_q_heads * D + i] - gpu_result_single[
 //                                       j * num_q_heads * D + i];
-//                     if (std::isnan(delta) || fabs(delta) > 0.1f) {
+//                     if (std::isnan(delta) || fabs(delta) > 0.01f) {
 //                         printf("error : %f, head_index: %d, m: %d, d: %d, cpu: %lf, gpu: %lf\n", delta, q, j, i,
 //                                cpu_result_single[j * num_q_heads * D + i], gpu_result_single[j * num_q_heads * D + i]);
-//                         return;
+//                         error_ratio++;
 //                     }
 //                 }
 //             }
 //         }
+//     }
+//     error_ratio /= batch * num_q_heads * M * D;
+//     if (error_ratio > 0.001f) {
+//         printf("error: error_ratio: %lf\n", error_ratio);
 //     }
 //
 //     printf("success\n");
@@ -1166,7 +1174,7 @@
 //     }
 // }
 //
-// int main645474(int argc, char *argv) {
+// int main345356(int argc, char *argv) {
 //     cudaDeviceProp device_prop{};
 //     cudaGetDeviceProperties(&device_prop, 0);
 //     printf("device prop sharedMemPerBlock:%d \n", device_prop.sharedMemPerBlock);

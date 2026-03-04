@@ -221,49 +221,57 @@ namespace tff::kernel {
             //todo float impl
         }
     }
-
     template<typename T>
-    void tff::kernel::QuantQ8MatMulReshape<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto input_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
-            0, para_ptr);
-        auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
+    class QuantMatMulReshape<T, core::device::GPUTag> : public base::OPCreatorBase<QuantMatMulReshape<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        if (input_tensors.size() != 2) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
-            return;
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL_RESHAPE;
         }
-        if (output_tensors == nullptr) {
-            tff::log::Logger::error("memcpy kernel param is invalid!");
-            return;
-        }
-        auto weight_tensor = input_tensors.at(0);
-        if (weight_tensor->get_buffer() == nullptr) {
-            tff::log::Logger::error("weight tensor is null!");
-            return;
-        }
-        auto x_tensor = input_tensors.at(1);
-        if (x_tensor->get_buffer() == nullptr) {
-            tff::log::Logger::error("x tensor is null!");
-            return;
-        }
-
-        const int K = weight_tensor->get_shape()[0];
-        const int M = weight_tensor->get_shape()[1];
-        const int B = weight_tensor->get_shape()[2];//todo impl batches
-        const int N = x_tensor->get_shape()[1];
+    };
+    template<typename T>
+    void tff::kernel::QuantMatMulReshape<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        // auto input_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
+        //     0, para_ptr);
+        // auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+        //     1, para_ptr);
         //
-        quant_q_8_0_matmul<T>(tff::core::quant::Q_8_0::BLOCK_SIZE, M, N, K,weight_tensor->get_buffer()->ptr(),
-            x_tensor->get_buffer()->ptr(), static_cast<T*>(output_tensors->get_buffer()->ptr()));
+        // if (input_tensors.size() != 2) {
+        //     tff::log::Logger::error("memcpy kernel param is invalid!");
+        //     return;
+        // }
+        // if (output_tensors == nullptr) {
+        //     tff::log::Logger::error("memcpy kernel param is invalid!");
+        //     return;
+        // }
+        // auto weight_tensor = input_tensors.at(0);
+        // if (weight_tensor->get_buffer() == nullptr) {
+        //     tff::log::Logger::error("weight tensor is null!");
+        //     return;
+        // }
+        // auto x_tensor = input_tensors.at(1);
+        // if (x_tensor->get_buffer() == nullptr) {
+        //     tff::log::Logger::error("x tensor is null!");
+        //     return;
+        // }
+        //
+        // const int K = weight_tensor->get_shape()[0];
+        // const int M = weight_tensor->get_shape()[1];
+        // const int B = weight_tensor->get_shape()[2];//todo impl batches
+        // const int N = x_tensor->get_shape()[1];
+        // //
+        // quant_q_8_0_matmul<T>(tff::core::quant::Q_8_0::BLOCK_SIZE, M, N, K,weight_tensor->get_buffer()->ptr(),
+        //     x_tensor->get_buffer()->ptr(), static_cast<T*>(output_tensors->get_buffer()->ptr()));
 
         //mem_buffer_manager_ptr->reset_gpu_memory(weight_tensor->get_external_memory_index());
         //mem_buffer_manager_ptr->reset_gpu_memory(x_tensor->get_external_memory_index());
     }
 
 
-    template class tff::kernel::QuantQ8MatMulReshape<float>;
-    template class tff::kernel::QuantQ8MatMulReshape<half>;
-    REGISTER_OP_OBJECT(QuantQ8MatMulReshape, float);
+    template class tff::kernel::QuantMatMulReshape<float, core::device::GPUTag>;
+    template class tff::kernel::QuantMatMulReshape<half, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(QuantMatMulReshape, float, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(QuantQ8MatMulReshape, half);
+    REGISTER_OP_OBJECT_DEVICE(QuantMatMulReshape, half, core::device::GPUTag);
 }

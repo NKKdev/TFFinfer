@@ -6,7 +6,8 @@
 #include "kernel/include/kernel_util.h"
 
 namespace tff::kernel {
-    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int
+    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const
+        int
         PAD_SIZE, const int ELEMENTS_PER_LOAD>
     __device__ void load_tile_n_vec(const int ld, const int dim,
                                     const int thread_x, const int thread_y,
@@ -37,7 +38,8 @@ namespace tff::kernel {
         }
     }
 
-    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int
+    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const
+        int
         PAD_SIZE>
     __device__ void load_tile_n(const int ld, const int dim,
                                 const int thread_x, const int thread_y,
@@ -60,7 +62,8 @@ namespace tff::kernel {
         }
     }
 
-    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int
+    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const
+        int
         PAD_SIZE>
     __device__ void load_tile_t(const int ld, const int dim,
                                 const int thread_x, const int thread_y,
@@ -121,6 +124,7 @@ namespace tff::kernel {
             }
         }
     }
+
     //
     template<typename T, const int VEC_DIM_M, const int VEC_DIM_N,
         const int BLOCK_DIM_M, const int BLOCK_DIM_N>
@@ -171,15 +175,15 @@ namespace tff::kernel {
         float c_reg[VEC_DIM_M * VEC_DIM_N] = {0};
 
         int flip_flag = 0;
-        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(a_ld, K, ld_thread_x, ld_thread_y,
+        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
+            a_ld, K, ld_thread_x, ld_thread_y,
             start_m, 0, a, &a_sm[flip_flag][0][0]);
         load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
-                                                                                 start_n, 0, b, &b_sm[flip_flag][0][0]);
+            start_n, 0, b, &b_sm[flip_flag][0][0]);
         __syncthreads();
 
 
         for (int k = 0; k <= K; k += BLOCK_DIM_K) {
-
             const int k_size = min(BLOCK_DIM_K, K - k);
             compute_tile<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
                 k_size, cm_thread_x, cm_thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
@@ -190,7 +194,8 @@ namespace tff::kernel {
                 load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
                     a_ld, K, ld_thread_x, ld_thread_y,
                     start_m, next_k, a, &a_sm[!flip_flag][0][0]);
-                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
+                    b_ld, N, ld_thread_x, ld_thread_y,
                     start_n, next_k, b, &b_sm[!flip_flag][0][0]);
             }
             __syncthreads();
@@ -205,7 +210,7 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_LOAD, const int VEC_DIM_M, const int VEC_DIM_N,
         const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
     __global__ void gemm_nn_func_vec(int M, int N, int K, int a_ld, int b_ld, int c_ld,
-                                  T *a, T *b, T *c) {
+                                     T *a, T *b, T *c) {
         const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
         const int ld_thread_block_n = BLOCK_DIM_N / VEC_DIM_LOAD;
         const int ld_thread_x = thread_id % ld_thread_block_n;
@@ -229,7 +234,8 @@ namespace tff::kernel {
             load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
                 a_ld, K, ld_thread_x, ld_thread_y,
                 start_m, k, a, &a_sm[0][0]);
-            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
+                b_ld, N, ld_thread_x, ld_thread_y,
                 start_n, k, b, &b_sm[0][0]);
             __syncthreads();
             const int k_size = min(BLOCK_DIM_K, K - k);
@@ -274,14 +280,14 @@ namespace tff::kernel {
 
         int flip_flag = 0;
         load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
-                                                                                 start_m, 0, a, &a_sm[flip_flag][0][0]);
-        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(b_ld, K, ld_thread_x, ld_thread_y,
+            start_m, 0, a, &a_sm[flip_flag][0][0]);
+        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
+            b_ld, K, ld_thread_x, ld_thread_y,
             start_n, 0, b, &b_sm[flip_flag][0][0]);
         __syncthreads();
 
 
         for (int k = 0; k <= K; k += BLOCK_DIM_K) {
-
             const int k_size = min(BLOCK_DIM_K, K - k);
             compute_tile<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
                 k_size, cm_thread_x, cm_thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
@@ -289,7 +295,8 @@ namespace tff::kernel {
             const int next_k = k + BLOCK_DIM_K;
             if (next_k < K) {
                 //load 下一块数据到sm;
-                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
+                    a_ld, M, ld_thread_x, ld_thread_y,
                     start_m, next_k, a, &a_sm[!flip_flag][0][0]);
                 load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
                     b_ld, K, ld_thread_x, ld_thread_y,
@@ -306,7 +313,7 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_LOAD, const int VEC_DIM_M, const int VEC_DIM_N,
         const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
     __global__ void gemm_tt_func_vec(int M, int N, int K, int a_ld, int b_ld, int c_ld,
-                                  T *a, T *b, T *c) {
+                                     T *a, T *b, T *c) {
         const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
         const int ld_thread_block_n = BLOCK_DIM_N / VEC_DIM_LOAD;
         const int ld_thread_x = thread_id % ld_thread_block_n;
@@ -327,9 +334,11 @@ namespace tff::kernel {
 
 #pragma unroll
         for (int k = 0; k < K; k += BLOCK_DIM_K) {
-            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
+                a_ld, M, ld_thread_x, ld_thread_y,
                 start_m, k, a, &a_sm[0][0]);
-            load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(b_ld, K, ld_thread_x, ld_thread_y,
+            load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
+                b_ld, K, ld_thread_x, ld_thread_y,
                 start_n, k, b, &b_sm[0][0]);
             __syncthreads();
             const int k_size = min(BLOCK_DIM_K, K - k);
@@ -374,14 +383,13 @@ namespace tff::kernel {
 
         int flip_flag = 0;
         load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
-                                                                                 start_m, 0, a, &a_sm[flip_flag][0][0]);
+            start_m, 0, a, &a_sm[flip_flag][0][0]);
         load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
-                                                                                 start_n, 0, b, &b_sm[flip_flag][0][0]);
+            start_n, 0, b, &b_sm[flip_flag][0][0]);
         __syncthreads();
 
 
         for (int k = 0; k < K; k += BLOCK_DIM_K) {
-
             const int k_size = min(BLOCK_DIM_K, K - k);
             compute_tile<T, VEC_DIM_M, VEC_DIM_N, BLOCK_DIM_M, BLOCK_DIM_N, PAD_SIZE>(
                 k_size, cm_thread_x, cm_thread_y, &a_sm[flip_flag][0][0], &b_sm[flip_flag][0][0], &c_reg[0]);
@@ -389,9 +397,11 @@ namespace tff::kernel {
             const int next_k = k + BLOCK_DIM_K;
             if (next_k < K) {
                 //load 下一块数据到sm;
-                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
+                    a_ld, M, ld_thread_x, ld_thread_y,
                     start_m, next_k, a, &a_sm[!flip_flag][0][0]);
-                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+                load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
+                    b_ld, N, ld_thread_x, ld_thread_y,
                     start_n, next_k, b, &b_sm[!flip_flag][0][0]);
             }
             __syncthreads();
@@ -405,7 +415,7 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_LOAD, const int VEC_DIM_M, const int VEC_DIM_N,
         const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
     __global__ void gemm_tn_func_vec(int M, int N, int K, int a_ld, int b_ld, int c_ld,
-                                  T *a, T *b, T *c) {
+                                     T *a, T *b, T *c) {
         const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
         const int ld_thread_block_n = BLOCK_DIM_N / VEC_DIM_LOAD;
         const int ld_thread_x = thread_id % ld_thread_block_n;
@@ -426,9 +436,11 @@ namespace tff::kernel {
 
 #pragma unroll
         for (int k = 0; k < K; k += BLOCK_DIM_K) {
-            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(a_ld, M, ld_thread_x, ld_thread_y,
+            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE>(
+                a_ld, M, ld_thread_x, ld_thread_y,
                 start_m, k, a, &a_sm[0][0]);
-            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(b_ld, N, ld_thread_x, ld_thread_y,
+            load_tile_t<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE>(
+                b_ld, N, ld_thread_x, ld_thread_y,
                 start_n, k, b, &b_sm[0][0]);
             __syncthreads();
             const int k_size = min(BLOCK_DIM_K, K - k);
@@ -443,7 +455,7 @@ namespace tff::kernel {
                                                                       &c_reg[0]);
     }
 
-    template<typename T,const int VEC_DIM_LOAD,  const int VEC_DIM_M, const int VEC_DIM_N,
+    template<typename T, const int VEC_DIM_LOAD, const int VEC_DIM_M, const int VEC_DIM_N,
         const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
     __global__ void gemm_nt_pipeline_double_buffer_vec(
         int M, int N, int K,
@@ -470,9 +482,11 @@ namespace tff::kernel {
         __shared__ T b_sm[2][BLOCK_DIM_K][BLOCK_DIM_N + PAD_SIZE];
 
         int flip_flag = 0;
-        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(a_ld, K, ld_thread_x, ld_thread_y,
+        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
+            a_ld, K, ld_thread_x, ld_thread_y,
             start_m, 0, a, &a_sm[flip_flag][0][0]);
-        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(b_ld, K, ld_thread_x, ld_thread_y,
+        load_tile_n_vec<T, VEC_DIM_LOAD, VEC_DIM_K, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE, VEC_DIM_LOAD>(
+            b_ld, K, ld_thread_x, ld_thread_y,
             start_n, 0, b, &b_sm[flip_flag][0][0]);
         __syncthreads();
 
@@ -507,7 +521,7 @@ namespace tff::kernel {
     template<typename T, const int VEC_DIM_LOAD, const int VEC_DIM_M, const int VEC_DIM_N,
         const int VEC_DIM_K, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int PAD_SIZE>
     __global__ void gemm_nt_func_vec(int M, int N, int K, int a_ld, int b_ld, int c_ld,
-                                  T *a, T *b, T *c) {
+                                     T *a, T *b, T *c) {
         const int thread_id = threadIdx.x + threadIdx.y * blockDim.y;
         const int ld_thread_block_n = BLOCK_DIM_N / VEC_DIM_LOAD;
         const int ld_thread_x = thread_id % ld_thread_block_n;
@@ -548,12 +562,13 @@ namespace tff::kernel {
 
     template<typename T>
     static void gemm_kernel_cuda(const tff::core::graph::MatMulTransType &trans_type,
-                                 std::vector<std::shared_ptr<tff::core::memory::Tensor> > &src,
-                                 std::vector<std::shared_ptr<tff::core::memory::Tensor> > &dst,
-                             std::shared_ptr<core::device::DeviceStream> &stream) {
-        auto &input_tensor_a = *src.begin();
-        auto &input_tensor_b = *src.rbegin();
-        auto &output_tensor = *dst.begin();
+                                 std::shared_ptr<tff::core::memory::Tensor> &a,
+                                 std::shared_ptr<tff::core::memory::Tensor> &b,
+                                 std::shared_ptr<tff::core::memory::Tensor> &c,
+                                 std::shared_ptr<core::device::DeviceStream> &stream) {
+        auto &input_tensor_a = a;
+        auto &input_tensor_b = b;
+        auto &output_tensor = c;
         if (input_tensor_a->get_buffer() == nullptr) {
             tff::log::Logger::error("Input tensor A is null.");
             return;
@@ -600,72 +615,86 @@ namespace tff::kernel {
         constexpr int PAD_SIZE = 1; //BLOCK_DIM_K;
 
         dim3 grid((S + BLOCK_DIM_M - 1) / BLOCK_DIM_M,
-              (D + BLOCK_DIM_N - 1) / BLOCK_DIM_N,
-              1);
+                  (D + BLOCK_DIM_N - 1) / BLOCK_DIM_N,
+                  1);
         dim3 block(BLOCK_DIM_N / VEC_DIM_N, BLOCK_DIM_M / VEC_DIM_M, 1);
 
         switch (trans_type) {
             case tff::core::graph::MatMulTransType::TFF_TT:
-                gemm_tt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
+                gemm_tt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M,
+                            BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
-                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
-                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
+                            S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                            static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                            static_cast<float *>(output_tensor->get_buffer()->ptr()));
                 break;
             case tff::core::graph::MatMulTransType::TFF_NT:
-                gemm_nt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
+                gemm_nt_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M,
+                            BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
-                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
-                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
+                            S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                            static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                            static_cast<float *>(output_tensor->get_buffer()->ptr()));
                 break;
             case tff::core::graph::MatMulTransType::TFF_NN:
-                gemm_nn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
+                gemm_nn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M,
+                            BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
-                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
-                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
+                            S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                            static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                            static_cast<float *>(output_tensor->get_buffer()->ptr()));
                 break;
             case tff::core::graph::MatMulTransType::TFF_TN:
-                gemm_tn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
+                gemm_tn_pipeline_double_buffer_vec<float, VEC_DIM_LOAD, VEC_DIM_M, VEC_DIM_N, VEC_DIM_K, BLOCK_DIM_M,
+                            BLOCK_DIM_N, BLOCK_DIM_K, PAD_SIZE><<<
                         grid,
-                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
-                                 static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
-                                 static_cast<float *>(output_tensor->get_buffer()->ptr()));
+                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
+                            S, D, D, S, D, D, static_cast<float *>(input_tensor_a->get_buffer()->ptr()),
+                            static_cast<float *>(input_tensor_b->get_buffer()->ptr()),
+                            static_cast<float *>(output_tensor->get_buffer()->ptr()));
                 break;
         }
     }
 
     template<typename T>
-    void tff::kernel::XGemm<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto trans_type = kernel::base::get_param_value<tff::core::graph::MatMulTransType>(0, para_ptr);
-        auto input_tensors = kernel::base::get_param_value<std::set<std::shared_ptr<tff::core::memory::Tensor>,
-            core::memory::Tensor::TensorCompare> >(
-            1, para_ptr);
-        auto output_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor> > >(
-            2, para_ptr);
+    class MatMul<T,
+                core::device::GPUTag> : public base::OPCreatorBase<MatMul<T, core::device::GPUTag>, T,
+                core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_MUL_MAT;
+        }
+    };
+
+    template<typename T>
+    void tff::kernel::MatMul<T, core::device::GPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+
+        auto trans_type = kernel::base::get_param_value<tff::core::graph::MatMulTransType>(MatMulBuilder::Params::TransType, para_ptr);
+        auto a = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            MatMulBuilder::Params::A, para_ptr);
+        auto b = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            MatMulBuilder::Params::B, para_ptr);
+        auto c = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
+            MatMulBuilder::Params::Out, para_ptr);
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                        para_ptr->get_param_count() - 1, para_ptr);
-
-        if (input_tensors.size() != 2) {
-            return;
-        }
-        if (output_tensors.size() != 1) {
-            return;
-        }
-        std::vector<std::shared_ptr<core::memory::Tensor>> inputs;
-        for (auto &input_tensor : input_tensors) {
-            inputs.push_back(input_tensor);
-        }
+            kernel::builder::OpParamBuilderBase<MatMulBuilder>::CommonParams::Stream, para_ptr);
         //
-        gemm_kernel_cuda<T>(trans_type, inputs, output_tensors, stream);
+        gemm_kernel_cuda<T>(trans_type, a, b , c, stream);
     }
 
-    template class tff::kernel::XGemm<float>;
-    template class tff::kernel::XGemm<half>;
-    template class tff::kernel::XGemm<Q8_0>;
-    REGISTER_OP_OBJECT(XGemm, float);
-    REGISTER_OP_OBJECT(XGemm, half);
-    REGISTER_OP_OBJECT(XGemm, Q8_0);
+    template class tff::kernel::MatMul<float, core::device::GPUTag>;
+    template class tff::kernel::MatMul<half, core::device::GPUTag>;
+    template class tff::kernel::MatMul<Q8_0, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(MatMul, float, core::device::GPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(MatMul, half, core::device::GPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(MatMul, Q8_0, core::device::GPUTag);
 }

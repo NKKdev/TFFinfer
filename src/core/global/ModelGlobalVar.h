@@ -9,7 +9,6 @@
 #include "graph/BaseDefine.h"
 #include "mem/BaseDefine.h"
 #include "../model/LLAMADefine.h"
-#include "fmt/format.h"
 using namespace tff::core::model;
 
 namespace tff::core::global {
@@ -1541,7 +1540,7 @@ namespace tff::core::global {
             {LLM_TENSOR_LAYER_OUTPUT, tff::core::graph::TffOpType::TFF_OP_MAP2CPU}
         },
     };
-    static std::unordered_map<ModelMetaKV, uint32_t> LLM_SPECIAL_TOKENS = {
+    static std::unordered_map<ModelMetaKV, int32_t> LLM_SPECIAL_TOKENS = {
         {LLM_KV_TOKENIZER_BOS_ID, 1},
         {LLM_KV_TOKENIZER_EOS_ID, 2},
         {LLM_KV_TOKENIZER_EOT_ID, -1},
@@ -1696,6 +1695,7 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_TRANSPOSE, "transpose"},
         {tff::core::graph::TffOpType::TFF_OP_GET_ROWS, "get_rows"},
         {tff::core::graph::TffOpType::TFF_OP_GET_ROWS_BACK, "get_rows_back"},
+        {tff::core::graph::TffOpType::TFF_OP_RMS_NORM_W, "rms_norm_w"},
         {tff::core::graph::TffOpType::TFF_OP_SET_ROWS, "set_rows"},
         {tff::core::graph::TffOpType::TFF_OP_DIAG, "diag"},
         {tff::core::graph::TffOpType::TFF_OP_DIAG_MASK_INF, "diag_mask_inf"},
@@ -1727,6 +1727,8 @@ namespace tff::core::global {
 
         {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT, "flash_attn_ext"},
         {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_BACK, "flash_attn_back"},
+        {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_PAGED, "flash_attn_paged"},
+        {tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_PAGED_ROPE, "flash_attn_paged_rope"},
         {tff::core::graph::TffOpType::TFF_OP_SSM_CONV, "ssm_conv"},
         {tff::core::graph::TffOpType::TFF_OP_SSM_SCAN, "ssm_scan"},
         {tff::core::graph::TffOpType::TFF_OP_WIN_PART, "win_part"},
@@ -1738,6 +1740,7 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_RWKV_WKV7, "rwkv_wkv7"},
 
         {tff::core::graph::TffOpType::TFF_OP_UNARY, "unary"},
+        {tff::core::graph::TffOpType::TFF_OP_BINARY, "binary"},
 
         {tff::core::graph::TffOpType::TFF_OP_MAP_CUSTOM1, "map_custom1"},
         {tff::core::graph::TffOpType::TFF_OP_MAP_CUSTOM2, "map_custom2"},
@@ -1754,17 +1757,21 @@ namespace tff::core::global {
         {tff::core::graph::TffOpType::TFF_OP_MAP2CPU, "map2cpu"},
         {tff::core::graph::TffOpType::TFF_OP_MEM_CPY, "memcpy"},
         {tff::core::graph::TffOpType::TFF_OP_MEM_REF, "mem_ref"},
+        {tff::core::graph::TffOpType::TFF_OP_MEM_RECYCLE, "mem_recycle"},
         {tff::core::graph::TffOpType::TFF_OP_EMBEDDING, "embedding"},
         //quant
-        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8, "quantize_q8"},
+        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE, "quantize_q8"},
         {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_ALIGNED, "quantize_aligned"},
         {tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8, "dequantize_q8"},
-        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL, "quant_q8_matmul"},
+        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_MATMUL, "quant_q8_matmul"},
         {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_RESHAPE, "quantize_q8_reshape"},
         {tff::core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8_RESHAPE, "dequantize_q8_reshape"},
+        {tff::core::graph::TffOpType::TFF_OP_QUANTIZE_Q8_MATMUL_RESHAPE, "quantize_q8_matmul_reshape"},
         //
         {tff::core::graph::TffOpType::TFF_OP_PRE_ROPE_TABLE, "pre_rope_table"},
         {tff::core::graph::TffOpType::TFF_OP_ATTN_MASK, "attn_mask"},
+        {tff::core::graph::TffOpType::TFF_OP_CONVERT, "convert"},
+        {tff::core::graph::TffOpType::TFF_OP_GATHER, "gather"},
     };
 
     //op fuse model
@@ -1774,6 +1781,10 @@ namespace tff::core::global {
             tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT,
             {tff::core::graph::TffOpType::TFF_OP_ROPE}
         }, //flash attention与rope算子融合
+        {
+            tff::core::graph::TffOpType::TFF_OP_FLASH_ATTN_PAGED,
+            {tff::core::graph::TffOpType::TFF_OP_ROPE}
+        },
         {tff::core::graph::TffOpType::TFF_OP_RMS_NORM, {graph::TffOpType::TFF_OP_MUL, graph::TffOpType::TFF_OP_ADD}},
         {tff::core::graph::TffOpType::TFF_OP_RMS_NORM, {graph::TffOpType::TFF_OP_MUL}},
     };

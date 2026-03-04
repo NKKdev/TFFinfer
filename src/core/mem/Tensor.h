@@ -13,6 +13,9 @@
 #include "global/GlobalDefine.h"
 
 namespace tff::core::memory {
+    /**
+     * @brief Tensor
+     */
     class Tensor : public std::enable_shared_from_this<Tensor> {
     public:
         struct TensorCompare {
@@ -22,7 +25,7 @@ namespace tff::core::memory {
         };
 
     public:
-        Tensor(const std::shared_ptr<Tensor> &other, bool _use_external = false) noexcept {
+        Tensor(const std::shared_ptr<Tensor> &other) noexcept {
             release();
             _use_external = other->_use_external;
             _external_memory_index = other->_external_memory_index;
@@ -36,8 +39,9 @@ namespace tff::core::memory {
             _strides = other->_strides;
             _allocator = other->_allocator;
         }
+
         Tensor(const tff::core::memory::DataType data_type = tff::core::memory::DataType::TFF_DATA_TYPE_UNKNOWN,
-        const MemoryType memory_type = MemoryType::TFF_MEM_TYPE_WORKSPACE,
+               const MemoryType memory_type = MemoryType::TFF_MEM_TYPE_WORKSPACE,
                std::array<int64_t, MAX_TENSOR_DIM> shapes = std::array<int64_t, MAX_TENSOR_DIM>(),
                bool use_external = true,
                std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> alloc =
@@ -106,7 +110,9 @@ namespace tff::core::memory {
         }
 
     public:
-        //
+        /**
+         * @brief 分配张量内存
+         */
         inline void allocate() {
             if (!_use_external) {
                 _buffer = std::make_shared<tff::core::memory::Memory>(
@@ -118,11 +124,18 @@ namespace tff::core::memory {
             }
         }
 
-        //
+        /**
+         * @brief 获取张量数据行大小
+         * @return size_t 张量数据行大小
+         */
         [[nodiscard]] inline size_t get_row_size() const {
             return _type_size * this->_shape[0] / type_traits_auto[_data_type]._blck_size;
         }
 
+        /**
+         * @brief 获取张量数据大小
+         * @return size_t 张量数据大小
+         */
         [[nodiscard]] inline int64_t get_bytes() const {
             size_t nbytes = 0;
             const size_t blck_size = type_traits_auto[_data_type]._blck_size;
@@ -140,51 +153,97 @@ namespace tff::core::memory {
             return nbytes;
         }
 
+        /**
+         * @brief 设置张量维度
+         * @return
+         */
         inline void set_dims(const size_t &n_dims) {
             this->_n_dims = n_dims;
         }
 
+        /**
+         * @brief 获取张量维度
+         * @return int 张量维度
+         */
         inline int dims() const {
             return this->_n_dims;
         }
 
-        //
+        /**
+         * @brief 获取张量形状
+         * @return std::array<int64_t, MAX_TENSOR_DIM> 张量形状
+         */
         inline std::array<int64_t, MAX_TENSOR_DIM> &get_shape() {
             return _shape;
         }
 
-        //
+        /**
+         * @brief 获取张量形状大小
+         * @return std::array<int64_t, MAX_TENSOR_DIM> 张量形状
+         */
         inline std::array<int64_t, MAX_TENSOR_DIM> &get_strides() {
             return this->_strides;
         }
 
-        //
+        /**
+         * @brief 设置张量形状
+         * @param n_dims 张量维度
+         * @param index 张量维度索引
+         */
         inline void set_shape(const size_t &n_dims, const size_t &index) {
             this->_shape[index] = n_dims;
         }
 
-        //
+        /**
+         * @brief 设置张量形状
+         * @param shape 张量形状
+         */
         inline void set_shape(const std::array<int64_t, MAX_TENSOR_DIM> &shape) {
             this->_shape = shape;
             this->set_dims(this->_shape.size());
+            stride_infer();
         }
-        //
+
+        /**
+         * @brief 获取张量内存类型
+         * @return MemoryType 张量内存类型
+         */
         inline MemoryType memory_type() const {
             return this->_memory_type;
         }
+
+        /**
+         * @brief 设置张量内存类型
+         * @param memory_type 内存类型
+         */
         inline void set_memory_type(const MemoryType &memory_type) {
             this->_memory_type = memory_type;
         }
-        //
+
+        /**
+         * @brief 获取张量数据类型
+         * @return DataType 张量数据类型
+         */
         inline DataType get_data_type() const {
             return this->_data_type;
         }
 
-        //
+        /**
+         * @brief 设置张量数据类型
+         * @param data_type 数据类型
+         */
         inline void set_data_type(const DataType &data_type) {
             this->_data_type = data_type;
             _type_size = memory::type_traits_auto[tff::core::memory::DataType(data_type)]._type_size;
             _blk_size = memory::type_traits_auto[tff::core::memory::DataType(data_type)]._blck_size;
+            stride_infer();
+        }
+
+        /**
+         * @brief 张量Stride推导
+         * @return  void
+         */
+        inline void stride_infer() {
             if (this->_strides.empty()) {
                 tff::log::Logger::error("_strides is empty!!");
                 return;
@@ -198,36 +257,55 @@ namespace tff::core::memory {
             }
         }
 
-        //
+        /**
+         * @brief 设置张量数据
+         * @param data 数据指针
+         * @param buffer_size 数据大小
+         * @param mem_buffer_index 内存索引
+         */
         inline void set_buffer_data(void *data, const size_t &buffer_size, size_t mem_buffer_index = -1) {
-            if (this->_buffer != nullptr) {
-                tff::log::Logger::error("current tensor already has buffer!!");
-                return;
-            }
             _use_external = true;
-            this->_external_memory_index = mem_buffer_index;
+            if (mem_buffer_index != -1) {
+                this->_external_memory_index = mem_buffer_index;
+            }
             this->_buffer = std::make_shared<tff::core::memory::Memory>(buffer_size, data, _use_external);
         }
 
-        //
+        /**
+         * @brief 获取张量外部内存索引
+         * @return size_t 张量外部内存索引
+         */
         inline int64_t get_external_memory_index() const {
             return _external_memory_index;
         }
 
+        /**
+         * @brief 设置张量外部内存索引
+         * @param mem_offset 外部内存索引
+         */
         inline void set_external_memory_index(const size_t &mem_offset) {
             this->_external_memory_index = mem_offset;
         }
 
-        //
+        /**
+         * @brief 获取张量类型
+         * @return ModelTensorType 张量类型
+         */
         [[nodiscard]] inline tff::core::memory::ModelTensorType get_tensor_type() const {
             return this->_tensor_type;
         }
 
+        /**
+         * @brief 设置张量类型
+         * @param tensor_type 张量类型
+         */
         inline void set_tensor_type(const tff::core::memory::ModelTensorType &tensor_type) {
             this->_tensor_type = tensor_type;
         }
 
-        //
+        /**
+         * @brief 释放张量内存
+         */
         inline void release() {
             if (_buffer) {
                 _allocator->release(_buffer->ptr());
@@ -236,37 +314,58 @@ namespace tff::core::memory {
             _blk_size = 0;
         }
 
-        //
+        /**
+         * @brief 获取张量分配器
+         * @return std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> 张量分配器
+         */
         inline std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> &get_allocator() {
             return _allocator;
         }
 
-        //
+        /**
+         * @brief 设置张量分配器
+         * @param allocator 张量分配器
+         */
         inline void set_allocator(const std::shared_ptr<tff::core::device::MemBufferAllocatorBaseObject> &allocator) {
             _allocator = allocator;
         }
 
-        //
+        /**
+         * @brief 张量是否分配
+         * @return  bool
+         */
         [[nodiscard]] inline bool is_allocated() const {
             return _is_allocated;
         }
 
-        //
+        /**
+         * @brief 获取张量内存
+         * @return std::shared_ptr<tff::core::memory::Memory> 张量内存
+         */
         inline std::shared_ptr<tff::core::memory::Memory> &get_buffer() {
             return _buffer;
         }
 
-        //
+        /**
+         * @brief 获取张量优先级
+         * @return
+         */
         [[nodiscard]] inline int get_priority() const {
             return _priority;
         }
 
-        //
+        /**
+         * @brief 设置张量优先级
+         * @param priority 优先级
+         */
         inline void set_priority(const int &priority) {
             _priority = priority;
         }
 
-        //
+        /**
+         * @brief 获取张量指针引用次数
+         * @return size_t 张量指针引用次数
+         */
         inline int get_ref_count() const {
             try {
                 tff::log::Logger::info("current ref count: %d ", shared_from_this().use_count());
@@ -276,7 +375,12 @@ namespace tff::core::memory {
             }
         }
 
-        //
+        /**
+         * @brief 获取张量元素
+         * @tparam T 张量元素类型
+         * @param indices 索引
+         * @return T& 张量元素
+         */
         template<typename T, typename... Args>
         inline T &at(Args... indices) {
             if (sizeof(T) != _type_size) {
@@ -288,6 +392,12 @@ namespace tff::core::memory {
             return *reinterpret_cast<T *>(_buffer->ptr() + compute_offset(indices...));
         }
 
+        /**
+         * @brief 获取张量元素
+         * @tparam T 张量元素类型
+         * @param indices 索引
+         * @return T& 张量元素
+         */
         template<typename T, typename... Args>
         inline const T &at(Args... indices) const {
             if (sizeof(T) != _type_size) {
@@ -299,13 +409,13 @@ namespace tff::core::memory {
             return *reinterpret_cast<const T *>(_buffer->ptr() + compute_offset(indices...));
         }
 
-        //
         inline void set_live_range(int start, int end) {
             this->_start = start;
             this->_end = end;
         }
 
         inline int start() const { return _start; }
+
         inline int end() const { return _end; }
 
     private:
@@ -326,15 +436,19 @@ namespace tff::core::memory {
 
             return offset;
         }
+
         //
         inline void check() {
             this->_n_dims = _shape.size();
-            for (size_t i = 0; i < _shape.size(); ++i) {
+            for (int i = _shape.size() - 1; i >= 0; --i) {
                 if (_shape[i] == 1) {
                     this->_n_dims--;
+                } else {
+                    break;
                 }
             }
         }
+
     private:
         //
         //

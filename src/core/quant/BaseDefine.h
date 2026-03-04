@@ -18,7 +18,9 @@ namespace tff::core::quant {
         void *dst,
         int64_t k
     )>;
-
+    /**
+     * @brief Q8量化结构体
+     */
     struct Q_8_0 {
         static constexpr int BLOCK_SIZE = 32;
         half d;
@@ -72,6 +74,9 @@ namespace tff::core::quant {
 
     static_assert(sizeof(tff::core::quant::Q_8_0) == 34);
 
+    /**
+     * @brief Q8对齐结构体
+     */
     struct Q_8_0_ALIGNED {
         static constexpr int BLOCK_SIZE = 32;
         float d;
@@ -123,8 +128,9 @@ namespace tff::core::quant {
     };
 
     static_assert(sizeof(tff::core::quant::Q_8_0_ALIGNED) == 36);
-
-    //
+    /**
+     * @brief Q8_1量化结构体
+     */
     struct Q_8_1 {
         static constexpr int BLOCK_SIZE = 32;
         half d;
@@ -178,8 +184,9 @@ namespace tff::core::quant {
         static constexpr bool is_quantized() { return true; };
     };
     static_assert(sizeof(tff::core::quant::Q_8_1) == 36);
-
-    //非量化类型;
+    /**
+     * @brief 非量化结构体
+     */
     template<typename T, typename = void>
     struct QuantScheme {
         static constexpr bool is_quantized() { return false; };

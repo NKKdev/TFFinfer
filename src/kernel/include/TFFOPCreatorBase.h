@@ -15,81 +15,37 @@ namespace tff::kernel::base {
     using OP_CALLBACK_TYPE = void(std::shared_ptr<tff::core::global::ParamBaseObject> &);
 
     template<typename T>
-    static T get_param_value(const int &index, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto name = para_ptr->get_param<std::string>(para_ptr->get_param_count() - 5);
-        auto opt = para_ptr->get_param<T>(index);
+    T get_param_value(const char *name, std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto opt = para_ptr->get_param<T>(name);
         if (!opt.has_value()) {
-            tff::log::Logger::error("op %s Failed to get param[%d]", std::string(name.value()).c_str(), index);
+            tff::log::Logger::error("op %s Failed to get param[%d]", name);
             return T{};
         }
         return opt.value();
     }
 
-    static std::function<OP_CALLBACK_TYPE> get_op_func(std::shared_ptr<core::device::DeviceBaseObject> &device,
+    std::function<OP_CALLBACK_TYPE> get_op_func(std::shared_ptr<core::device::MemBufferAllocatorBaseObject> &allocator,
                                                        const tff::core::graph::TffOpType &op_type,
-                                                       const tff::core::memory::DataType &data_type) {
-        if (device == nullptr) {
-            tff::log::Logger::error("op device is invalid!!");
-            return nullptr;
-        }
-        auto it = core::global::TFF_OP_TYPE_MAP.find(op_type);
-        if (it == core::global::TFF_OP_TYPE_MAP.end()) {
-            tff::log::Logger::error("Op type not found in TFF_OP_TYPE_MAP");
-            return nullptr;
-        }
-        std::string device_tag_name;
-        switch (device->device_type()) {
-            case core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU:
-                device_tag_name = std::string(core::device::GPUTag::name());
-                break;
-            case core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU:
-                device_tag_name = std::string(core::device::CPUTag::name());
-                break;
-            case core::device::TFF_BACKEND_DEVICE_TYPE_UNKNOWN:
-                break;
-        }
-        std::string op_name = std::string(it->second) + std::string("_") + device_tag_name + "_";
-        switch (data_type) {
-            case tff::core::memory::DataType::TFF_DATA_TYPE_F32:
-                op_name = op_name + tff::core::global::get_type_suffix<float>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_F64:
-                op_name = op_name + tff::core::global::get_type_suffix<double>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_I32:
-                op_name = op_name + tff::core::global::get_type_suffix<int32_t>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_I64:
-                op_name = op_name + tff::core::global::get_type_suffix<int64_t>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_I8:
-                op_name = op_name + tff::core::global::get_type_suffix<uint8_t>();
-                break;
-            case tff::core::memory::DataType::TFF_DATA_TYPE_F16:
-                op_name = op_name + tff::core::global::get_type_suffix<half>();
-                break;
-            case tff::core::memory::TFF_DATA_TYPE_Q8_0:
-                op_name = op_name + tff::core::global::get_type_suffix<Q8_0>();
-                break;
-            case core::memory::TFF_DATA_TYPE_Q8_0_ALIGNED:
-                op_name += tff::core::global::get_type_suffix<Q8_0_ALIGNED>();
-            default:
-                break;
-        }
+                                                       const tff::core::memory::DataType &data_type);
 
+    void op_before_hook(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        return tff::factory::FunctionFactory::instance()->get_callback<tff::kernel::base::OP_CALLBACK_TYPE>(
-            OP_NODE_FLAG,
-            op_name);
-    }
-
-    // 算子基类模板
+    void op_after_hook(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+    /**
+     * @brief 创建OP对象
+     * @tparam Derived 继承的OP子类
+     * @tparam T 数据类型
+     * @tparam DeviceTag 设备类型
+     */
     template<typename Derived, typename T, typename DeviceTag>
     class OPCreatorBase {
     public:
         using value_type = T;
         using device_tag = DeviceTag;
-
+        /**
+         * @brief 获取设备类型名称
+         * @return 设备类型名称
+         */
         inline static std::string get_device_tag_name() {
             if constexpr (std::is_same_v<decltype(DeviceTag::name), const char *>) {
                 return DeviceTag::name;
@@ -99,7 +55,10 @@ namespace tff::kernel::base {
                 return "";
             }
         }
-
+        /**
+         * @brief 获取OP名称
+         * @return OP名称
+         */
         inline static std::string get_op_name() {
             auto it = core::global::TFF_OP_TYPE_MAP.find(Derived::op_type());
             if (it == core::global::TFF_OP_TYPE_MAP.end()) {
@@ -112,67 +71,9 @@ namespace tff::kernel::base {
             //tff::log::Logger::info("regist op (%s) ", name.c_str());
             return name;
         }
-
-        static void op_before_hook(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-            auto tensor = get_param_value<std::shared_ptr<core::memory::Tensor> >(
-                 para_ptr->get_param_count() - 7, para_ptr);
-            auto input_tensors = get_param_value<std::vector<std::shared_ptr<core::memory::Tensor> > >(
-                para_ptr->get_param_count() - 6, para_ptr);
-            const auto &name = get_param_value<std::string>(para_ptr->get_param_count() - 5, para_ptr);
-            auto mem_buffer_manager_ptr = get_param_value<
-                std::shared_ptr<
-                    tff::core::runtime::LLMMemManager> >(para_ptr->get_param_count() - 4, para_ptr);
-            auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent> >(
-                para_ptr->get_param_count() - 3, para_ptr);
-            auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent> > >(
-                para_ptr->get_param_count() - 2, para_ptr);
-            auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                para_ptr->get_param_count() - 1, para_ptr);
-
-            for (auto &wait_event: event_list) {
-                if (wait_event == nullptr) {
-                    continue;
-                }
-                //tff::log::Logger::info("stream %s wait event %s",stream->name().c_str(), wait_event->name().c_str());
-                stream->wait_event(wait_event->get_native_event());
-            }
-            // tff::log::Logger::info("node %s output_tensor pointer %p",name.c_str(),
-            //     static_cast<void *>(tensor.get()));
-        }
-
-        static void op_after_hook(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-            auto tensor = get_param_value<std::shared_ptr<core::memory::Tensor> >(
-                para_ptr->get_param_count() - 7, para_ptr);
-            auto input_tensors = get_param_value<std::vector<std::shared_ptr<core::memory::Tensor> > >(
-                para_ptr->get_param_count() - 6, para_ptr);
-            const auto &name = get_param_value<std::string>(para_ptr->get_param_count() - 5, para_ptr);
-            tff::log::Logger::info("layer node %s op:%s compute!", name.c_str(), Derived::get_op_name().c_str());
-            auto mem_buffer_manager_ptr = get_param_value<
-                std::shared_ptr<
-                    tff::core::runtime::LLMMemManager> >(para_ptr->get_param_count() - 4, para_ptr);
-            auto event = get_param_value<std::shared_ptr<core::device::DeviceEvent> >(
-                para_ptr->get_param_count() - 3, para_ptr);
-            auto event_list = get_param_value<std::vector<std::shared_ptr<core::device::DeviceEvent> > >(
-                para_ptr->get_param_count() - 2, para_ptr);
-            auto stream = get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                para_ptr->get_param_count() - 1, para_ptr);
-            if (event != nullptr) {
-                event->record(stream);
-            }
-
-            if (mem_buffer_manager_ptr != nullptr) {
-                for (auto &input: input_tensors) {
-                    if (input->get_allocator() == nullptr) {
-                        continue;
-                    }
-                    auto &device_id = input->get_allocator()->_device_id;
-                    mem_buffer_manager_ptr->release_memory(device_id, input->get_external_memory_index());
-                }
-            }
-
-        }
-
-        // 注册函数
+        /**
+         * @brief 注册OP对象
+         */
         static void registry_function() {
             static_assert(
                 std::is_pointer_v<decltype(&Derived::compute)> &&
@@ -198,9 +99,12 @@ namespace tff::kernel::base {
                 wrapper
             );
         }
-
-
-        // 编译时检查
+        /**
+         * @brief 判断是否支持指定数据类型
+         * @tparam CheckT 数据类型
+         * @tparam CheckTag 设备类型
+         * @return 是否支持
+         */
         template<typename CheckT = T, typename CheckTag = DeviceTag>
         static constexpr bool is_supported() {
             return DeviceTag::template supports_data_type<CheckT>();

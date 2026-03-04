@@ -20,147 +20,120 @@ using namespace tff::core::global;
 using namespace tff::core::graph;
 
 namespace tff::core::model {
+    /**
+     * Qwen3Creator
+     */
     class QWen3Creator final : public ModelCreatorBase {
     public:
         QWen3Creator() = default;
 
         ~QWen3Creator() override = default;
 
-        //
+    public:
+        /**
+         * 获取模型名称
+         * @return
+         */
         inline const char *get_model_name() override {
             return tff::core::model::to_string(tff::core::model::ModelArchitectureType::TFF_MODEL_ARCH_QWEN3);
         }
 
-        //
+        /**
+         * 构建模型上下文
+         * @param ctx
+         */
         inline void build_model_context(const model::GraphContext &ctx) override {
-            this->_model_ctx = ctx;
+            this->_graph_ctx = ctx;
         }
 
+    public:
+        /**
+         * 构建模型计算图
+         * @param layer_map 模型层信息
+         * @param graph_ptr 计算图对象
+         */
         void build_graph(
             std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
                 std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                     tff::core::model::layer::ModelLayerObject> > > > &layer_map,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr) override;
 
+        /**
+         * 构建模型内存IO计算图
+         * @param layer_map 模型层信息
+         * @param graph_ptr 模型内存图对象
+         */
         void build_mem_graph(
             std::unordered_map<tff::core::model::ModelTensorLayerType, std::unordered_map<uint32_t,
                 std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
                     tff::core::model::layer::ModelLayerObject> > > > &layer_map,
             std::shared_ptr<tff::core::graph::Graph> &graph_ptr) override;
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_inputs(
+    protected:
+        /**
+         * 构建Rope表节点
+         * @return
+         */
+        std::shared_ptr<GraphNode> build_rope_table_node();
+
+        /**
+         * @brief 构建输入节点
+         * @param layer_map
+         * @return
+         */
+        std::shared_ptr<GraphNode> build_inputs(
             const std::unordered_map<memory::ModelTensorType, std::shared_ptr<layer::ModelLayerObject> > &layer_map);
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_norm(memory::ModelTensorType tensor_type,
-                                                                const std::unordered_map<memory::ModelTensorType,
-                                                                    std::shared_ptr<layer::
-                                                                        ModelLayerObject> > &layer_map,
-                                                                std::shared_ptr<GraphNode> &input_node);
+        /**
+         * 构建输出节点
+         * @param tensor_type 模型张量类型
+         * @param input_node 输入节点
+         * @return
+         */
+        std::shared_ptr<GraphNode> build_output(memory::ModelTensorType tensor_type,
+                                                std::shared_ptr<GraphNode> &input_node);
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_output(tff::core::memory::ModelTensorType tensor_type,
-                                                                  const std::unordered_map<
-                                                                      tff::core::memory::ModelTensorType,
-                                                                      std::shared_ptr<
-                                                                          tff::core::model::layer::ModelLayerObject> > &
-                                                                  layer_map,
-                                                                  std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-                                                                  std::shared_ptr<tff::core::graph::GraphNode> &
-                                                                  input_node);
+        /**
+         * @brief 构建QKV节点
+         * @param weight_node 权重节点
+         * @param x_node 输入节点
+         * @return
+         */
+        std::shared_ptr<GraphNode> build_qkv_node(
+            std::shared_ptr<GraphNode> &weight_node, std::shared_ptr<GraphNode> &x_node);
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_reshape_node(memory::ModelTensorType tensor_type,
-                                                                        const std::unordered_map<memory::ModelTensorType
-                                                                            , std::shared_ptr<layer::
-                                                                                ModelLayerObject> > &layer_map,
-                                                                        std::shared_ptr<GraphNode> &input_node,
-                                                                        int dim0, int dim1, int dim2);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_mul_mat_node(
-            std::shared_ptr<layer::ModelLayerObject> &layer,
-            std::shared_ptr<GraphNode> &b_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_qkv_node(memory::ModelTensorType tensor_type,
-                                                                    const std::unordered_map<memory::ModelTensorType,
-                                                                        std::shared_ptr<layer::
-                                                                            ModelLayerObject> >
-                                                                    &layer_map,
-                                                                    std::shared_ptr<GraphNode> &input_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_attn(
-            const std::unordered_map<memory::ModelTensorType, std::shared_ptr<layer::ModelLayerObject> > &layer_map,
-            std::shared_ptr<GraphNode> &q_node,
-            std::shared_ptr<GraphNode> &k_node,
-            std::shared_ptr<GraphNode> &v_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_add_node(
-            std::shared_ptr<GraphNode> &a_node,
-            std::shared_ptr<GraphNode> &b_node, bool inplace = false);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_rope_node(
-            std::shared_ptr<GraphNode> &input_node, std::shared_ptr<GraphNode> &rope_table_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_ffn_inp(
+        /**
+         * @brief 构建FFN输入节点
+         * @param input_node 输入节点
+         * @param current_node 当前节点
+         * @return
+         */
+        std::shared_ptr<GraphNode> build_ffn_inp(
             std::shared_ptr<GraphNode> &input_node,
             std::shared_ptr<GraphNode> &current_node);
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_ffn_up(
-            const std::unordered_map<tff::core::memory::ModelTensorType,
-                std::shared_ptr<tff::core::model::layer::ModelLayerObject> > &layer_map,
-            std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            std::shared_ptr<tff::core::graph::GraphNode> &input_node);
+        /**
+         * @brief 构建提取输出logits节点
+         * @param node 输入节点
+         * @return
+         */
+        std::shared_ptr<GraphNode> build_gather_node(std::shared_ptr<GraphNode> &node);
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_ffn_gate(
-            const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                tff::core::model::layer::ModelLayerObject> > &layer_map,
-            std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            std::shared_ptr<tff::core::graph::GraphNode> &input_node);
+        /**
+         * @brief 构建数据卸载节点， GPU卸载结果到CPU
+         * @param node 输入节点
+         * @return
+         */
+        std::shared_ptr<GraphNode> build_offload_node(std::shared_ptr<GraphNode> &node);
 
-        std::shared_ptr<tff::core::graph::GraphNode> build_ffn_down(
-            const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                tff::core::model::layer::ModelLayerObject> > &layer_map,
-            std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            std::shared_ptr<tff::core::graph::GraphNode> &input_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_ffn(
-            const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                tff::core::model::layer::ModelLayerObject> > &layer_map,
-            std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-            std::shared_ptr<tff::core::graph::GraphNode> &input_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_unary_op(
-            std::shared_ptr<tff::core::graph::GraphNode> &up_node,
-            std::shared_ptr<tff::core::graph::GraphNode> &gate_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_kv_cache_store_node(
-            memory::ModelTensorType tensor_type, const int &layer_id, const std::shared_ptr<GraphNode> &kv_node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_kv_cache_load_node(
-            memory::ModelTensorType tensor_type, const int &layer_id, const std::shared_ptr<GraphNode> &node);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_rope_table_node();
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_mul_node(
-            std::shared_ptr<layer::ModelLayerObject> &layer, std::shared_ptr<GraphNode> &a_node);
-
-
-        //build mem graph;
-        //
-        std::shared_ptr<tff::core::graph::GraphNode> build_host_node(
-            std::shared_ptr<layer::ModelLayerObject> &layer, NodeType &input_node);
-
-        //
-        std::shared_ptr<tff::core::graph::GraphNode> build_device_node(
-            std::shared_ptr<layer::ModelLayerObject> &layer, NodeType &input_node,
-            std::shared_ptr<GraphNode> &current_cpu_node, bool
-            is_input = false);
-
-        std::shared_ptr<tff::core::graph::GraphNode> build_aligned_node(std::shared_ptr<GraphNode> &input_node);
-
-        //
-        NodeType build_layer_node(memory::ModelTensorType tensor_type,
-                                  const std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                                      tff::core::model::layer::ModelLayerObject> > &layer_map, NodeType &input_node,
-                                  bool
-                                  is_input = false);
+        /**
+         * @brief 构建Rope节点
+         * @param layer_id 层ID
+         * @param input_node 输入节点
+         * @return
+         */
+        std::shared_ptr<graph::GraphNode> build_rope_node(
+            int layer_id, const std::shared_ptr<GraphNode> &input_node);
     };
 }
 #endif //TFFINFER_LLAMACREATOR_H

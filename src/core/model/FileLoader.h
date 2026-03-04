@@ -18,7 +18,9 @@
 //#include <bits/resource.h>
 #endif
 namespace tff::core::model {
-    //file
+    /**
+     * @brief 文件加载器
+     */
     class FileLoader {
     public:
         FileLoader(const char *fname, const char *mode) {

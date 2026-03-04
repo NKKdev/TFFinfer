@@ -17,7 +17,7 @@ namespace tff::schedule {
         if (file.is_open()) {
             file << dump_str;
             file.close();
-            tff::log::Logger::info("Task flow graph dumped to: %s\n", graph_dump_path);
+            //tff::log::Logger::info("Task flow graph dumped to: %s\n", graph_dump_path);
         } else {
             tff::log::Logger::warning("Failed to open file for dumping task graph: %s\n", graph_dump_path);
         }

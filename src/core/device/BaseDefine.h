@@ -8,7 +8,7 @@
 #include <string>
 #include "ModuleFactory.h"
 namespace tff::core::device {
-    //
+
     enum DeviceSchedulingPriority {
         TFF_DEVICE_PRIORITY_DEFAULT = 0,
         TFF_DEVICE_PRIORITY_CPU = 1,

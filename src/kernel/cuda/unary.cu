@@ -27,11 +27,21 @@ namespace tff::kernel {
     }
 
     template<typename T>
+    class UnaryOP<T, core::device::GPUTag> : public base::OPCreatorBase<UnaryOP<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_UNARY;
+        }
+    };
+    template<typename T>
     void unary_op(const core::graph::TFFUnaryType &type,
                   std::shared_ptr<core::memory::Tensor> &x1, std::shared_ptr<core::memory::Tensor> &x2,
                   std::shared_ptr<core::memory::Tensor> &result,
                              std::shared_ptr<core::device::DeviceStream> &stream) {
-        if (x1 == nullptr || x2 == nullptr || result == nullptr) {
+        if (x1 == nullptr || x2 == nullptr || result == nullptr || x1->get_buffer() == nullptr ||
+            x2->get_buffer() == nullptr || result->get_buffer() == nullptr) {
             tff::log::Logger::error("input params is invalid!!");
             return;
         }
@@ -58,19 +68,21 @@ namespace tff::kernel {
 
     //
     template<typename T>
-    void tff::kernel::UnaryOP<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto unary_type = static_cast<tff::core::graph::TFFUnaryType>(kernel::base::get_param_value<const int>(0, para_ptr));
-        auto x1 = kernel::base::get_param_value<std::shared_ptr<core::memory::Tensor> >(1, para_ptr);
-        auto x2 = kernel::base::get_param_value<std::shared_ptr<core::memory::Tensor> >(2, para_ptr);
-        auto output = kernel::base::get_param_value<std::shared_ptr<core::memory::Tensor> >(3, para_ptr);
+    void tff::kernel::UnaryOP<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+
+        auto unary_type = static_cast<tff::core::graph::TFFUnaryType>(kernel::base::get_param_value<int>(
+            UnaryOPBuilder::Params::UnaryType, para_ptr));
+        auto x1 = kernel::base::get_param_value<std::shared_ptr<core::memory::Tensor> >(UnaryOPBuilder::Params::X1, para_ptr);
+        auto x2 = kernel::base::get_param_value<std::shared_ptr<core::memory::Tensor> >(UnaryOPBuilder::Params::X2, para_ptr);
+        auto output = kernel::base::get_param_value<std::shared_ptr<core::memory::Tensor> >(UnaryOPBuilder::Params::Out, para_ptr);
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                        para_ptr->get_param_count() - 1, para_ptr);
+                        kernel::builder::OpParamBuilderBase<UnaryOPBuilder>::CommonParams::Stream, para_ptr);
         unary_op<T>(unary_type, x1, x2, output, stream);
     }
 
-    template class tff::kernel::UnaryOP<half>;
-    template class tff::kernel::UnaryOP<float>;
-    REGISTER_OP_OBJECT(UnaryOP, half);
+    template class tff::kernel::UnaryOP<half, core::device::GPUTag>;
+    template class tff::kernel::UnaryOP<float, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(UnaryOP, half, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(UnaryOP, float);
+    REGISTER_OP_OBJECT_DEVICE(UnaryOP, float, core::device::GPUTag);
 }

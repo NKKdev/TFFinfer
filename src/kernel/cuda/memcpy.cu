@@ -22,28 +22,6 @@ namespace tff::kernel {
 
         allocator->memcpy_async(src->get_buffer()->ptr(), dst->get_buffer()->ptr(), dst->get_bytes(), kind,
                                 stream->get_native_stream());
-
-#ifdef _DEBUG
-        // float *cpu_result = static_cast<float *>(src->get_buffer()->ptr());
-        //
-        // std::vector<float> gpu_result;
-        // gpu_result.resize(
-        //     dst->get_shape()[0] * dst->get_shape()[1] * dst->get_shape()[2] *
-        //     dst->get_shape()[3]);
-        // dst->get_allocator()->memcopy(dst->get_buffer()->ptr(), gpu_result.data(),
-        //     dst->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
-        //
-        // for (int mm = 0; mm < dst->get_shape()[1]; mm++) {
-        //     for (int nn = 0; nn < dst->get_shape()[0]; nn++) {
-        //         float delta = gpu_result[mm * dst->get_shape()[0] + nn] - cpu_result[mm * dst->get_shape()[0] + nn];
-        //         if (delta > 0.001f) {
-        //             tff::log::Logger::error("error: m: %d n: %d, delta: %lf", mm, nn, delta);
-        //             throw std::runtime_error("error");
-        //         }
-        //     }
-        // }
-        // tff::log::Logger::info("layer node MemCpy op compute success!");
-#endif
     }
 
     static bool is_same_shape(std::array<int64_t, MAX_TENSOR_DIM> &shape1,
@@ -56,47 +34,58 @@ namespace tff::kernel {
         return true;
     }
 
+    template<typename T>
+    class MemCpy<T,
+                core::device::GPUTag> : public base::OPCreatorBase<MemCpy<T, core::device::GPUTag>, T,
+                core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_MEM_CPY;
+        }
+    };
+
     //
     template<typename T>
-    void tff::kernel::MemCpy<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        const auto memcpy_kind = kernel::base::get_param_value<tff::core::memory::MemCpyKind>(0, para_ptr);
+    void tff::kernel::MemCpy<T, core::device::GPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        const auto memcpy_kind = kernel::base::get_param_value<tff::core::memory::MemCpyKind>(
+            MemCpyBuilder::Params::MemCpyKind, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
-        auto input_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<core::memory::Tensor>>>(
-                   2, para_ptr);
+            MemCpyBuilder::Params::Out, para_ptr);
+        auto input_tensor = kernel::base::get_param_value<std::shared_ptr<core::memory::Tensor> >(
+            MemCpyBuilder::Params::In, para_ptr);
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                        para_ptr->get_param_count() - 1, para_ptr);
+            kernel::builder::OpParamBuilderBase<MemCpyBuilder>::CommonParams::Stream, para_ptr);
 
-        for (auto &input_tensor: input_tensors) {
-            if (input_tensor == nullptr || output_tensors == nullptr) {
-                tff::log::Logger::error("kernel param is invalid!");
-                return;
-            }
-            if (input_tensor->get_shape() != output_tensors->get_shape()) {
-                return;;
-            }
-            if (input_tensor->get_buffer() == nullptr) {
-                tff::log::Logger::error("kernel param is invalid!");
-                return;
-            }
-            memcpy_kernel_cuda<T>(input_tensor, output_tensors,
-                                  memcpy_kind, stream);
+
+        if (input_tensor == nullptr || output_tensors == nullptr) {
+            return;;
         }
+        if (input_tensor->get_shape() != output_tensors->get_shape()) {
+            return;;
+        }
+        if (input_tensor->get_buffer() == nullptr) {
+            return;;
+        }
+        memcpy_kernel_cuda<T>(input_tensor, output_tensors,
+                              memcpy_kind, stream);
     }
 
 
-    template class tff::kernel::MemCpy<float>;
-    template class tff::kernel::MemCpy<double>;
-    template class tff::kernel::MemCpy<int32_t>;
-    template class tff::kernel::MemCpy<int64_t>;
-    template class tff::kernel::MemCpy<Q8_0>;
-    REGISTER_OP_OBJECT(MemCpy, float);
+    template class tff::kernel::MemCpy<float, core::device::GPUTag>;
+    template class tff::kernel::MemCpy<double, core::device::GPUTag>;
+    template class tff::kernel::MemCpy<int32_t, core::device::GPUTag>;
+    template class tff::kernel::MemCpy<int64_t, core::device::GPUTag>;
+    template class tff::kernel::MemCpy<Q8_0, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(MemCpy, float, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(MemCpy, double);
+    REGISTER_OP_OBJECT_DEVICE(MemCpy, double, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(MemCpy, int32_t);
+    REGISTER_OP_OBJECT_DEVICE(MemCpy, int32_t, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(MemCpy, int64_t);
+    REGISTER_OP_OBJECT_DEVICE(MemCpy, int64_t, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(MemCpy, Q8_0);
+    REGISTER_OP_OBJECT_DEVICE(MemCpy, Q8_0, core::device::GPUTag);
 }

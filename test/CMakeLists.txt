@@ -41,15 +41,6 @@ if (NOT glog_FOUND)
     get_target_property(GLOG_INCLUDE_DIRS glog::glog INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "Glog include directories: ${GLOG_INCLUDE_DIRS}")
 endif ()
-#cutlass
-FetchContent_Declare(
-        cutlass
-        GIT_REPOSITORY https://gitee.com/git_mirror/cutlass.git
-        GIT_TAG v3.7.0
-)
-FetchContent_MakeAvailable(cutlass)
-get_target_property(cutlass_INCLUDE_DIRS CUTLASS INTERFACE_INCLUDE_DIRECTORIES)
-message(STATUS "cutlass include directories: ${cutlass_INCLUDE_DIRS}")
 
 file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cu
@@ -66,6 +57,8 @@ add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
         quant_fp32_gemm.cu
         varify_gemm_quant_q8_0.cu
         set_of_rows.cu
+        fp32_to_fp16.cu
+        flash_attention_rope_neox.cu
 )
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE

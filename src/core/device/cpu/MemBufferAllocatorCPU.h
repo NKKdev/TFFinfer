@@ -45,7 +45,7 @@ namespace tff::core::device {
 
     public:
         [[nodiscard]] inline tff::core::device::DeviceType device_type() const override {
-            return tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU;
+            return tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU;
         }
 
         void release(void *ptr) const override;

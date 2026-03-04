@@ -42,7 +42,7 @@ namespace tff::kernel {
 
                 auto float_data_ptr = (float *) (
                     (char *) output_tensor->get_buffer()->ptr() + (i * shape_dim * token_embed->get_shape()[0] + j *
-                    token_embed->get_shape()[0]) * sizeof(float));
+                                                                   token_embed->get_shape()[0]) * sizeof(float));
                 if (float_data_ptr && quant_data_ptr) {
                     dequantize_callback(quant_data_ptr, float_data_ptr, token_embed->get_shape()[0]);
                 }
@@ -50,15 +50,28 @@ namespace tff::kernel {
         }
     }
 
+    template<typename T>
+    class Embedding<T,
+                core::device::CPUTag> : public base::OPCreatorBase<Embedding<T, core::device::CPUTag>, T,
+                core::device::CPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_EMBEDDING;
+        }
+    };
+
     //
     template<typename T>
-    void tff::kernel::Embedding<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    void tff::kernel::Embedding<T, core::device::CPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         auto embedding_weight = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            0, para_ptr);
+            EmbeddingBuilder::Params::Weight, para_ptr);
         auto input_token = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
+            EmbeddingBuilder::Params::InputToken, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            2, para_ptr);
+            EmbeddingBuilder::Params::Out, para_ptr);
 
         if (embedding_weight == nullptr || input_token == nullptr || output_tensors == nullptr) {
             tff::log::Logger::error("embedding input tensors is empty");
@@ -66,17 +79,18 @@ namespace tff::kernel {
         }
 
         embedding_kernel_cpu<T>(embedding_weight, input_token, output_tensors);
+
     }
 
-    template class tff::kernel::Embedding<float>;
-    template class tff::kernel::Embedding<double>;
-    template class tff::kernel::Embedding<int32_t>;
-    template class tff::kernel::Embedding<Q8_0>;
-    REGISTER_OP_OBJECT(Embedding, float);
+    template class tff::kernel::Embedding<float, core::device::CPUTag>;
+    template class tff::kernel::Embedding<double, core::device::CPUTag>;
+    template class tff::kernel::Embedding<int32_t, core::device::CPUTag>;
+    template class tff::kernel::Embedding<Q8_0, core::device::CPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(Embedding, float, core::device::CPUTag);
 
-    REGISTER_OP_OBJECT(Embedding, double);
+    REGISTER_OP_OBJECT_DEVICE(Embedding, double, core::device::CPUTag);
 
-    REGISTER_OP_OBJECT(Embedding, int32_t);
+    REGISTER_OP_OBJECT_DEVICE(Embedding, int32_t, core::device::CPUTag);
 
-    REGISTER_OP_OBJECT(Embedding, Q8_0);
+    REGISTER_OP_OBJECT_DEVICE(Embedding, Q8_0, core::device::CPUTag);
 }

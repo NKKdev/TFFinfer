@@ -10,17 +10,17 @@
 
 namespace tff::core::memory {
     enum class MemoryType {
-        TFF_MEM_TYPE_WEIGHT,      // 持久权重内存，不可回收，常驻
+        TFF_MEM_TYPE_RESIDENT,      // 持久权重内存，不可回收，常驻
         TFF_MEM_TYPE_WORKSPACE,   // 临时激活内存等，可复用，及时释放
         TFF_MEM_TYPE_KV_CACHE,// 可复用，固定内存块
     };
     
     enum MemCpyKind {
         TFF_MEM_CPY_TYPE_UNKNOWN = 0,
-        TFF_MEM_CPY_TYPE_NORMAL,
-        TFF_MEM_CPY_TYPE_DEVICE2HOST = 1,
-        TFF_MEM_CPY_TYPE_HOST2DEVICE = 2,
-        TFF_MEM_CPY_TYPE_DEVICE2DEVICE = 3,
+        TFF_MEM_CPY_TYPE_NORMAL = 1,
+        TFF_MEM_CPY_TYPE_DEVICE2HOST = 2,
+        TFF_MEM_CPY_TYPE_HOST2DEVICE = 3,
+        TFF_MEM_CPY_TYPE_DEVICE2DEVICE = 4,
     };
 
     enum DataType {
@@ -72,6 +72,7 @@ namespace tff::core::memory {
         LLM_TENSOR_POS_EMBD,
         LLM_TENSOR_OUTPUT,
         LLM_TENSOR_OUTPUT_NORM,
+        LLM_TENSOR_OUTPUT_IDS,
         LLM_TENSOR_ROPE_FREQS,
         LLM_TENSOR_ROPE_FACTORS_LONG,
         LLM_TENSOR_ROPE_FACTORS_SHORT,

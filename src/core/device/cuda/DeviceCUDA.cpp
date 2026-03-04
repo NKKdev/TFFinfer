@@ -57,7 +57,7 @@ namespace tff::core::device::cuda {
         return tff::core::device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU;
     }
 
-    tff::core::device::DeviceType DeviceCUDA::device_type() {
+    DeviceType DeviceCUDA::device_type() {
         std::vector<int> device_list;
         get_device_id(device_list);
         if (device_list.empty()) {

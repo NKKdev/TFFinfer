@@ -5,13 +5,13 @@
 #include "InferRuntime.h"
 #include "model/base/ModelDetectorRegistry.h"
 #include "model/llama/LLAMACreator.h"
-#include "FunctionFactory.h"
 #include "model/base/ModelConfigReader.h"
 #include "mem/BaseDefine.h"
-
+#include "sampler/LLMSampler.h"
 namespace tff::core::runtime {
     bool LLMInferRuntime::load_model(const std::vector<std::string> &model_files_path,
                                      const tff::core::model::ModelConfig &params) {
+        tff::log::Logger::info("Loading model: {%s}", model_files_path[0].c_str());
         if (model_files_path.empty()) {
             return false;
         }
@@ -22,12 +22,11 @@ namespace tff::core::runtime {
         this->_model_loader = model_detector->create_loader();
         this->_model_loader->load_from_file(model_files_path, params);
         this->build_model_creator();
-        this->_vocabulary_ptr = std::make_unique<tff::core::model::LLMLLaMaVocabulary>();
+        this->_vocabulary_ptr = std::make_unique<tff::core::model::LLMVocabulary>();
 
         this->load_hparams(params._is_fuse_op, params._kv_data_type);
         this->load_vocab();
         this->build_layers();
-        //this->load_tensor_data();
         return bRet;
     }
 
@@ -48,58 +47,42 @@ namespace tff::core::runtime {
         }
         this->_model_creator = creator;
         auto &cfg = this->_model_loader->get_model_config();
-        this->_model_creator->_model_ctx._n_embd_head = cfg._n_embd / cfg._n_head_arr[0];
-        this->_model_creator->_model_ctx._max_seq_len = cfg._n_ctx;
-        this->_model_creator->_model_ctx._n_embd_head_k = cfg._n_embd_head_k;
-        this->_model_creator->_model_ctx._n_embd_head_v = cfg._n_embd_head_v;
-        this->_model_creator->_model_ctx._n_head = cfg._n_head_arr[0];
-        this->_model_creator->_model_ctx._n_head_kv = cfg._n_head_kv_arr[0];
-        this->_model_creator->_model_ctx._n_layer = cfg._n_layer;
-        this->_model_creator->_model_ctx._use_fp16 = cfg._use_f16;
-        this->_model_creator->_model_ctx._use_mmap = cfg._use_mmap;
-        this->_model_creator->_model_ctx._rope_freq_base = cfg._rope_freq_base;
-        this->_model_creator->_model_ctx._rope_freq_scale = cfg._rope_freq_scale;
-        this->_model_creator->_model_ctx._model_loader = this->_model_loader;
-        this->_model_creator->_model_ctx._f_norm_rms_eps = cfg._f_norm_rms_eps;
+        this->_model_creator->_graph_ctx._n_embd_head = cfg._n_embd / cfg._n_head_arr[0];
+        this->_model_creator->_graph_ctx._max_seq_len = cfg._n_ctx;
+        this->_model_creator->_graph_ctx._n_embd_head_k = cfg._n_embd_head_k;
+        this->_model_creator->_graph_ctx._n_embd_head_v = cfg._n_embd_head_v;
+        this->_model_creator->_graph_ctx._n_head = cfg._n_head_arr[0];
+        this->_model_creator->_graph_ctx._n_head_kv = cfg._n_head_kv_arr[0];
+        this->_model_creator->_graph_ctx._n_layer = cfg._n_layer;
+        this->_model_creator->_graph_ctx._use_fp16 = cfg._use_f16;
+        this->_model_creator->_graph_ctx._use_mmap = cfg._use_mmap;
+        this->_model_creator->_graph_ctx._rope_freq_base = cfg._rope_freq_base;
+        this->_model_creator->_graph_ctx._rope_freq_scale = cfg._rope_freq_scale;
+        this->_model_creator->_graph_ctx._model_loader = this->_model_loader;
+        this->_model_creator->_graph_ctx._f_norm_rms_eps = cfg._f_norm_rms_eps;
+        this->_model_creator->_graph_ctx._rope_type = cfg._rope_type;
+        this->_model_creator->_graph_ctx._is_fuse = cfg._is_fuse_op;
+        this->_model_creator->_graph_ctx._n_output = cfg._n_output;
+
         return true;
     }
 
     bool LLMInferRuntime::init_device() {
-        auto gpu_device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
-            DEVICE_BACKEND_FLAG,
-            tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CUDA));
-        if (gpu_device) {
-            gpu_device->device_init();
-            this->_devices.insert(gpu_device);
-            this->_has_gpu_backend = true;
-            std::vector<int> device_ids;
-            gpu_device->get_device_id(device_ids);
-            for (auto device_id: device_ids) {
-                this->_devices_map.insert(std::make_pair(device_id, gpu_device));
-            }
+        this->_device_manager = std::dynamic_pointer_cast<device::DeviceManager>(
+            tff::factory::ModuleFactory::instance()->create_shared<tff::module::ModuleObject>(
+                DEVICE_MANAGER_FLAG,
+                tff::factory::ModuleKeyType(DEVICE_MANAGER_FLAG)));
+        if (this->_device_manager == nullptr) {
+            return false;
         }
-
-        auto cpu_device = tff::factory::ModuleFactory::instance()->create_shared<tff::core::device::DeviceBaseObject>(
-            DEVICE_BACKEND_FLAG,
-            tff::factory::ModuleKeyType(DEVICE_BACKEND_TYPE_CPU));
-        if (cpu_device) {
-            cpu_device->device_init();
-            this->_devices.insert(cpu_device);
-            std::vector<int> device_ids;
-            cpu_device->get_device_id(device_ids);
-            for (auto device_id: device_ids) {
-                this->_devices_map.insert(std::make_pair(device_id, cpu_device));
-            }
-        }
-
-        return !(this->_devices.empty());
+        return true;
     }
 
     bool LLMInferRuntime::init_runtime_context() {
+        tff::log::Logger::info("Initializing runtime context.");
         bool ret = true;
-        ret &= this->init_device();
-        ret &= this->init_kvcache();
-        ret &= this->load_tensor_data();
+        ret &= init_kvcache();
+        ret &= load_tensor_data();
         return ret;
     }
 
@@ -114,7 +97,7 @@ namespace tff::core::runtime {
         kv_cfg._max_tokens = this->_model_config._n_ctx;
         kv_cfg._use_f16 = this->_model_config._use_f16;
         kv_cfg._data_type = this->_model_config._kv_data_type;
-        for (auto device: this->_devices) {
+        for (auto &[device_id, device]: this->_device_manager->devices()) {
             if (!device) {
                 tff::log::Logger::error("No valid device found in _devices.");
                 return false;
@@ -125,100 +108,93 @@ namespace tff::core::runtime {
             const float one_page_size = kv_cfg._n_embd_head * kv_cfg._n_head_kv * PAGE_SIZE * type_size;
             tff::log::Logger::info("KV Cache: Size per page: {%lf} bytes", one_page_size);
 
-            //
-            std::vector<int> device_ids;
-            device->get_device_id(device_ids);
-            if (device_ids.empty()) {
-                tff::log::Logger::error("Failed to get device IDs.");
-                return false;
-            }
-            tff::log::Logger::info("KV Cache: Target devices: {%d}", device_ids[0]);
+            tff::log::Logger::info("KV Cache: Target devices: {%d}", device_id);
 
             auto model_ctx = this->_model_loader->get_model_ctx();
-            for (const auto device_id: device_ids) {
-                size_t free_mem = 0;
-                size_t total_mem = 0;
-                device->get_device_mem(device_id, &free_mem, &total_mem);
-                tff::log::Logger::info("Device {%d}: Total memory: {%lld} bytes, Free memory: {%lld} bytes",
-                                       device_id, total_mem, free_mem);
-                //
 
-                //预留模型上下文权重和其他开销的显存;
-                const size_t context_reserve = model_ctx->_max_tensor_byte_size * model_ctx->_tensor_info.size();
-                free_mem -= context_reserve;
-                tff::log::Logger::info("Reserved memory for model context and overhead: {%lld} bytes", context_reserve);
+            size_t free_mem = 0;
+            size_t total_mem = 0;
+            device->get_device_mem(device_id, &free_mem, &total_mem);
+            tff::log::Logger::info("Device {%d}: Total memory: {%lld} bytes, Free memory: {%lld} bytes",
+                                   device_id, total_mem, free_mem);
+            //
 
-                if (free_mem <= 0) {
-                    tff::log::Logger::error(
-                        "Insufficient GPU memory. After reservation, free memory is {%lf} bytes (<= 0).",
-                        free_mem);
-                    return false;
-                }
+            //预留模型上下文权重和其他开销的显存;
+            const size_t context_reserve = model_ctx->_max_tensor_byte_size * model_ctx->_tensor_info.size();
+            free_mem -= context_reserve;
+            tff::log::Logger::info("Reserved memory for model context and overhead: {%lld} bytes", context_reserve);
 
-                //计算总页数并创建KV Cache
-                kv_cfg._total_pages = min(static_cast<int>(free_mem / one_page_size), kv_cfg._max_tokens / PAGE_SIZE);
-                tff::log::Logger::info("KV Cache: Total available free memory for KV: {%lld} bytes",
-                                       static_cast<size_t>(free_mem));
-                tff::log::Logger::info("KV Cache: Total pages calculated: {%d} ({%lld} bytes per page)",
-                                       kv_cfg._total_pages, static_cast<size_t>(one_page_size));
+            if (free_mem <= 0) {
+                tff::log::Logger::error(
+                    "Insufficient GPU memory. After reservation, free memory is {%lf} bytes (<= 0).",
+                    free_mem);
+                return false;
+            }
 
-                if (kv_cfg._total_pages == 0) {
-                    tff::log::Logger::error(
-                        "Calculated total KV cache pages is 0. Available memory ({%lld}) is less than one page size ({%lld}).",
-                        static_cast<size_t>(free_mem), static_cast<size_t>(one_page_size));
-                    return false;
-                }
-                if (!this->_mem_manager_ptr->init(device_id)) {
-                    tff::log::Logger::error("device %d memory manager init failed!!", device_id);
-                    return false;
-                }
-                try {
-                    this->_kv_cache_ptr[device_id] = std::make_shared<LLMKVCache>(device_id,
-                        this->_model_config._kv_data_type,
-                        kv_cfg,this->_mem_manager_ptr);
-                    tff::log::Logger::info("KV Cache successfully initialized with {%d} pages.", kv_cfg._total_pages);
-                } catch (const std::exception &e) {
-                    tff::log::Logger::error("Failed to create LLMKVCache instance. Exception: {%s}", e.what());
-                    return false;
-                } catch (...) {
-                    tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
-                    return false;
-                }
-                if (this->_mem_manager_ptr == nullptr) {
-                    tff::log::Logger::info("Memory Manager created failed.");
-                    return false;
-                }
+            //计算总页数并创建KV Cache
+            kv_cfg._total_pages = min(static_cast<int>(free_mem / one_page_size),
+                kv_cfg._n_layer * kv_cfg._max_tokens / PAGE_SIZE);
+            tff::log::Logger::info("KV Cache: Total available free memory for KV: {%lld} bytes",
+                                   (free_mem));
+            tff::log::Logger::info("KV Cache: Total pages calculated: {%d} ({%lld} bytes per page)",
+                                   kv_cfg._total_pages, static_cast<size_t>(one_page_size));
+
+            if (kv_cfg._total_pages == 0) {
+                tff::log::Logger::error(
+                    "Calculated total KV cache pages is 0. Available memory ({%lld}) is less than one page size ({%lld}).",
+                    static_cast<size_t>(free_mem), static_cast<size_t>(one_page_size));
+                return false;
+            }
+            if (!this->_mem_manager_ptr->init(device_id)) {
+                tff::log::Logger::error("device %d memory manager init failed!!", device_id);
+                return false;
+            }
+            try {
+                this->_kv_cache_ptr[device_id] = std::make_shared<LLMKVCache>(device_id,
+                                                                              this->_model_config._kv_data_type,
+                                                                              kv_cfg, this->_mem_manager_ptr);
+                tff::log::Logger::info("KV Cache successfully initialized with {%d} pages.", kv_cfg._total_pages);
+            } catch (const std::exception &e) {
+                tff::log::Logger::error("Failed to create LLMKVCache instance. Exception: {%s}", e.what());
+                return false;
+            } catch (...) {
+                tff::log::Logger::error("Failed to create LLMKVCache instance. Unknown exception occurred.");
+                return false;
+            }
+            if (this->_mem_manager_ptr == nullptr) {
+                tff::log::Logger::info("Memory Manager created failed.");
+                return false;
             }
         }
-
         //
 
         return true; // 初始化成功
     }
 
-    bool LLMInferRuntime::init_graph() {
+    bool LLMInferRuntime::init_graph(std::shared_ptr<tff::core::graph::Graph> &graph_ptr) {
         if (this->_layer_map.empty()) {
             tff::log::Logger::error("model layer is invalid!!\n");
             return false;
         }
         tff::log::Logger::info("Initializing graph");
 
-        this->_model_creator->_model_ctx._kv_cache_ptr = this->_kv_cache_ptr;
-        this->_model_creator->build_graph(this->_layer_map, this->_infer_graph_ptr);
+        this->_model_creator->_graph_ctx._kv_cache_ptr = this->_kv_cache_ptr;
+        this->_model_creator->build_graph(this->_layer_map, graph_ptr);
+        this->_graph_optimizer->optimize(this->_model_creator->_graph_ctx, graph_ptr);
         return true;
     }
-
-    bool LLMInferRuntime::init_io_graph() {
+    bool LLMInferRuntime::init_io_graph(std::shared_ptr<tff::core::graph::Graph> &graph_ptr) {
         if (this->_layer_map.empty()) {
             tff::log::Logger::error("model layer is invalid!!\n");
             return false;
         }
-        tff::log::Logger::info("Initializing io graph");
+        tff::log::Logger::info("Initializing graph");
 
-        this->_model_creator->build_mem_graph(this->_layer_map, this->_mem_graph_ptr);
+        this->_model_creator->_graph_ctx._kv_cache_ptr = this->_kv_cache_ptr;
+        this->_model_creator->build_mem_graph(this->_layer_map, graph_ptr);
+        this->_graph_optimizer->optimize(this->_model_creator->_graph_ctx, graph_ptr);
         return true;
     }
-
     void LLMInferRuntime::build_mem_offset(const std::shared_ptr<tff::core::runtime::LLMMemManager> &_mem_manager_ptr,
                                            const std::shared_ptr<graph::Graph> &graph_ptr,
                                            std::unordered_map<std::string,
@@ -229,32 +205,46 @@ namespace tff::core::runtime {
                 node->op_type() == TFF_OP_VIEW || node->op_type() == TFF_OP_MAP2CPU) {
                 continue;
             }
-            auto current_device = *node->device().begin();
+
+            const auto &device_id = node->get_tensor()->get_allocator()->_device_id;
+            const auto &current_device =
+                this->_device_manager->get_device(device_id);
             auto [start, end] = graph_ptr->get_lifetime(node);
             //tff::log::Logger::info("node： %s start: %d, end: %d", node->name().c_str(), start, end);
 
             auto mem_offset = _mem_manager_ptr->allocate_memory(node->get_tensor()->get_bytes(),
-                                                                start, end, current_device.first, node->mem_type());
+                                                                start, end, device_id, node->get_tensor()->memory_type());
             //node->get_tensor()->set_external_memory_index(mem_offset);
-            auto device_type_flag = current_device.second->get_device_type_flag(current_device.first);
+            auto device_type_flag = current_device->get_device_type_flag(device_id);
             // tff::log::Logger::info("node: %s mem start offset: %lld, mem end offset: %lld", node->name().c_str(),
             //                        mem_offset, mem_offset + node->get_tensor()->get_bytes());
             auto iter = mem_buffer_offset_map.find(device_type_flag);
             if (iter != mem_buffer_offset_map.end()) {
-                auto device_iter = iter->second.find(current_device.first);
+                auto device_iter = iter->second.find(device_id);
                 if (device_iter != iter->second.end()) {
-                    device_iter->second = device_iter->second < mem_offset
-                                              ? mem_offset
-                                              : device_iter->second;
+                    device_iter->second = device_iter->second<mem_offset
+                                                                  ? mem_offset
+                                                                  : device_iter->second;
                 } else {
-                    iter->second.insert(std::make_pair(current_device.first, mem_offset));
+                    iter->second.insert(std::make_pair(device_id, mem_offset));
                 }
             } else {
                 std::unordered_map<int, size_t> device_mem_offset_map;
-                device_mem_offset_map.insert(std::make_pair(current_device.first, mem_offset));
+                device_mem_offset_map.insert(std::make_pair(device_id, mem_offset));
                 mem_buffer_offset_map.insert(std::make_pair(device_type_flag, device_mem_offset_map));
             }
         }
+    }
+
+    int32_t LLMInferRuntime::sample_token() {
+        static thread_local std::mt19937 rng{std::random_device{}()};
+        float *logits = static_cast<float *>(this->_model_creator->_graph_ctx._logits->get_buffer()->ptr() +
+                (this->_model_creator->_graph_ctx._logits->get_shape()[1] - this->_model_config._n_output) *
+                this->_model_creator->_graph_ctx._logits->get_strides()[1]);
+
+        return core::sampling::LLMSampler::sample(this->_model_creator->_graph_ctx._logits->get_shape()[0],
+            logits,
+            this->_model_config._sampling_config, rng);
     }
 
     bool LLMInferRuntime::init_mem_manager(const std::shared_ptr<graph::Graph> &graph_ptr,
@@ -284,11 +274,12 @@ namespace tff::core::runtime {
         if (!is_cpu_init) {
             bRet &= _mem_manager_ptr->init(-1); //cpu id = -1;
         }
-        this->_model_creator->_model_ctx._mem_manager_ptr = _mem_manager_ptr;
+        this->_model_creator->_graph_ctx._mem_manager_ptr = _mem_manager_ptr;
         return bRet;
     }
 
     bool LLMInferRuntime::infer(const int n_predict, std::vector<std::string> &generate_str_vec) {
+        tff::log::Logger::info("infer start");
         bool bRet = true;
         for (auto &batch: this->_llm_batch_manager_ptr->_ubatches) {
             bRet &= this->prefill(batch);
@@ -301,31 +292,97 @@ namespace tff::core::runtime {
     }
 
     bool LLMInferRuntime::prefill(std::shared_ptr<LLMBatch> &ubatch) {
-        this->_model_creator->_model_ctx._is_prefill = true;
+        tff::log::Logger::info("prefill start");
+        this->_model_creator->_graph_ctx._is_prefill = true;
         this->build_inputs(ubatch);
         this->build_output();
-        if (!this->_infer_graph_ptr) {
-            this->init_graph();
+        if (!this->_prefill_graph_ptr) {
+            this->init_graph(this->_prefill_graph_ptr);
         }
+        time_t t1 = clock();
         try {
             this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER,
-                                                     this->_infer_graph_ptr,
-                                                     this->_model_config._is_fuse_op);
+                                                     this->_prefill_graph_ptr);
+
             this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_INFER);
         } catch (const std::exception &e) {
             tff::log::Logger::error("Prefill forward failed: {%s}", e.what());
             return false;
         }
+
+        //
+        ubatch->_tokens.push_back(this->sample_token());
+        time_t t2 = clock();
+        tff::log::Logger::info("prefill time: %lf s", double(t2 - t1) / CLOCKS_PER_SEC);
+        ubatch->_n_tokens++;
+        ubatch->_pos.push_back(ubatch->_tokens.size() - 1);
+        ubatch->_token_seq_ids.push_back(ubatch->_token_seq_ids[ubatch->_token_seq_ids.size() - 1]);
+        ubatch->_logits[ubatch->_logits.size() - 1] = 0;
+        ubatch->_logits.push_back(1);
+        tff::log::Logger::info("prefill token: %d", ubatch->_tokens.back());
         return true;
     }
 
     bool LLMInferRuntime::decode(std::shared_ptr<LLMBatch> &ubatch,
                                  const int &n_predict, std::string &generate_str) {
-        this->_model_creator->_model_ctx._is_prefill = false;
+        tff::log::Logger::info("decode start");
+        this->_model_creator->_graph_ctx._is_prefill = false;
+
+        std::shared_ptr<LLMBatch> batch = std::make_shared<LLMBatch>();
+        batch = ubatch;
+        batch->_pos = {batch->_pos.back()};
+        auto pos = batch->_pos.back();
+        batch->_tokens = {batch->_tokens.back()};
+        batch->_n_tokens = batch->_tokens.size();
+
+        this->_model_creator->_graph_ctx._n_tokens = batch->_n_tokens;
+
+        this->build_inputs(batch);
+        this->build_output();
+        std::vector<int64_t> generate_token;
+        generate_token.reserve(n_predict);
+        if (!this->_decode_graph_ptr) {
+            this->init_graph(this->_decode_graph_ptr);
+            this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER, this->_decode_graph_ptr);
+        }
+        time_t t1 = clock();
+        for (int step = 0; step < n_predict; ++step) {
+            generate_token.push_back(batch->_tokens.back());
+            batch->_pos = {pos};
+            batch->_tokens = {batch->_tokens.back()};
+            batch->_n_tokens = batch->_tokens.size();
+            this->_model_creator->_graph_ctx._n_tokens = batch->_n_tokens;
+
+            this->build_inputs(batch);
+            this->build_output();
+
+            this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_INFER);
+
+            batch->_tokens.push_back(this->sample_token());
+            batch->_n_tokens++;
+            pos++;
+            batch->_token_seq_ids.push_back(ubatch->_token_seq_ids[ubatch->_token_seq_ids.size() - 1]);
+            batch->_logits[ubatch->_logits.size() - 1] = 0;
+            batch->_logits.push_back(1);
+
+            update_kv_cache(this->_model_creator->_graph_ctx, batch);
+            const auto &eog_tokens = this->_vocabulary_ptr->get_eog_tokens();
+            std::string token_str = this->_vocabulary_ptr->_cache_token_to_piece[batch->_tokens.back()];
+            generate_str += token_str;
+            std::cout << token_str << std::flush;
+            if (std::find(eog_tokens.begin(), eog_tokens.end(), batch->_tokens.back()) != eog_tokens.end()){
+                break;
+            }
+        }
+        std::cout<<std::endl;
+        time_t t2 = clock();
+        tff::log::Logger::info("%d token decode time: %d s", n_predict, (t2 - t1) / CLOCKS_PER_SEC);
+        tff::log::Logger::info("generate string: %s", generate_str.c_str());
         return true;
     }
 
     int LLMInferRuntime::encode(const std::vector<std::string> &prompt_batches) {
+        tff::log::Logger::info("encode prompt...");
         if (prompt_batches.empty()) {
             tff::log::Logger::error("Prompt is empty.");
             return -1;
@@ -370,7 +427,7 @@ namespace tff::core::runtime {
 
     void LLMInferRuntime::build_inputs(std::shared_ptr<LLMBatch> &batch) {
         //set embedding layer input
-        this->_model_creator->_model_ctx._seq_id = batch->_token_seq_ids[0];
+        this->_model_creator->_graph_ctx._seq_id = batch->_token_seq_ids[0];
         auto &tokens_data = batch->_tokens;
         auto &input_pos = batch->_pos;
         auto token_tensor = std::make_shared<tff::core::memory::Tensor>(
@@ -385,12 +442,12 @@ namespace tff::core::runtime {
         token_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
 
         auto input_pos_tensor = std::make_shared<tff::core::memory::Tensor>(
-                                                                            tff::core::memory::DataType::TFF_DATA_TYPE_I32,
-                                                                            memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
-                                                                            std::array<int64_t, MAX_TENSOR_DIM>{
-                                                                                static_cast<int64_t>(input_pos.size()),
-                                                                                1, 1, 1
-                                                                            }, true);
+            tff::core::memory::DataType::TFF_DATA_TYPE_I32,
+            memory::MemoryType::TFF_MEM_TYPE_WORKSPACE,
+            std::array<int64_t, MAX_TENSOR_DIM>{
+                static_cast<int64_t>(input_pos.size()),
+                1, 1, 1
+            }, true);
         input_pos_tensor->set_buffer_data(input_pos.data(),
                                           input_pos.size() * memory::type_traits_auto[
                                               tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
@@ -409,6 +466,11 @@ namespace tff::core::runtime {
                     this->bind_device(input_pos_layer, this->_model_config._n_layer);
 
                     layer.insert(std::make_pair(input_pos_tensor->get_tensor_type(), input_pos_layer));
+                }else {
+                    input_pos_layer_iter->second->_tensor->set_shape(input_pos_tensor->get_shape());
+                    input_pos_layer_iter->second->_tensor->set_buffer_data(input_pos.data(),input_pos.size() * memory::type_traits_auto[
+                                              tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
+
                 }
                 //
                 auto input_token_embed_layer_iter = layer.find(memory::ModelTensorType::LLM_TENSOR_INPUT_TOKEN);
@@ -420,6 +482,11 @@ namespace tff::core::runtime {
                     this->bind_device(input_token_layer, this->_model_config._n_layer);
 
                     layer.insert(std::make_pair(token_tensor->get_tensor_type(), input_token_layer));
+                }else {
+                    input_token_embed_layer_iter->second->_tensor->set_shape(token_tensor->get_shape());
+                    input_token_embed_layer_iter->second->_tensor->set_buffer_data(tokens_data.data(),
+                                      tokens_data.size() * memory::type_traits_auto[
+                                          tff::core::memory::DataType::TFF_DATA_TYPE_I32]._type_size);
                 }
             }
         }
@@ -436,9 +503,9 @@ namespace tff::core::runtime {
         output_tensor->set_tensor_type(memory::ModelTensorType::LLM_TENSOR_OUTPUT);
 
 
-        auto input_layer_iter = this->_layer_map.find(LLM_TENSOR_LAYER_OUTPUT);
-        if (input_layer_iter != this->_layer_map.end()) {
-            for (auto &layers: input_layer_iter->second) {
+        auto output_layer_iter = this->_layer_map.find(LLM_TENSOR_LAYER_OUTPUT);
+        if (output_layer_iter != this->_layer_map.end()) {
+            for (auto &layers: output_layer_iter->second) {
                 auto &layer = layers.second;
                 auto out_put_layer_iter = layer.find(memory::ModelTensorType::LLM_TENSOR_OUTPUT);
                 if (out_put_layer_iter == layer.end()) {
@@ -454,9 +521,12 @@ namespace tff::core::runtime {
         }
     }
 
-    void LLMInferRuntime::load_stats() {
-        //this->_n_elements = this->_model_loader->_n_elements;
-        //this->_n_bytes = this->_model_loader->_n_bytes;
+    void LLMInferRuntime::update_kv_cache(model::GraphContext &graph_ctx, std::shared_ptr<LLMBatch> &ubatch) {
+        for (const auto &[layer_id, device_id] : graph_ctx._layer_device_map) {
+            graph_ctx._kv_cache_ptr[device_id]->set_kv(ubatch->_token_seq_ids.back(),
+                                                         layer_id,
+                                                         graph_ctx._n_tokens);
+        }
     }
 
     void LLMInferRuntime::load_hparams(bool is_fuse_op, const tff::core::memory::DataType &kv_data_type) {
@@ -480,7 +550,6 @@ namespace tff::core::runtime {
         size_t total_layer_num = this->_model_config._n_layer;
         for (auto &weight: weight_map) {
             size_t layer_index = 0;
-            std::shared_ptr<tff::core::graph::GraphNode> layer_node;
             auto tensor = weight.second._tensor_ptr;
             auto &layer_info = tff::core::global::LLM_LAYER_OP_INFOS.find(tensor->get_tensor_type())->second;
             if (layer_info.first == tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING) {
@@ -503,35 +572,35 @@ namespace tff::core::runtime {
             layer->_layer_name = get_layer_name(weight.first);
             layer->_layer_index = layer_index;
             layer->_tensor = weight.second._tensor_ptr;
+            layer->_tensor->set_memory_type(memory::MemoryType::TFF_MEM_TYPE_RESIDENT);
             layer->_model_file_index = weight.second._idx;
             layer->_offset = weight.second._offs;
             layer->_data_size = weight.second._alignment_size;
             this->bind_device(layer, total_layer_num);
 
-            auto iter = this->_layer_map[layer_info.first].find(layer_index);
-            if (iter != this->_layer_map[layer_info.first].end()) {
-                iter->second.insert(std::make_pair(tensor->get_tensor_type(), layer));
-            } else {
-                std::unordered_map<tff::core::memory::ModelTensorType, std::shared_ptr<
-                            tff::core::model::layer::ModelLayerObject> >
-                        tensor_type_graph_map;
-                tensor_type_graph_map.insert(std::make_pair(tensor->get_tensor_type(), layer));
-                this->_layer_map[layer_info.first].insert(std::make_pair(layer_index, tensor_type_graph_map));
-            }
+            auto& layer_index_map = this->_layer_map[layer_info.first];
+            auto& tensor_map = layer_index_map[layer_index];
+            tensor_map[tensor->get_tensor_type()] = std::move(layer);
         }
         return true;
     }
 
     void LLMInferRuntime::bind_device(std::shared_ptr<tff::core::model::layer::ModelLayerObject> &layer_obj,
                                       const int &total_layer_index) {
+        if (layer_obj->_tensor == nullptr) {
+            tff::log::Logger::error("[LLMInferRuntime] layer_obj->_tensor is nullptr.");
+            return;
+        }
         auto get_device = [](const std::string &device_type_flag, const int &layer_index,
-                             const int &total_layer_index)-> std::unordered_map<int, std::shared_ptr<
+                             const int &total_layer_index)-> std::pair<int, std::shared_ptr<
             tff::core::device::DeviceBaseObject> > {
             auto device = tff::factory::ModuleFactory::instance()->create_shared<
                 tff::core::device::DeviceBaseObject>(
                 DEVICE_BACKEND_FLAG, tff::factory::ModuleKeyType(device_type_flag));
+            if (device == nullptr) {
+                return {};
+            }
             std::vector<float> device_splits;
-
             std::vector<int> device_list;
             device->get_device_id(device_list);
             for (size_t i = 0; i < device_list.size(); ++i) {
@@ -556,18 +625,27 @@ namespace tff::core::runtime {
                                                          float(layer_index) / total_layer_index) -
                                         device_splits.
                                         begin();
-            return {{device_list[layer_device_id], device}};
+            return {device_list[layer_device_id], device};
         };
         switch (layer_obj->_type) {
             case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_INPUT: {
-                layer_obj->_device_list = get_device(
+                auto [device_id, device] = get_device(
                     DEVICE_BACKEND_TYPE_CPU, layer_obj->_layer_index, total_layer_index);
+                if (device != nullptr) {
+                    layer_obj->_tensor->set_allocator(device->get_device_buffer_allocator(device_id));
+                    layer_obj->_device_list.insert(std::make_pair(device_id, device));
+                }
                 break;
             }
             case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_OUTPUT:
             case tff::core::model::ModelTensorLayerType::LLM_TENSOR_LAYER_REPEATING: {
-                layer_obj->_device_list = get_device(
+                auto [device_id, device] = get_device(
                     DEVICE_BACKEND_TYPE_CUDA, layer_obj->_layer_index, total_layer_index);
+                if (device != nullptr) {
+                    layer_obj->_tensor->set_allocator(device->get_device_buffer_allocator(device_id));
+                    layer_obj->_device_list.insert(std::make_pair(device_id, device));
+                }
+
                 break;
             }
             default:
@@ -576,7 +654,10 @@ namespace tff::core::runtime {
     }
 
     bool LLMInferRuntime::load_tensor_data() {
-        this->init_io_graph();
+        if (!this->_mem_graph_ptr) {
+            this->init_io_graph(this->_mem_graph_ptr);
+        }
+
         try {
             this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_IO, this->_mem_graph_ptr);
             this->_task_manager->run(tff::schedule::TaskType::TFF_TASK_TYPE_IO);

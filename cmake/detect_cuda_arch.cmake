@@ -1,4 +1,3 @@
-# detect_cuda_arch.cmake 或直接写在 CMakeLists.txt 中
 if(CMAKE_CUDA_COMPILER AND NOT CMAKE_CUDA_ARCHITECTURES)
     find_program(NVIDIA_SMI nvidia-smi)
     if(NVIDIA_SMI)
@@ -13,8 +12,6 @@ if(CMAKE_CUDA_COMPILER AND NOT CMAKE_CUDA_ARCHITECTURES)
 
         if(DETECTED_COMPUTE_CAPS)
             message("-- DETECTED_COMPUTE_CAPS " ${DETECTED_COMPUTE_CAPS})
-            # 将 compute capability 转为整数（去掉小数点）
-            # 例如：8.6 → 86, 7.5 → 75
             string(REPLACE "." ";" CAP_LIST ${DETECTED_COMPUTE_CAPS})
             list(REMOVE_DUPLICATES CAP_LIST)
 

@@ -10,7 +10,7 @@
 #include "unicode.h"
 
 namespace tff::core::model {
-    bool tff::core::model::LLMLLaMaVocabulary::load_vocabulary(
+    bool tff::core::model::LLMVocabulary::load_vocabulary(
         const std::shared_ptr<tff::core::model::ModelLoaderBase> &model_loader) {
         bool bRet = true;
         this->_model_loader = model_loader;
@@ -46,7 +46,7 @@ namespace tff::core::model {
         return bRet;
     }
 
-    int32_t LLMLLaMaVocabulary::get_rank(const std::string &token_left, const std::string &token_right) const {
+    int32_t LLMVocabulary::get_rank(const std::string &token_left, const std::string &token_right) const {
         auto it = this->_bpe_ranks.find(std::make_pair(token_left, token_right));
         if (it == this->_bpe_ranks.end()) {
             return -1;
@@ -55,7 +55,7 @@ namespace tff::core::model {
         return it->second;
     }
 
-    bool LLMLLaMaVocabulary::load_bpe() {
+    bool LLMVocabulary::load_bpe() {
         const auto &ctx = _model_loader->get_model_ctx();
         //
         std::vector<std::string> merge_vector;
@@ -78,7 +78,7 @@ namespace tff::core::model {
         return true;
     }
 
-    bool LLMLLaMaVocabulary::load_token_data() {
+    bool LLMVocabulary::load_token_data() {
         const auto &ctx = _model_loader->get_model_ctx();
         //
         std::vector<std::string> token_data;
@@ -120,7 +120,7 @@ namespace tff::core::model {
         return true;
     }
 
-    void LLMLLaMaVocabulary::tokenize(const std::string &raw_text, std::vector<int32_t> &token_vec,
+    void LLMVocabulary::tokenize(const std::string &raw_text, std::vector<int32_t> &token_vec,
                                       bool add_special, bool parse_special) const {
         if (this->_tokenizer == nullptr) {
             tff::log::Logger::error("tokenizer not init! raw_text: %s tokenize failed!!\n", raw_text.c_str());
@@ -129,7 +129,7 @@ namespace tff::core::model {
         this->_tokenizer->tokenize(raw_text, token_vec, this);
     }
 
-    void LLMLLaMaVocabulary::process_special_tokens() {
+    void LLMVocabulary::process_special_tokens() {
         const auto &ctx = _model_loader->get_model_ctx();
         for (auto &pair: LLM_SPECIAL_TOKENS) {
             //
@@ -194,7 +194,7 @@ namespace tff::core::model {
         }
     }
 
-    void LLMLLaMaVocabulary::process_eog_tokens() {
+    void LLMVocabulary::process_eog_tokens() {
         this->_special_eog_ids.clear();
 #define UPDATE_EOG_TOKEN(special_token_type) \
         if (LLM_SPECIAL_TOKENS[special_token_type] != LLAMA_TOKEN_NULL && \
@@ -212,8 +212,7 @@ namespace tff::core::model {
 
 #undef UPDATE_EOG_TOKEN
         for (const auto &t: this->_token_to_id) {
-            if (false
-                || t.first == "<|eot_id|>"
+            if (t.first == "<|eot_id|>"
                 || t.first == "<|im_end|>"
                 || t.first == "<|end|>"
                 || t.first == "<|return|>" // o200k_harmony
@@ -234,11 +233,10 @@ namespace tff::core::model {
                     this->_id_to_token[t.second]._attribute = TFF_TOKEN_ATTR_CONTROL;
                 }
             } else {
-                // token is control, but not marked as EOG -> print a debug log
                 if (this->_id_to_token[t.second]._attribute & TFF_TOKEN_ATTR_CONTROL && this->_special_eog_ids.
                     count(t.second) == 0) {
-                    tff::log::Logger::warning("%s: control token: %6d '%s' is not marked as EOG\n",
-                                              __func__, t.second, t.first.c_str());
+                    // tff::log::Logger::warning("%s: control token: %6d '%s' is not marked as EOG\n",
+                    //                           __func__, t.second, t.first.c_str());
                 }
             }
         }
@@ -273,7 +271,7 @@ namespace tff::core::model {
     }
 
     //
-    void LLMLLaMaVocabulary::process_user_defined_tokens() {
+    void LLMVocabulary::process_user_defined_tokens() {
         for (const auto &t: this->_token_to_id) {
             if (t.first == "<|channel|>" || t.first == "<|message|>" || t.first == "<|start|>" || t.first ==
                 "<|constrain|>") {
@@ -294,10 +292,10 @@ namespace tff::core::model {
     }
 
     //
-    std::string LLMLLaMaVocabulary::token_to_string(const int32_t &token, bool special) {
+    std::string LLMVocabulary::token_to_string(const int32_t &token, bool special) {
         const auto &text = this->_id_to_token[token]._text;
         std::string piece;
-        piece.resize(text.size()); // using string internal cache
+        piece.resize(text.size());
         const int n_chars = this->token_to_string(token, &piece[0], piece.size(), 0, special);
         if (n_chars < 0) {
             piece.resize(-n_chars);
@@ -313,7 +311,7 @@ namespace tff::core::model {
     }
 
     //
-    int32_t LLMLLaMaVocabulary::token_to_string(int32_t token, char *buf, int32_t length, int32_t lstrip,
+    int32_t LLMVocabulary::token_to_string(int32_t token, char *buf, int32_t length, int32_t lstrip,
                                                 bool special) {
         int32_t nCheckRet = 0;
         const auto &attr = this->_id_to_token[token]._attribute;

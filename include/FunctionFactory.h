@@ -16,6 +16,9 @@
 #include "Logger.h"
 
 namespace tff::factory {
+    /**
+     * 函数工厂
+     */
     class DEEP_TFF_API FunctionFactory : public std::enable_shared_from_this<FunctionFactory> {
     public:
         static std::shared_ptr<FunctionFactory> instance() {
@@ -24,13 +27,25 @@ namespace tff::factory {
         }
 
     public:
+        /**
+         * 注册回调
+         * @tparam Func
+         * @param flag
+         * @param key
+         * @param func
+         */
         template<typename Func>
         void register_callback(const std::string &flag, const std::string &key, Func &&func) {
             std::lock_guard<std::mutex> lock(_mutex);
             _functions[flag][key] = std::function(func);
         }
-
-        // 获取回调（需知道类型）
+        /**
+         * 获取回调
+         * @tparam Func
+         * @param flag
+         * @param key
+         * @return
+         */
         template<typename Func>
         std::function<Func> get_callback(const std::string &flag, const std::string &key) {
             std::lock_guard<std::mutex> lock(_mutex);
@@ -46,16 +61,25 @@ namespace tff::factory {
             }
             return std::any_cast<std::function<Func> >(it2->second);
         }
-
-        // 判断是否存在
+        /**
+         * 检测回调是否存在
+         * @param flag
+         * @param key
+         * @return
+         */
         bool has_callback(const std::string &flag, const std::string &key) {
             std::lock_guard<std::mutex> lock(_mutex);
             auto it = _functions.find(flag);
             if (it == _functions.end()) return false;
             return it->second.find(key) != it->second.end();
         }
-
-        //
+        /**
+         * 调用回调
+         * @tparam Args
+         * @param flag
+         * @param key
+         * @param args
+         */
         template<typename... Args>
         void invoke(const std::string &flag, const std::string &key, Args &&... args) {
             std::lock_guard<std::mutex> lock(_mutex);
@@ -63,8 +87,6 @@ namespace tff::factory {
             if (it == _functions.end()) tff::log::Logger::error("Flag not found");
             auto it2 = it->second.find(key);
             if (it2 == it->second.end()) tff::log::Logger::error("Callback not found");
-
-            // 直接调用
             std::any_cast<std::function<void(Args...)> >(it2->second)(std::forward<Args>(args)...);
         }
 

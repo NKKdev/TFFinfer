@@ -9,7 +9,7 @@ namespace tff::core::runtime {
     REGISTER_MODULE_OBJECT(LLMBatchManager, tff::module::ModuleObject, BATCH_MANAGER_FLAG, BATCH_MANAGER_FLAG);
 
     bool tff::core::runtime::LLMBatchManager::init(const std::unordered_map<int, std::string> &seq_prompt,
-                                                   const std::shared_ptr<tff::core::model::LLMLLaMaVocabulary> &
+                                                   const std::shared_ptr<tff::core::model::LLMVocabulary> &
                                                    vocabulary_ptr, const bool output_all,
                                                    BatchSplitType batch_split_type) {
         if (!vocabulary_ptr) {

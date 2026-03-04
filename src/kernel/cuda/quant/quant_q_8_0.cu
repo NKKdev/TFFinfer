@@ -95,82 +95,39 @@ namespace tff::kernel {
             //todo Q_8_1 impl;
         }
     }
-
     template<typename T>
-    void tff::kernel::Quant<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto input_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            0, para_ptr);
-        auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
-        auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-            para_ptr->get_param_count() - 1, para_ptr);
+    class Quant<T, core::device::GPUTag> : public base::OPCreatorBase<Quant<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_QUANTIZE;
+        }
+    };
+    template<typename T>
+    void tff::kernel::Quant<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto input_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            QuantBuilder::Params::In, para_ptr);
+        auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            QuantBuilder::Params::Out, para_ptr);
+        auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
+            kernel::builder::OpParamBuilderBase<QuantBuilder>::CommonParams::Stream, para_ptr);
+        auto name = kernel::base::get_param_value<std::string>(kernel::builder::OpParamBuilderBase<QuantBuilder>::CommonParams::Name, para_ptr);
         if (input_tensor == nullptr || input_tensor->get_buffer() == nullptr) {
-            tff::log::Logger::error("input_tensor buffer is nullptr!");
+            tff::log::Logger::error("node %s input_tensor buffer is nullptr!",name.c_str());
             return;
         }
         if (output_tensor == nullptr || output_tensor->get_buffer() == nullptr) {
-            tff::log::Logger::error("output_tensor buffer is nullptr!");
+            tff::log::Logger::error("node %s output_tensor buffer is nullptr!",name.c_str());
             return;
         }
 
         const int M = input_tensor->get_shape()[1];
         const int N = input_tensor->get_shape()[0];
         quant<T>(M, N, input_tensor, output_tensor, stream);
-#ifdef _DEBUG1
-        stream->synchronize();
-        const auto &name = kernel::base::get_param_value<std::string>(para_ptr->get_param_count() - 5, para_ptr);
-        std::string filename = "";
-        if (name == "quantize_q_8_0_node") {
-            filename = "attn_norm-0_result.ggml";
-        }
-        varify(filename, input_tensor);
-        std::string quant_fileName = "quant_q8_0.ggml";
-        varify(quant_fileName, output_tensor);
-
-
-        std::vector<Q8_0_ALIGNED> weight_gpu_result;
-        weight_gpu_result.resize(
-            output_tensor->get_shape()[0]/32 * output_tensor->get_shape()[1] * output_tensor->get_shape()[2] *
-            output_tensor->get_shape()[3]);
-        auto bute_size = output_tensor->get_bytes();
-        output_tensor->get_allocator()->memcopy(output_tensor->get_buffer()->ptr(), weight_gpu_result.data(),
-                                                output_tensor->get_bytes(), core::memory::TFF_MEM_CPY_TYPE_DEVICE2HOST);
-        std::vector<float> gpu_result;
-        gpu_result.resize(
-            input_tensor->get_shape()[0] * input_tensor->get_shape()[1] * input_tensor->get_shape()[2] *
-            input_tensor->get_shape()[3]);
-        auto dequantize_callback = core::memory::type_traits_auto[core::memory::DataType::TFF_DATA_TYPE_Q8_0_ALIGNED].
-                dequantize_callback;
-        for (int i = 0;i < input_tensor->get_shape()[1]; ++i) {
-            auto quant_ptr = weight_gpu_result.data() + i * input_tensor->get_shape()[0] / 32;
-            auto float_ptr = gpu_result.data() + i * input_tensor->get_shape()[0];
-            dequantize_callback(quant_ptr, float_ptr, input_tensor->get_shape()[0]);
-        }
-        std::vector<float> weight_cpu_result;
-        weight_cpu_result.resize(
-            input_tensor->get_shape()[0] * input_tensor->get_shape()[1] * input_tensor->get_shape()[2] *
-            input_tensor->get_shape()[3]);
-        load_tensor_raw(filename.c_str(), weight_cpu_result.data());
-
-        float error_ratio = 0.0f;
-        for (int mm = 0; mm < input_tensor->get_shape()[1]; mm++) {
-            for (int nn = 0; nn < input_tensor->get_shape()[0]; nn++) {
-                float delta = gpu_result[mm * input_tensor->get_shape()[0] + nn] - weight_cpu_result[
-                                  mm * input_tensor->get_shape()[0] + nn];
-                if (fabs(delta) > 0.001f) {
-                    tff::log::Logger::error("filename: %s, error: m: %d n: %d, delta: %lf", filename.c_str(),
-                                            nn, delta);
-                    error_ratio++;
-                }
-            }
-        }
-        error_ratio /= input_tensor->get_shape()[1] * input_tensor->get_shape()[0];
-        tff::log::Logger::error("error_ratio: %f\n", error_ratio);
-#endif
     }
 
 
-    template class tff::kernel::Quant<Q8_0_ALIGNED>;
-    REGISTER_OP_OBJECT(Quant, Q8_0_ALIGNED);
+    template class tff::kernel::Quant<Q8_0_ALIGNED, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(Quant, Q8_0_ALIGNED, core::device::GPUTag);
 }

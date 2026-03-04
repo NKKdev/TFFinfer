@@ -2,7 +2,6 @@
 // Created by nkk on 2026/1/3.
 //
 
-#include "../../../../cmake-build-release/_deps/fmt-src/include/fmt/os.h"
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
 #include "kernel/include/kernel_util.h"
@@ -446,18 +445,26 @@ __device__ void compute_tile_double_buffer(const int k_size, const int thread_x,
             (quant_b->get_buffer()->ptr()),
             static_cast<T *>(c->get_buffer()->ptr()));
     }
-
     template<typename T>
-    void tff::kernel::QuantQ8MatMul<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    class QuantMatMul<T, core::device::GPUTag> : public base::OPCreatorBase<QuantMatMul<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_QUANTIZE_MATMUL;
+        }
+    };
+    template<typename T>
+    void tff::kernel::QuantMatMul<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         auto weight_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            0, para_ptr);
+            QuantMatMulBuilder::Params::Weight, para_ptr);
         auto x_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            1, para_ptr);
+            QuantMatMulBuilder::Params::X, para_ptr);
         auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            2, para_ptr);
+            QuantMatMulBuilder::Params::Out, para_ptr);
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-            para_ptr->get_param_count() - 1, para_ptr);
+            kernel::builder::OpParamBuilderBase<QuantMatMulBuilder>::CommonParams::Stream, para_ptr);
 
         if (weight_tensor == nullptr || x_tensor == nullptr || output_tensor == nullptr) {
             return;
@@ -475,60 +482,14 @@ __device__ void compute_tile_double_buffer(const int k_size, const int thread_x,
         const int M = x_tensor->get_shape()[1];
         const int B = weight_tensor->get_shape()[2]; //todo impl batches
         const int N = weight_tensor->get_shape()[1];
-
         quant_q_8_0_matmul<T>(M, N, K, x_tensor,
                               weight_tensor, output_tensor,
                               stream);
-
-#ifdef _DEBUG1
-        stream->synchronize();
-        const auto &name = kernel::base::get_param_value<std::string>(para_ptr->get_param_count() - 5, para_ptr);
-        std::string filename = "";
-        if (name == "blk.0.attn_q_mul_w") {
-            filename = "Qcur-0_src_0.ggml";
-            varify(filename, weight_tensor);
-        } else if (name == "blk.0.attn_k_mul_w") {
-            filename = "Kcur-0_src_0.ggml";
-            varify(filename, weight_tensor);
-        } else
-        if (name == "blk.0.attn_v_mul_w") {
-            filename = "Vcur-0_src_0.ggml";
-            varify(filename, weight_tensor);
-        }
-
-        if (name == "blk.0.attn_q_mul_w") {
-            filename = "quant_q8_0.ggml";
-            varify(filename, x_tensor);
-        } else if (name == "blk.0.attn_k_mul_w") {
-            filename = "quant_q8_0.ggml";
-            varify(filename, x_tensor);
-        } else
-        if (name == "blk.0.attn_v_mul_w") {
-            filename = "quant_q8_0.ggml";
-            varify(filename, x_tensor);
-        }
-
-        //save_tensor("q_weight_quant.tff", weight_tensor);
-        //save_tensor("x_tensor.tff", x_tensor);
-
-        if (name == "blk.0.attn_q_mul_w") {
-            filename = "Qcur-0_result.ggml";
-            varify(filename, output_tensor);
-        } else if (name == "blk.0.attn_k_mul_w") {
-            filename = "Kcur-0_result.ggml";
-            varify(filename, output_tensor);
-        } else
-        if (name == "blk.0.attn_v_mul_w") {
-            filename = "Vcur-0_result.ggml";
-            varify(filename, output_tensor);
-        }
-        //cudaFree(tmp);
-#endif
     }
 
-    template class tff::kernel::QuantQ8MatMul<float>;
-    template class tff::kernel::QuantQ8MatMul<half>;
-    REGISTER_OP_OBJECT(QuantQ8MatMul, float);
+    template class tff::kernel::QuantMatMul<float, core::device::GPUTag>;
+    template class tff::kernel::QuantMatMul<half, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(QuantMatMul, float, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(QuantQ8MatMul, half);
+    REGISTER_OP_OBJECT_DEVICE(QuantMatMul, half, core::device::GPUTag);
 }

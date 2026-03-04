@@ -3,12 +3,21 @@
 
 namespace tff::core::graph {
     void Graph::clear() {
+        for (const auto &node : _total_nodes) {
+            node->_output_nodes.clear();
+        }
         _leafs.clear();
         _nodes.clear();
         _use_counts.clear();
         _visited.clear();
         _node_to_index.clear();
         _leaf_to_index.clear();
+        this->_output_node.clear();
+        this->_total_nodes.clear();
+        this->_first_use.clear();
+        this->_last_use.clear();
+        this->_exec_time.clear();
+
     }
 
     bool Graph::is_leaf_node(const std::shared_ptr<GraphNode> &node) const {
@@ -54,7 +63,7 @@ namespace tff::core::graph {
     void Graph::build_graph(std::shared_ptr<GraphNode> output_node) {
         if (!output_node) return;
         clear();
-
+        this->_output_node.push_back(output_node);
         visit(output_node);
         //
         this->analyze_lifetimes();

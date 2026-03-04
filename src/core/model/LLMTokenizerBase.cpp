@@ -35,7 +35,7 @@ namespace tff::core::model {
         }
     }
     void tff::core::model::LLMTokenizerBPE::tokenize(const std::string &text, std::vector<int32_t> &token,
-        const LLMLLaMaVocabulary *vocabulary_ptr) {
+        const LLMVocabulary *vocabulary_ptr) {
         const auto byte_vec = unicode_regex_split(text, this->_regex);
         std::vector<LLMSymbol> symbol_vec_tmp;
         for (const auto & word : byte_vec) {
@@ -48,7 +48,7 @@ namespace tff::core::model {
     }
     //
     void tff::core::model::LLMTokenizerBPE::add_tuple(int left, int right,
-        const LLMLLaMaVocabulary *vocabulary_ptr) {
+        const LLMVocabulary *vocabulary_ptr) {
         if (left == -1 || right == -1) {
             return;
         }
@@ -88,13 +88,13 @@ namespace tff::core::model {
         }
     }
 
-    void LLMTokenizerBPE::generate_tuple(const LLMLLaMaVocabulary *vocabulary_ptr) {
+    void LLMTokenizerBPE::generate_tuple(const LLMVocabulary *vocabulary_ptr) {
         for (size_t i = 1; i < _symbol_vec.size(); ++i) {
             this->add_tuple(i - 1, i, vocabulary_ptr);
         }
     }
 
-    void LLMTokenizerBPE::merge_tuple(const LLMLLaMaVocabulary *vocabulary_ptr) {
+    void LLMTokenizerBPE::merge_tuple(const LLMVocabulary *vocabulary_ptr) {
         while (!_work_queue.empty()) {
             auto tuple = _work_queue.pop_move();
             auto & left_symbol = _symbol_vec[tuple._left];
@@ -138,7 +138,7 @@ namespace tff::core::model {
     }
     //
     void LLMTokenizerBPE::generate_token(const std::vector<LLMSymbol> &symbol_vec,
-        const LLMLLaMaVocabulary *vocabulary_ptr,
+        const LLMVocabulary *vocabulary_ptr,
         std::vector<int32_t> &token_vec) {
         if (!symbol_vec.empty()) {
             for (int i = 0; i != -1; i = symbol_vec[i]._next) {

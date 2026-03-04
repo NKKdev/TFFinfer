@@ -18,6 +18,9 @@ namespace tff::core::runtime {
     using PageID = uint64_t;
     using DeviceTensor = tff::core::memory::Tensor;
 
+    /**
+     * @brief KVCache 缓存PAGE
+     */
     struct KVPage {
         std::shared_ptr<tff::core::memory::Tensor> _k;
         std::shared_ptr<tff::core::memory::Tensor> _v;
@@ -27,6 +30,9 @@ namespace tff::core::runtime {
         mutable std::mutex mutex; // 可选锁
     };
 
+    /**
+     * @brief KVCache 缓存管理器
+     */
     class PageManager : public std::enable_shared_from_this<PageManager> {
     public:
         PageManager(const int &device_id,
@@ -37,27 +43,27 @@ namespace tff::core::runtime {
             : _device_id(device_id), _total_pages(total_pages), _page_size(page_size), _n_d_h(_d_h), _n_h_kv(_h_kv),
               _mem_manager_ptr(mem_manager_ptr) {
             _pages.resize(total_pages);
+            int64_t kv_cache_buffer_size = 0;
             for (int i = 0; i < total_pages; ++i) {
                 _pages[i] = std::make_shared<KVPage>();
                 std::array<int64_t, MAX_TENSOR_DIM> shapes = {
-                    static_cast<int64_t>(_d_h) , static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size), 1
+                    static_cast<int64_t>(_d_h), static_cast<int64_t>(_h_kv), static_cast<int64_t>(page_size), 1
                 };
                 _pages[i]->_k = std::make_shared<tff::core::memory::Tensor>(
                     data_type, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
                     shapes);
-                _pages[i]->_k->set_external_memory_index(mem_manager_ptr->allocate_memory_offset(
-                    _pages[i]->_k->get_bytes(),
-                    _device_id, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE));
+                kv_cache_buffer_size += _pages[i]->_k->get_bytes();
                 _pages[i]->_v = std::make_shared<tff::core::memory::Tensor>(
                     data_type, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
                     shapes);
-                _pages[i]->_v->set_external_memory_index(mem_manager_ptr->allocate_memory_offset(
-                    _pages[i]->_v->get_bytes(),
-                    _device_id, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE));
+                kv_cache_buffer_size += _pages[i]->_v->get_bytes();
                 _pages[i]->_n_tokens = 0;
                 _pages[i]->_is_used = false;
                 _free_list.push_back(i);
             }
+            auto offset = this->_mem_manager_ptr->allocate_memory_offset(kv_cache_buffer_size, device_id,
+                                                                         memory::MemoryType::TFF_MEM_TYPE_WORKSPACE);
+            this->_mem_manager_ptr->release_memory(device_id, offset);
         };
 
         ~PageManager() {
@@ -68,7 +74,10 @@ namespace tff::core::runtime {
         }
 
     public:
-        // 分配一个新 page
+        /**
+         * @brief 分配一个 page
+         * @return page id
+         */
         inline PageID allocate() {
             std::lock_guard<std::mutex> lock(_mutex);
             if (_free_list.empty()) return INVALID_PAGE_ID;
@@ -78,7 +87,10 @@ namespace tff::core::runtime {
             return id;
         }
 
-        // 释放一个 page
+        /**
+         * @brief 释放一个 page
+         * @param id page id
+         */
         inline void free(PageID id) {
             std::lock_guard<std::mutex> lock(_mutex);
             if (id >= 0 && id < (int) _pages.size() && _pages[id]->_is_used) {
@@ -87,14 +99,25 @@ namespace tff::core::runtime {
             }
         }
 
-        // 获取某个 page 的指针（用于 kernel 调用）
-        inline std::shared_ptr<tff::core::memory::Tensor> get_k(PageID id) const {
+        /**
+         * @brief 获取一个 page 的 k
+         * @param id page id
+         * @return k
+         */
+        inline std::shared_ptr<tff::core::memory::Tensor> get_k(PageID id,
+                                                                const std::shared_ptr<core::device::DeviceEvent> &event)
+        const {
             std::lock_guard<std::mutex> lock(_mutex);
             if (id != INVALID_PAGE_ID && id < static_cast<int>(_pages.size()) && _pages[id]->_is_used) {
                 if (_pages[id]->_k->get_buffer() == nullptr) {
                     const auto [fst, snd] = _mem_manager_ptr->allocate_memory(_pages[id]->_k->get_bytes(),
-                                                                          this->_device_id,
-                                                                          memory::MemoryType::TFF_MEM_TYPE_KV_CACHE);
+                                                                              this->_device_id,
+                                                                              memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
+                                                                              event);
+                    // tff::log::Logger::info(
+                    //     "k device_id: %d,memory type: %d, allocate offset: %lld end offset : %lld",
+                    //     _device_id, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE, fst,
+                    //     fst + _pages[id]->_k->get_bytes());
                     _pages[id]->_k->set_buffer_data(snd, _pages[id]->_k->get_bytes(),
                                                     fst);
                 }
@@ -105,13 +128,25 @@ namespace tff::core::runtime {
             }
         }
 
-        inline std::shared_ptr<tff::core::memory::Tensor> get_v(PageID id) const {
+        /**
+         * @brief 获取一个 page 的 v
+         * @param id page id
+         * @return v
+         */
+        inline std::shared_ptr<tff::core::memory::Tensor> get_v(PageID id,
+                                                                const std::shared_ptr<core::device::DeviceEvent> &event)
+        const {
             std::lock_guard<std::mutex> lock(_mutex);
             if (id != INVALID_PAGE_ID && id < static_cast<int>(_pages.size()) && _pages[id]->_is_used) {
                 if (_pages[id]->_v->get_buffer() == nullptr) {
                     const auto [fst, snd] = _mem_manager_ptr->allocate_memory(_pages[id]->_v->get_bytes(),
-                                                                          this->_device_id,
-                                                                          memory::MemoryType::TFF_MEM_TYPE_KV_CACHE);
+                                                                              this->_device_id,
+                                                                              memory::MemoryType::TFF_MEM_TYPE_KV_CACHE,
+                                                                              event);
+                    // tff::log::Logger::info(
+                    //     "v device_id: %d,memory type: %d, allocate offset: %lld end offset : %lld",
+                    //     _device_id, memory::MemoryType::TFF_MEM_TYPE_KV_CACHE, fst,
+                    //     fst + _pages[id]->_k->get_bytes());
                     _pages[id]->_v->set_buffer_data(snd, _pages[id]->_v->get_bytes(),
                                                     fst);
                 }
@@ -122,12 +157,19 @@ namespace tff::core::runtime {
             }
         }
 
+        /**
+         * @brief 获取当前使用的 page 的数量
+         * @return page 数量
+         */
         int used_count() const {
             std::lock_guard<std::mutex> lock(_mutex);
             return (int) _pages.size() - (int) _free_list.size();
         }
 
-        //
+        /**
+         * @brief 获取 page 的大小
+         * @return page 的大小
+         */
         inline int32_t get_page_size() const { return _page_size; }
 
     private:
@@ -141,7 +183,9 @@ namespace tff::core::runtime {
         mutable std::mutex _mutex;
     };
 
-    //
+    /**
+     * @brief KVCache 的 page 层上下文信息
+     */
     class LayerKVContext : public std::enable_shared_from_this<LayerKVContext> {
     public:
         LayerKVContext();
@@ -154,11 +198,26 @@ namespace tff::core::runtime {
         ~LayerKVContext() = default;
 
     public:
+        /**
+         * @brief 获取当前使用的 page 的数量
+         * @return page 数量
+         */
         inline int get_num_pages() const { return static_cast<int>(_page_table.size()); }
+        /**
+         * @brief 获取当前使用的 page的最大token数量
+         * @return token 数量
+         */
         inline int get_max_tokens() const { return _page_table.size() * _page_manager->get_page_size(); }
+        /**
+         * @brief 获取当前使用的 token 的数量
+         * @return token 数量
+         */
         inline int get_token_count() const { return _num_tokens; }
-        //
-        // 获取第 idx 个 token 所在的 page_id 和 page 内偏移
+        /**
+         * @brief 获取一个 token 的位置信息
+         * @param token_idx token 的索引
+         * @return page id 和 offset
+         */
         inline std::pair<PageID, int> get_location(int token_idx) const {
             if (token_idx >= _num_tokens) return {INVALID_PAGE_ID, 0};
             int page_id = token_idx / _page_manager->get_page_size();
@@ -166,7 +225,10 @@ namespace tff::core::runtime {
             return {_page_table[page_id], offset};
         }
 
-        // 添加一个新 token（返回是否成功）
+        /**
+         * @brief 添加一个 token
+         * @return 是否添加成功
+         */
         inline bool append_token() {
             if (_num_tokens == get_max_tokens()) {
                 PageID new_page = _page_manager->allocate();
@@ -177,6 +239,9 @@ namespace tff::core::runtime {
             return true;
         }
 
+        /**
+         * @brief 清空当前上下文
+         */
         inline void clear() {
             for (PageID pid: _page_table) {
                 if (pid != INVALID_PAGE_ID) {
@@ -196,6 +261,9 @@ namespace tff::core::runtime {
         std::shared_ptr<PageManager> _page_manager;
     };
 
+    /**
+     * @brief KVCache
+     */
     class LLMKVCache : public std::enable_shared_from_this<LLMKVCache> {
     public:
         struct KVConfig {
@@ -240,26 +308,50 @@ namespace tff::core::runtime {
         };
 
     public:
-        //
+        /**
+         * @brief 构建kvCache上下为
+         * @return  void
+         */
         void build_layer_kvcache_context(const int &seq_id, const int &layer_id);
 
-        //
+        /**
+         * @brief 开始prefill
+         * @param batch_size batch size
+         * @param seq_len seq len
+         */
         inline void begine_prefill(const size_t &batch_size, const size_t &seq_len) {
             this->_seq_length = seq_len;
             this->_current_batch_size = batch_size;
             _is_prefilling = true;
         }
 
-        //
+        /**
+         * @brief 结束prefill
+         */
         inline void end_prefill() {
             _is_prefilling = false;
         }
 
+        /**
+         * @brief 获取一个token的层Key
+         * @param seq_id seq id
+         * @param layer_id layer id
+         * @param page_id page id
+         * @param event event
+         * @return key
+         */
         static inline int make_key(const int seq_id, const int layer_id) {
             return (seq_id << 16) | layer_id;
         }
 
-
+        /**
+         * @brief 获取一个token的层上下文指针
+         * @param seq_id seq id
+         * @param layer_id layer id
+         * @param page_id page id
+         * @param event event
+         * @return LayerKVContext 上下文指针
+         */
         LayerKVContext *get_context(int seq_id, int layer_id) {
             const int key = make_key(seq_id, layer_id);
             std::lock_guard<std::mutex> lock(global_mutex);
@@ -275,9 +367,22 @@ namespace tff::core::runtime {
             return ptr;
         }
 
+        /**
+         * @brief 设置一个token的kv，这里用于decode阶段更新kv上下文信息
+         * @param seq_id seq id
+         * @param layer_id layer id
+         * @param token_num token num
+         * @return 是否成功
+         */
         bool set_kv(int seq_id, int layer_id,
-                   const int &token_num);
-        //
+                    const int &token_num);
+
+        /**
+         * @brief 获取一个token的某层历史token数量
+         * @param seq_id seq id
+         * @param layer_id layer id
+         * @return token数量
+         */
         inline int get_kv_token_num(int seq_id, int layer_id) {
             LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (ctx == nullptr) {
@@ -285,29 +390,58 @@ namespace tff::core::runtime {
             }
             return ctx->get_token_count();
         }
-        //
+
+        /**
+         * @brief 获取一个token的某层kv位置
+         * @param seq_id seq id
+         * @param layer_id layer id
+         * @param token_idx token idx
+         * @return page id, token idx
+         */
         inline std::pair<PageID, int> get_location(int seq_id, int layer_id, const int token_idx) {
             return get_context(seq_id, layer_id)->get_location(token_idx);
         }
-        //
-        inline std::shared_ptr<memory::Tensor> get_k(int seq_id, int layer_id, PageID page_id) {
+
+        /**
+         * @brief 获取一个token的某层k张量
+         * @param seq_id seq id
+         * @param layer_id layer id
+         * @param page_id page id
+         * @param event event
+         * @return k  tensor
+         */
+        inline std::shared_ptr<memory::Tensor> get_k(int seq_id, int layer_id, PageID page_id,
+                                                     const std::shared_ptr<core::device::DeviceEvent> &event) {
             const LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (ctx == nullptr) {
                 tff::log::Logger::error("current layer (%d) kv cache context is invalid!!", layer_id);
                 return std::shared_ptr<core::memory::Tensor>();
             }
-            return ctx->_page_manager->get_k(page_id);
+            return ctx->_page_manager->get_k(page_id, event);
         }
 
-        inline std::shared_ptr<memory::Tensor> get_v(int seq_id, int layer_id, PageID page_id) {
+        /**
+         * @brief 获取一个token的某层v张量
+         * @param seq_id seq id
+         * @param layer_id layer id
+         * @param page_id page id
+         * @param event event
+         * @return v  tensor
+         */
+        inline std::shared_ptr<memory::Tensor> get_v(int seq_id, int layer_id, PageID page_id,
+                                                     const std::shared_ptr<core::device::DeviceEvent> &event) {
             const LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (ctx == nullptr) {
                 tff::log::Logger::error("current layer (%d) kv cache context is invalid!!", layer_id);
                 return std::shared_ptr<core::memory::Tensor>();
             }
-            return ctx->_page_manager->get_v(page_id);
+            return ctx->_page_manager->get_v(page_id, event);
         }
 
+        /**
+         * @brief 清空一个seq的kv缓存
+         * @param seq_id seq id
+         */
         void clear(int seq_id) {
             std::lock_guard<std::mutex> lock(global_mutex);
             for (int lid = 0; lid < _config._n_layer; ++lid) {
@@ -320,6 +454,10 @@ namespace tff::core::runtime {
             }
         }
 
+        /**
+         * @brief 获取kv配置
+         * @return kv配置
+         */
         const LLMKVCache::KVConfig &get_config() const { return _config; }
 
     public:

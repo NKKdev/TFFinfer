@@ -6,6 +6,7 @@
 #define TFFINFER_PARAMBASEOBJECT_H
 #include <memory>
 #include <cstring>
+#include <set>
 #include <type_traits>
 #include <stdexcept>
 #include "global/GlobalDefine.h"
@@ -14,7 +15,9 @@
 namespace tff::core::global {
     static constexpr size_t BUFFER_SIZE = MAX_PARAM_BUFFER_SIZE;
     static constexpr size_t MAX_PARAMS = MAX_PARAM_COUNT;
-
+    /**
+     * @brief 参数对象
+     */
     class ParamBaseObject final : std::enable_shared_from_this<ParamBaseObject> {
     public:
         ParamBaseObject() : _use_para_count(0) {
@@ -26,8 +29,7 @@ namespace tff::core::global {
 
         ParamBaseObject(ParamBaseObject &&) = default;
 
-        ParamBaseObject& operator=(const ParamBaseObject& other) {
-
+        ParamBaseObject &operator=(const ParamBaseObject &other) {
             if (this == &other) {
                 return *this;
             }
@@ -35,7 +37,8 @@ namespace tff::core::global {
             _use_para_count = other._use_para_count;
             return *this;
         }
-        ParamBaseObject& operator=(ParamBaseObject&& other) noexcept {
+
+        ParamBaseObject &operator=(ParamBaseObject &&other) noexcept {
             if (this == &other) {
                 return *this;
             }
@@ -46,60 +49,57 @@ namespace tff::core::global {
         }
 
     public:
+        /**
+         * @brief 设置参数
+         * @tparam T 参数类型
+         * @param name 参数名称
+         * @param value 参数值
+         */
         template<typename T>
-        void set_param(T &&value) {
-            const int index = this->get_param_count();
-            if (index >= MAX_PARAMS) {
-                tff::log::Logger::error("Parameter index out of range");
-                return;
-            }
-            _params[index] = std::forward<T>(value);
-            if (index >= _use_para_count) {
-                _use_para_count++;
-            }
+        void set_param(const std::string &name, T &&value) {
+            _params[name] = std::forward<T>(value);
+            _param_names.insert(name);
         }
 
+        /**
+         * @brief 获取参数
+         * @tparam T 参数类型
+         * @param name 参数名称
+         * @return 参数值
+         */
         template<typename T>
-        std::optional<std::reference_wrapper<const T> > get_param(size_t index) const {
-            if (index >= MAX_PARAMS || !_params[index].has_value()) {
-                tff::log::Logger::warning("get_param: index %zu out of range or empty", index);
+        std::optional<std::reference_wrapper<const T> > get_param(const std::string &name) const {
+            const auto it = _params.find(name);
+            if (it == _params.end()) {
+                //tff::log::Logger::warning("Parameter '%s' not found", name.c_str());
                 return std::nullopt;
             }
             try {
-                const T &val = std::any_cast<const T &>(_params[index]);
+                const T &val = std::any_cast<const T &>(it->second);
                 return std::cref(val);
-            } catch (const std::bad_any_cast &) {
-                tff::log::Logger::error("get_param: type mismatch at index %zu (requested %s)", index,
-                                        typeid(T).name());
+            } catch (const std::bad_any_cast &e) {
+                tff::log::Logger::error("Type mismatch for param '%s'", name.c_str());
                 return std::nullopt;
             }
         }
 
-        //
-        template<typename T>
-        std::optional<std::reference_wrapper<T> > get_param_mut(size_t index) {
-            if (index >= MAX_PARAMS || !_params[index].has_value()) {
-                tff::log::Logger::warning("get_param_mut: index %zu out of range or empty", index);
-                return std::nullopt;
-            }
-            try {
-                T &val = std::any_cast<T &>(_params[index]);
-                return std::ref(val);
-            } catch (const std::bad_any_cast &) {
-                tff::log::Logger::error("get_param_mut: type mismatch at index %zu (requested %s)", index,
-                                        typeid(T).name());
-                return std::nullopt;
-            }
-        }
-
-        //
-        inline int get_param_count() const {
-            return _use_para_count;
+        /**
+         * @brief 获取参数数量
+         * @return 参数数量
+         */
+        size_t get_param_count() const { return _param_names.size(); }
+        /**
+         * @brief 获取参数
+         * @return 参数
+         */
+        const std::unordered_map<std::string, std::any> &params() const {
+            return _params;
         }
 
     private:
-        std::array<std::any, MAX_PARAMS> _params;
-        int32_t _use_para_count;
+        std::unordered_map<std::string, std::any> _params;
+        std::set<std::string> _param_names;
+        int _use_para_count;
     };
 }
 

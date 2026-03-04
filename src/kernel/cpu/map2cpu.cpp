@@ -13,7 +13,6 @@ namespace tff::kernel {
                                        const size_t &offset,
                                        const double &data_size,
                                        const std::shared_ptr<tff::core::model::ModelLoaderBase> &model_loader_ptr,
-                                       std::vector<std::shared_ptr<tff::core::memory::Tensor>> &inputs,
                                        std::shared_ptr<tff::core::memory::Tensor> &outputs) {
         if (model_file_index < 0) {
             tff::log::Logger::error("Model file index is invalid");
@@ -38,29 +37,41 @@ namespace tff::kernel {
     }
 
     template<typename T>
-    void tff::kernel::MemMap2Cpu<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        const auto model_file_index = kernel::base::get_param_value<size_t>(0, para_ptr);
-        const auto offset = kernel::base::get_param_value<size_t>(1, para_ptr);
-        const auto data_size = kernel::base::get_param_value<double>(2, para_ptr);
-        const auto model_loader_ptr = kernel::base::get_param_value<std::shared_ptr<tff::core::model::ModelLoaderBase> >(3, para_ptr);
-        auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            4, para_ptr);
-        auto input_tensors = kernel::base::get_param_value<std::vector<std::shared_ptr<tff::core::memory::Tensor>>>(
-            5, para_ptr);
+    class Map2Cpu<T,
+                core::device::CPUTag> : public base::OPCreatorBase<Map2Cpu<T, core::device::CPUTag>, T,
+                core::device::CPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
-        std::vector<std::shared_ptr<core::memory::Tensor>> inputs;
-        for (auto &input_tensor : input_tensors) {
-            inputs.push_back(input_tensor);
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_MAP2CPU;
         }
-        mem_map2cpu_kernel_cpu<T>(model_file_index, offset, data_size, model_loader_ptr, inputs, output_tensors);
+    };
+
+    template<typename T>
+    void tff::kernel::Map2Cpu<T, core::device::CPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        const auto model_file_index = kernel::base::get_param_value<size_t>(
+            Map2CpuBuilder::Params::FileIdx, para_ptr);
+        const auto offset = kernel::base::get_param_value<size_t>(Map2CpuBuilder::Params::Offset, para_ptr);
+        const auto data_size = kernel::base::get_param_value<double>(Map2CpuBuilder::Params::Size, para_ptr);
+        const auto model_loader_ptr = kernel::base::get_param_value<std::shared_ptr<
+            tff::core::model::ModelLoaderBase> >(Map2CpuBuilder::Params::ModelCtx, para_ptr);
+        auto output_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            Map2CpuBuilder::Params::Out, para_ptr);
+
+        mem_map2cpu_kernel_cpu<T>(model_file_index, offset, data_size, model_loader_ptr, output_tensor);
     }
 
-    template class tff::kernel::MemMap2Cpu<float>;
-    template class tff::kernel::MemMap2Cpu<double>;
-    template class tff::kernel::MemMap2Cpu<int32_t>;
-    template class tff::kernel::MemMap2Cpu<Q8_0>;
-    REGISTER_OP_OBJECT(MemMap2Cpu, float);
-    REGISTER_OP_OBJECT(MemMap2Cpu, double);
-    REGISTER_OP_OBJECT(MemMap2Cpu, int32_t);
-    REGISTER_OP_OBJECT(MemMap2Cpu, Q8_0);
+    template class tff::kernel::Map2Cpu<float, core::device::CPUTag>;
+    template class tff::kernel::Map2Cpu<double, core::device::CPUTag>;
+    template class tff::kernel::Map2Cpu<int32_t, core::device::CPUTag>;
+    template class tff::kernel::Map2Cpu<Q8_0, core::device::CPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(Map2Cpu, float, core::device::CPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(Map2Cpu, double, core::device::CPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(Map2Cpu, int32_t, core::device::CPUTag);
+
+    REGISTER_OP_OBJECT_DEVICE(Map2Cpu, Q8_0, core::device::CPUTag);
 }

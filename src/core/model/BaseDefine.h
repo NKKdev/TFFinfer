@@ -11,6 +11,7 @@
 #include "GGUFDef.h"
 #include "Logger.h"
 #include "global/OPDefine.h"
+#include "sampler/LLMSampler.h"
 using namespace tff::core::global;
 
 namespace tff::core::model {
@@ -90,7 +91,13 @@ X(TFF_MODEL_ARCH_GEMMA,   "gemma")
         TFF_SWA_TYPE_CHUNKED = 2,
         TFF_SWA_TYPE_SYMMETRIC = 3,
     };
-
+    enum RopeType {
+        TFF_ROPE_TYPE_NONE = -1,
+        TFF_ROPE_TYPE_NORM = 0,
+        TFF_ROPE_TYPE_NEOX = 1,
+        TFF_ROPE_TYPE_MROPE = 2,
+        TFF_ROPE_TYPE_VISION = 3,
+    };
     struct ModelConfig {
         // 架构相关参数
         std::string _arch_name;
@@ -116,6 +123,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "gemma")
         uint32_t _n_embd_head_v{};
         uint32_t _n_expert = 0;
         uint32_t _n_expert_used = 0;
+        uint32_t _n_output;
 
         float _rope_freq_base;
         float _rope_freq_scale;
@@ -123,11 +131,15 @@ X(TFF_MODEL_ARCH_GEMMA,   "gemma")
         float _f_norm_rms_eps;
 
         //
+        sampling::SamplingConfig _sampling_config;
+
+        //
         std::vector<uint32_t> _n_head_arr;
         std::vector<uint32_t> _n_head_kv_arr;
         std::vector<uint32_t> _n_ff_arr;
 
         ModelAttentionSWAType _swa_type = TFF_SWA_TYPE_NONE;
+        RopeType _rope_type = TFF_ROPE_TYPE_NEOX;
         uint32_t _n_swa = 0;
         std::unordered_map<uint32_t, bool> _swa_layers;
         //
@@ -215,13 +227,7 @@ X(TFF_MODEL_ARCH_GEMMA,   "gemma")
         FF_VOCAB_TYPE_COUNT // 用于数组大小
     };
 
-    enum RopeType {
-        TFF_ROPE_TYPE_NONE = -1,
-        TFF_ROPE_TYPE_NORM = 0,
-        TFF_ROPE_TYPE_NEOX = 1,
-        TFF_ROPE_TYPE_MROPE = 2,
-        TFF_ROPE_TYPE_VISION = 3,
-    };
+
 
     struct TokenData {
         std::string _text;

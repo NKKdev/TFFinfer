@@ -11,6 +11,10 @@
 #define TASK_FLOW_MANAGER_FLAG "TASK_FLOW_MANAGER"
 #define WEIGHT_MEM_BUFFER_MANAGER_FLAG "WEIGHT_MEM_BUFFER_MANAGER"
 #define BATCH_MANAGER_FLAG "BATCH_MANAGER"
+#define GRAPH_OPTIMIZER_FALG "GRAPH_OPTIMIZER"
+#define DEVICE_MANAGER_FLAG "DEVICE_MANAGER"
+
+#define MEM_OPT_STRATEGY_FLAG "MEM_OPT_STRATEGY"
 
 #define MODEL_CREATOR_FLAG "MODELCreator"
 #define MODEL_DETECTOR_FLAG "ModelDetector"
@@ -45,7 +49,7 @@
 namespace tff::core::global {
 
     //
-    static memory::MemCpyKind make_cpy_kind(device::DeviceType &src_type, device::DeviceType &dst_type) {
+    static memory::MemCpyKind make_cpy_kind(device::DeviceType src_type, device::DeviceType dst_type) {
         if (src_type == device::DeviceType::TFF_BACKEND_DEVICE_TYPE_CPU && dst_type == device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU) {
             return memory::MemCpyKind::TFF_MEM_CPY_TYPE_HOST2DEVICE;
         }else if (src_type == device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU && dst_type == device::DeviceType::TFF_BACKEND_DEVICE_TYPE_GPU) {

@@ -11,9 +11,9 @@
 #include "graph/Graph.h"
 
 namespace tff::core::runtime {
-    struct TaskObject {
-    };
-
+    /**
+     * @brief LLM任务调度管理器
+     */
     class LLMTaskFlowManager : public tff::module::ModuleObject {
     public:
         LLMTaskFlowManager() {
@@ -26,37 +26,27 @@ namespace tff::core::runtime {
         ~LLMTaskFlowManager() override = default;
 
     public:
-        //
-        bool build_task_schedule(const tff::schedule::TaskType &type,const std::shared_ptr<graph::Graph> &graph_ptr,
-                                 bool is_fuse = false) const;
-
-        //
+        /**
+         * @brief 构建任务调度
+         * @param type 任务类型
+         * @param graph_ptr 图
+         * @return 是否成功
+         */
+        bool build_task_schedule(const schedule::TaskType &type, const std::shared_ptr<graph::Graph> &graph_ptr) const;
+        /**
+         * @brief 运行任务调度
+         * @param type 运行任务类型
+         */
         inline void run(const tff::schedule::TaskType &type) {
             this->_task_scheduler->run(type);
         }
-
+        /**
+         * @brief 获取调度器
+         * @return 调度器
+         */
         inline std::shared_ptr<tff::schedule::HybridScheduler> get_task_schedule() const {
             return this->_task_scheduler;
         }
-
-        //
-        inline void clear() {
-        }
-
-    protected:
-        bool fuse_quant_node(const std::shared_ptr<tff::core::graph::Graph> &graph_ptr,
-                                  const std::shared_ptr<graph::GraphNode> &current_node) const;
-        void fuse_op_node(const std::shared_ptr<graph::Graph> &graph_ptr,
-                          const std::vector<std::shared_ptr<graph::GraphNode> > &nodes) const;
-
-        bool fuse(const std::shared_ptr<graph::Graph> &graph_ptr,
-                  const std::shared_ptr<graph::GraphNode> &current_node) const;
-
-        //
-        bool can_fuse(const std::shared_ptr<graph::Graph> &graph_ptr,
-                      const std::shared_ptr<graph::GraphNode> &current_node, std::shared_ptr<
-                          graph::GraphNode> &pre_node) const;
-
     protected:
         std::shared_ptr<tff::schedule::HybridScheduler> _task_scheduler;
     };

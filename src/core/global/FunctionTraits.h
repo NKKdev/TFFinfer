@@ -6,10 +6,13 @@
 #define TFFINFER_FUNCTIONTRAITS_H
 
 namespace tff::core::global {
+    /**
+     * 函数特征
+     * @tparam T
+     */
     template<typename T>
     struct FunctionTraits;
-
-    // 函数指针
+    
     template<typename Ret, typename... Args>
     struct FunctionTraits<Ret(*)(Args...)> {
         using type = Ret(Args...);

@@ -710,14 +710,14 @@ namespace tff::kernel {
                              const int q_ld, const int k_ld, const int v_ld,
                              const float scale,
                              const int num_q_heads, const int num_kv_heads,
-                             const T *q_gpu,
-                             const T *k_gpu,
-                             const T *v_gpu,
-                             T *mask,
+                             const half *q_gpu,
+                             const half *k_gpu,
+                             const half *v_gpu,
+                             half *mask,
                              float *cos_sin_table,
-                             float *out_put,
+                             T *out_put,
                              std::shared_ptr<core::device::DeviceStream> &stream) {
-        if (std::is_same_v<T, half>) {
+        if (std::is_same_v<T, float>) {
             if (num_q_heads == 32 && num_kv_heads == 8 && D == 128) {
                 constexpr int B = 4;
                 constexpr int MBit = 2;
@@ -746,26 +746,34 @@ namespace tff::kernel {
             //todo
         }
     }
+    template<typename T>
+    class FlashAttn<T, core::device::GPUTag> : public base::OPCreatorBase<FlashAttn<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
 
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_FLASH_ATTN_EXT;
+        }
+    };
     //
     template<typename T>
-    void tff::kernel::FlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    void tff::kernel::FlashAttn<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
         auto max_ctx = kernel::base::get_param_value<const int>(0, para_ptr);
         auto q_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            1, para_ptr);
+            FlashAttnBuilder::Params::Q, para_ptr);
         auto k_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            2, para_ptr);
+            FlashAttnBuilder::Params::K, para_ptr);
         auto v_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            3, para_ptr);
+            FlashAttnBuilder::Params::V, para_ptr);
         auto rope_table = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            4, para_ptr);
+            PreRopeTableBuilder::Params::RopeTable, para_ptr);
         auto mask_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            5, para_ptr);
+            FlashAttnBuilder::Params::Mask, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            6, para_ptr);
+            FlashAttnBuilder::Params::Out, para_ptr);
 
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                        para_ptr->get_param_count() - 1, para_ptr);
+                        kernel::builder::OpParamBuilderBase<FlashAttnBuilder>::CommonParams::Stream, para_ptr);
 
         if (q_tensor== nullptr || k_tensor == nullptr || v_tensor == nullptr || output_tensors == nullptr
             || rope_table == nullptr || mask_tensor == nullptr ) {
@@ -787,13 +795,14 @@ namespace tff::kernel {
             case 128: {
                 auto *cos_sin_table = static_cast<float *>(rope_table->get_buffer()->ptr());
                 if (rope_table != nullptr) {
+
                     flash_attention_128<T, 1>(max_ctx, B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
-                                              static_cast<T *>(q_tensor->get_buffer()->ptr()),
-                                              static_cast<T *>(k_tensor->get_buffer()->ptr()),
-                                              static_cast<T *>(v_tensor->get_buffer()->ptr()),
-                                              static_cast<T *>(mask_tensor->get_buffer()->ptr()),
+                                              static_cast<half *>(q_tensor->get_buffer()->ptr()),
+                                              static_cast<half *>(k_tensor->get_buffer()->ptr()),
+                                              static_cast<half *>(v_tensor->get_buffer()->ptr()),
+                                              static_cast<half *>(mask_tensor->get_buffer()->ptr()),
                                               cos_sin_table,
-                                              static_cast<float *>(output->get_buffer()->ptr()), stream);
+                                              static_cast<T *>(output->get_buffer()->ptr()), stream);
                 }
                 break;
             }
@@ -807,6 +816,6 @@ namespace tff::kernel {
     }
 
 
-    template class tff::kernel::FlashAttn<half>;
-    REGISTER_OP_OBJECT(FlashAttn, half);
+    template class tff::kernel::FlashAttn<float, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(FlashAttn, float, core::device::GPUTag);
 }

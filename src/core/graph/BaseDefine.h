@@ -32,6 +32,7 @@ namespace tff::core::graph {
         TFF_OP_SILU_BACK,
         TFF_OP_NORM, // normalize
         TFF_OP_RMS_NORM,
+        TFF_OP_RMS_NORM_W,
         TFF_OP_RMS_NORM_BACK,
         TFF_OP_GROUP_NORM,
         TFF_OP_L2_NORM,
@@ -82,6 +83,7 @@ namespace tff::core::graph {
         TFF_OP_FLASH_ATTN_EXT,
         TFF_OP_FLASH_ATTN_BACK,
         TFF_OP_FLASH_ATTN_PAGED,
+        TFF_OP_FLASH_ATTN_PAGED_ROPE,
         TFF_OP_SSM_CONV,
         TFF_OP_SSM_SCAN,
         TFF_OP_WIN_PART,
@@ -93,6 +95,7 @@ namespace tff::core::graph {
         TFF_OP_RWKV_WKV7,
 
         TFF_OP_UNARY,
+        TFF_OP_BINARY,
 
         TFF_OP_MAP_CUSTOM1,
         TFF_OP_MAP_CUSTOM2,
@@ -110,18 +113,24 @@ namespace tff::core::graph {
         TFF_OP_MAP2CPU,
         TFF_OP_MEM_CPY,
         TFF_OP_MEM_REF,
+        TFF_OP_MEM_RECYCLE,
         TFF_OP_EMBEDDING,
         //quant
-        TFF_OP_QUANTIZE_Q8,
+        TFF_OP_QUANTIZE,
         TFF_OP_QUANTIZE_ALIGNED,
         TFF_OP_QUANTIZE_Q8_RESHAPE,
-        TFF_OP_QUANTIZE_Q8_MATMUL,
+        TFF_OP_QUANTIZE_MATMUL,
         TFF_OP_QUANTIZE_Q8_MATMUL_RESHAPE,
         TFF_OP_DEQUANTIZE_Q8,
         TFF_OP_DEQUANTIZE_Q8_RESHAPE,
         //
         TFF_OP_PRE_ROPE_TABLE,
         TFF_OP_ATTN_MASK,
+        //
+        TFF_OP_CONVERT,
+        TFF_OP_GATHER,
+        //
+        TFF_OP_WEIGHT,
         TFF_OP_COUNT,
     };
     enum TFFMaskType {
@@ -133,6 +142,15 @@ namespace tff::core::graph {
         TFF_UNARY_TYPE_SILU,
         TFF_UNARY_TYPE_RELU,
         TFF_UNARY_TYPE_COUNT,
+    };
+    enum TFFBinaryType {
+        TFF_BINARY_TYPE_UNKNOWN,
+        TFF_BINARY_TYPE_ADD,
+        TFF_BINARY_TYPE_SUB,
+        TFF_BINARY_TYPE_COUNT,
+    };
+    enum TFFNormType {
+        TFF_NORM_RMS = 0,
     };
     enum MatMulTransType {
         TFF_NT = 0,

@@ -1,7 +1,6 @@
 //
 // Created by nkk on 2025/12/17.
 //
-#include <fmt/core.h>
 
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
@@ -40,16 +39,24 @@ namespace tff::kernel {
 
         }
     }
-
     template<typename T>
-    void tff::kernel::DeQuantQ8<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+    class DeQuant<T, core::device::GPUTag> : public base::OPCreatorBase<DeQuant<T, core::device::GPUTag>, T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_DEQUANTIZE_Q8;
+        }
+    };
+    template<typename T>
+    void tff::kernel::DeQuant<T, core::device::GPUTag>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
 
     }
 
 
-    template class tff::kernel::DeQuantQ8<float>;
-    template class tff::kernel::DeQuantQ8<half>;
-    REGISTER_OP_OBJECT(DeQuantQ8, float);
+    template class tff::kernel::DeQuant<float, core::device::GPUTag>;
+    template class tff::kernel::DeQuant<half, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(DeQuant, float, core::device::GPUTag);
 
-    REGISTER_OP_OBJECT(DeQuantQ8, half);
+    REGISTER_OP_OBJECT_DEVICE(DeQuant, half, core::device::GPUTag);
 }

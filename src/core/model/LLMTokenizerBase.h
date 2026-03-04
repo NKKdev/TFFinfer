@@ -12,7 +12,11 @@
 #include "../global/ModelGlobalVar.h"
 #include "BaseDefine.h"
 using namespace tff::core::global;
+
 namespace tff::core::model {
+    /**
+     * @brief 字符Symbol
+     */
     struct LLMSymbol {
         int32_t _prev;
         int32_t _next;
@@ -20,6 +24,9 @@ namespace tff::core::model {
         size_t _n;
     };
 
+    /**
+     * @brief 优先队列
+     */
     template<typename T, typename Container = std::vector<T>, typename Compare = std::less<typename
         Container::value_type> >
     class LLMPriorityQueue : public std::priority_queue<T, Container, Compare> {
@@ -36,6 +43,9 @@ namespace tff::core::model {
         void pop() = delete;
     };
 
+    /**
+     * @brief 词元元组
+     */
     class LLMVocabTupleBPE {
     public:
         LLMVocabTupleBPE() = default;
@@ -57,49 +67,92 @@ namespace tff::core::model {
         int _rank{};
         size_t _size{};
     };
-    class LLMLLaMaVocabulary;
-    class LLMTokenizerBase : public std::enable_shared_from_this<LLMTokenizerBase>,tff::module::ModuleObject {
+
+    class LLMVocabulary;
+    /**
+     * @brief LLMTokenizer
+     */
+    class LLMTokenizerBase : public std::enable_shared_from_this<LLMTokenizerBase>, tff::module::ModuleObject {
     public:
         LLMTokenizerBase() = default;
 
         ~LLMTokenizerBase() override = default;
 
     public:
-        virtual void init(tff::core::model::VocabPreType pre_type = TFF_VOCAB_PRE_TYPE_SMOLLM){};
-        virtual void tokenize(const std::string &text, std::vector<int32_t> &token, const LLMLLaMaVocabulary *vocabulary_ptr){};
+        virtual void init(tff::core::model::VocabPreType pre_type = TFF_VOCAB_PRE_TYPE_SMOLLM) {
+        };
+
+        virtual void tokenize(const std::string &text, std::vector<int32_t> &token,
+                              const LLMVocabulary *vocabulary_ptr) {
+        };
 
     public:
         std::vector<std::string> _regex;
     };
 
+    /**
+     * @brief BPE
+     */
     class LLMTokenizerBPE : public LLMTokenizerBase {
     public:
         explicit LLMTokenizerBPE() {
         };
 
-        ~LLMTokenizerBPE() override= default;
+        ~LLMTokenizerBPE() override = default;
+
     public:
         void init(tff::core::model::VocabPreType pre_type = TFF_VOCAB_PRE_TYPE_SMOLLM) override;
-        void tokenize(const std::string &text, std::vector<int32_t> &token, const LLMLLaMaVocabulary *vocabulary_ptr) override;
+
+        void tokenize(const std::string &text, std::vector<int32_t> &token,
+                      const LLMVocabulary *vocabulary_ptr) override;
+
     protected:
-        //
-        void add_tuple(int left, int right, const LLMLLaMaVocabulary *vocabulary_ptr);
-        //
+        /**
+         * @brief 添加元组
+         * @param left 左边指针
+         * @param right 右边指针
+         */
+        void add_tuple(int left, int right, const LLMVocabulary *vocabulary_ptr);
+
+        /**
+         * @brief 解析符号
+         * @param word 字符
+         */
         void parse_symbol(const std::string &word);
-        //
-        void generate_tuple(const LLMLLaMaVocabulary *vocabulary_ptr);
-        //
-        void merge_tuple(const LLMLLaMaVocabulary *vocabulary_ptr);
-        //
+
+        /**
+         * @brief 生成元组
+         * @param vocabulary_ptr 词表
+         */
+        void generate_tuple(const LLMVocabulary *vocabulary_ptr);
+
+        /**
+         * @brief 合并元组
+         * @param vocabulary_ptr 词表
+         */
+        void merge_tuple(const LLMVocabulary *vocabulary_ptr);
+
+        /**
+         * @brief 更新符号
+         * @param symbol_vec 符号向量
+         */
         void update_symbol(std::vector<LLMSymbol> &symbol_vec);
-        //
-        void generate_token(const std::vector<LLMSymbol> &symbol_vec, const LLMLLaMaVocabulary *vocabulary_ptr, std::vector<int32_t> &token_vec);
+
+        /**
+         * @brief 生成token
+         * @param symbol_vec 符号向量
+         * @param token_vec token向量
+         * @param vocabulary_ptr 词表
+         */
+        void generate_token(const std::vector<LLMSymbol> &symbol_vec, const LLMVocabulary *vocabulary_ptr,
+                            std::vector<int32_t> &token_vec);
+
     protected:
         std::vector<LLMSymbol> _symbol_vec;
         LLMVocabTupleBPE::queue _work_queue;
     };
 
-    REGISTER_MODULE_OBJECT(LLMTokenizerBPE, LLMTokenizerBase,"TOKENIZER",
+    REGISTER_MODULE_OBJECT(LLMTokenizerBPE, LLMTokenizerBase, "TOKENIZER",
                            get_tokenizer_name(tff::core::model::VocabType::TFF_VOCAB_TYPE_BPE).data());
 }
 

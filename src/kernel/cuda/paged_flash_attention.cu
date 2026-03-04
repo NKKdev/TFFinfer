@@ -69,12 +69,10 @@ namespace tff::kernel {
 
     template<>
     __device__ __forceinline__ void load_vec<float, float2>(const float *addr, float2 *out, const int count) {
-        if (count == 4) {
+        if (count == 2) {
             const float2 *h = reinterpret_cast<const float2 *>(addr);
             out[0] = h[0];
             out[1] = h[1];
-            out[2] = h[2];
-            out[3] = h[3];
         } else {
             const float2 *h = reinterpret_cast<const float2 *>(addr);
             out[0] = h[0];
@@ -123,6 +121,54 @@ namespace tff::kernel {
             cp_async_cg_16<64>(dst_addr, addr);
             cp_async_commit();
 #endif
+        }
+    }
+
+    template<typename T, const int WARP_SIZE, const int BLOCK_ROW_SIZE, const int BLOCK_COL_SIZE>
+    __global__ __forceinline__ void get_value_by_table(
+        const T *__restrict__ block_table,
+        half *__restrict__ dst,
+        const int dim0,
+        const int dim1,
+        const int dim2,
+        const int start_row,
+        const int start_offset,
+        const int token_num) {
+        const int thread_id = threadIdx.x + threadIdx.y * blockDim.x;
+        const int head_index = blockIdx.x;
+        const int batch_index = blockIdx.z;
+        const int block_row_index = blockIdx.y * BLOCK_ROW_SIZE;
+
+        const int thread_x = thread_id % WARP_SIZE;
+        const int warp_id = thread_id / WARP_SIZE;
+        const int VEC_DIM_ROW = BLOCK_ROW_SIZE / blockDim.y; // 4
+        const int VEC_DIM_COL = BLOCK_COL_SIZE / blockDim.x; // 1
+
+        const int src_row_base = start_row + block_row_index;
+        const int src_col_base = head_index * dim0 / 2;
+        const int g_index = batch_index * dim2 * dim1 * dim0;
+        const auto dst_block_ptr = dst + g_index;
+
+#pragma unroll
+        for (int i = 0; i < VEC_DIM_ROW; i++) {
+            const int row = src_row_base + warp_id + i * BLOCK_ROW_SIZE / VEC_DIM_ROW;
+            if (row >= dim2) {
+                continue;
+            }
+#pragma unroll
+            for (int j = 0; j < VEC_DIM_COL; j++) {
+                const int col = src_col_base + thread_x + j * BLOCK_COL_SIZE / VEC_DIM_COL;
+                if (col >= dim1 * dim0) {
+                    continue;
+                }
+                const int dst_row_base = warp_id + i * BLOCK_ROW_SIZE / VEC_DIM_ROW;
+                const int dst_row = block_row_index + dst_row_base;
+                if (dst_row < dim2) {
+                    auto *dst_ptr = reinterpret_cast<half2 *>(dst_block_ptr);
+                    auto *src_ptr = reinterpret_cast<half2 *>(block_table[row * dim1 + head_index]);
+                    dst_ptr[dst_row * dim1 * dim0 / 2 + col] = src_ptr[thread_x + j * BLOCK_COL_SIZE / VEC_DIM_COL];
+                }
+            }
         }
     }
 
@@ -248,10 +294,207 @@ namespace tff::kernel {
         }
     }
 
-    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K,
+    template<const int VEC_DIM_LD, const int VEC_DIM_K,
+    const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int ELEMENTS_PER_LOAD,
+    const int B, const int MBit, const int S, const int PAD_SIZE>
+    __device__ __forceinline__ void rope_k_neox(const int ld, const int dim,
+                                                const int thread_x, const int warp_id,
+                                                const int start_m,
+                                                const int k,
+                                                const float *__restrict__ cos_sin_table,
+                                                half2 *k_sm) {
+        //rot;
+#pragma unroll
+        for (int j = 0; j < VEC_DIM_LD; ++j) {
+            const int dim0_base = start_m + warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+            for (int kk = 0; kk < VEC_DIM_K / (ELEMENTS_PER_LOAD * 2); ++kk) {
+                const int dim1 = k + thread_x * (ELEMENTS_PER_LOAD * 2) + kk * (BLOCK_DIM_K / VEC_DIM_K) *
+                                 (ELEMENTS_PER_LOAD * 2);
+
+                float2 cos_sin_table_val[ELEMENTS_PER_LOAD];
+                if (dim0_base < dim) {
+                    const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
+                    if (actual_load > 0) {
+                        load_vec<float, float2>(&cos_sin_table[dim0_base * ld + dim1], &cos_sin_table_val[0],
+                                                actual_load);
+                    } else {
+                        for (int i = 0; i < ELEMENTS_PER_LOAD; ++i) {
+                            cos_sin_table_val[i].x = 0;
+                            cos_sin_table_val[i].y = 0;
+                        }
+                    }
+                } else {
+#pragma unroll
+                    for (int i = 0; i < ELEMENTS_PER_LOAD; ++i) {
+                        cos_sin_table_val[i].x = 0;
+                        cos_sin_table_val[i].y = 0;
+                    }
+                }
+
+                int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+                int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2;
+                int offset = sm_row * (BLOCK_DIM_K / 2 + PAD_SIZE) + sm_col;
+#ifdef _SWIZZLE
+                int addr = swizzle<B, MBit, S>(offset);
+#else
+                int addr = offset; //
+#endif
+                //
+                half2 table0 = __float22half2_rn(cos_sin_table_val[0]);
+                half2 table1 = __float22half2_rn(cos_sin_table_val[1]);
+                half2 sub = k_sm[addr];
+                half2 add = k_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2];
+
+                half sub0 = sub.x * table0.x - add.x * table0.y;
+                half sub1 = sub.y * table1.x - add.y * table1.y;
+
+                half add0 = sub.x * table0.y + add.x * table0.x;
+                half add1 = sub.y * table1.y + add.y * table1.x;
+
+                k_sm[addr] = make_half2(sub0, sub1);
+                k_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2] = make_half2(add0, add1);
+                // if (j == 0 && start_m == 32 && warp_id == 0 && kk == 0 && blockIdx.y == 4 && blockIdx.x == 4) {
+                //     printf(
+                //         "k rope m: %d, h: %d, d: %d, k_sm0[%d].x: %lf, k_sm0[%d].y: %lf, k_sm64[%d].x: %lf, k_sm64[%d].y: %lf, "
+                //         "table0.x: %lf, table0.y: %lf, table1.x: %lf, table1.y: %lf,result0[%d].x: %lf, result0[%d]: %lf, result64[%d].x: %lf, result64[%d]: %lf \n",
+                //         dim0_base, 0, sm_col,
+                //         addr,
+                //         __half2float(sub.x),
+                //         addr,
+                //         __half2float(sub.y),
+                //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                //         __half2float(add.x),
+                //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                //         __half2float(add.y),
+                //         __half2float(table0.x),
+                //         __half2float(table0.y),
+                //         __half2float(table1.x),
+                //         __half2float(table1.y),
+                //         addr,
+                //         __half2float(k_sm[addr].x),
+                //         addr,
+                //         __half2float(k_sm[addr].y),
+                //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                //         __half2float(k_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2].x),
+                //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                //         __half2float(k_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2].y));
+                // }
+            }
+        }
+    }
+
+    template<const int VEC_DIM_LD, const int VEC_DIM_K,
         const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int ELEMENTS_PER_LOAD, const int B, const int MBit, const
         int
-        S, const int PAD_SIZE>
+        S, const int PAD_SIZE, const int HEAD_NUM_PER_BLOCK, const int HIDDEN_DIM>
+    __device__ __forceinline__ void rope_q_neox(const int ld, const int dim,
+                                                const int thread_x, const int warp_id,
+                                                const int start_m,
+                                                const int k,
+                                                const float *__restrict__ cos_sin_table,
+                                                half2 *q_sm) {
+        //rot;
+#pragma unroll
+        for (int j = 0; j < VEC_DIM_LD; ++j) {
+            const int dim0_base = start_m + warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+
+            for (int kk = 0; kk < VEC_DIM_K / (ELEMENTS_PER_LOAD * 2); ++kk) {
+                const int dim1 = thread_x * (ELEMENTS_PER_LOAD * 2) + kk * (BLOCK_DIM_K / VEC_DIM_K) *
+                                 (ELEMENTS_PER_LOAD * 2);
+
+                float2 cos_sin_table_val[ELEMENTS_PER_LOAD];
+                if (dim0_base < dim) {
+                    const int actual_load = min(ELEMENTS_PER_LOAD, ld - dim1);
+                    if (actual_load > 0) {
+                        load_vec<float, float2>(&cos_sin_table[dim0_base * ld + dim1], &cos_sin_table_val[0],
+                                                actual_load);
+                    } else {
+                        for (int i = 0; i < ELEMENTS_PER_LOAD; ++i) {
+                            cos_sin_table_val[i].x = 0;
+                            cos_sin_table_val[i].y = 0;
+                        }
+                    }
+                } else {
+#pragma unroll
+                    for (int i = 0; i < ELEMENTS_PER_LOAD; ++i) {
+                        cos_sin_table_val[i].x = 0;
+                        cos_sin_table_val[i].y = 0;
+                    }
+                }
+#pragma unroll
+                for (int head_index = 0; head_index < HEAD_NUM_PER_BLOCK; ++head_index) {
+                    int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
+                    int sm_col = head_index * HIDDEN_DIM / 2 + thread_x * ELEMENTS_PER_LOAD / 2 +
+                                 kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2;
+                    int offset = sm_row * (HEAD_NUM_PER_BLOCK * HIDDEN_DIM / 2 + PAD_SIZE) + sm_col;
+#ifdef _SWIZZLE
+                    int addr = swizzle<B, MBit, S>(offset);
+#else
+                    int addr = offset; //
+#endif
+#pragma unroll
+
+
+                    half2 table0 = __float22half2_rn(cos_sin_table_val[0]);
+                    half2 table1 = __float22half2_rn(cos_sin_table_val[1]);
+                    //half2 table0 = __float22half2_rn(cos_sin_table_val[i]);
+                    half2 sub = q_sm[addr];
+                    half2 add = q_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2];
+
+                    half sub0 = sub.x * table0.x - add.x * table0.y;
+                    half sub1 = sub.y * table1.x - add.y * table1.y;
+
+                    half add0 = sub.x * table0.y + add.x * table0.x;
+                    half add1 = sub.y * table1.y + add.y * table1.x;
+
+                    q_sm[addr] = make_half2(sub0, sub1);
+                    q_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2] = make_half2(add0, add1);
+                    // if (j == 0 && start_m == 32 && warp_id == 0 && kk == 0 && blockIdx.y == 4 && blockIdx.x == 4) {
+                    //     printf(
+                    //         "q rope m: %d, h: %d, d: %d, q_sm0[%d].x: %lf, q_sm0[%d].y: %lf, q_sm64[%d].x: %lf, q_sm64[%d].y: %lf, "
+                    //         "table0.x: %lf, table0.y: %lf, table1.x: %lf, table1.y: %lf,result0[%d].x: %lf, result0[%d]: %lf, result64[%d].x: %lf, result64[%d]: %lf \n",
+                    //         dim0_base, head_index, sm_col,
+                    //         addr,
+                    //         __half2float(sub.x),
+                    //         addr,
+                    //         __half2float(sub.y),
+                    //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                    //         __half2float(add.x),
+                    //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                    //         __half2float(add.y),
+                    //         __half2float(table0.x),
+                    //         __half2float(table0.y),
+                    //         __half2float(table1.x),
+                    //         __half2float(table1.y),
+                    //         addr,
+                    //         __half2float(q_sm[addr].x),
+                    //         addr,
+                    //         __half2float(q_sm[addr].y),
+                    //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                    //         __half2float(q_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2].x),
+                    //         addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2,
+                    //         __half2float(q_sm[addr + (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2].y));
+                    // }
+                }
+            }
+        }
+    }
+
+    template
+    <
+        typename T, const int
+        VEC_DIM_LD, const int
+        VEC_DIM_K,
+        const int BLOCK_DIM_LD,
+        const int BLOCK_DIM_K,
+        const int ELEMENTS_PER_LOAD,
+        const int B,
+        const int MBit,
+        const
+        int
+        S,
+        const int PAD_SIZE
+    >
     __device__ __forceinline__ void load_tile_q(const int ld, const int dim,
                                                 const int thread_x, const int warp_id,
                                                 const int start_m,
@@ -266,7 +509,8 @@ namespace tff::kernel {
                                  ELEMENTS_PER_LOAD;
 
                 int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-                int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2;
+                int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD /
+                             2;
                 int offset = sm_row * (BLOCK_DIM_K / 2 + PAD_SIZE) + sm_col;
 #ifdef _SWIZZLE
                 int addr8 = swizzle<B, MBit, S>(offset);
@@ -298,10 +542,21 @@ namespace tff::kernel {
         }
     }
 
-    template<typename T, const int VEC_DIM_LD, const int VEC_DIM_K,
-        const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int ELEMENTS_PER_LOAD, const int B, const int MBit, const
-        int
-        S, const int PAD_SIZE>
+    template
+    <
+        typename T,
+        const int NUM_KV_HEAD,
+        const int HIDDEN_DIM,
+        const int VEC_DIM_LD,
+        const int VEC_DIM_K,
+        const int BLOCK_DIM_LD,
+        const int BLOCK_DIM_K,
+        const int ELEMENTS_PER_LOAD,
+        const int B,
+        const int MBit,
+        const int S,
+        const int PAD_SIZE
+    >
     __device__ __forceinline__ void load_tile_kv(const int ld, const int dim,
                                                  const int thread_x, const int warp_id,
                                                  const int start_m,
@@ -316,7 +571,8 @@ namespace tff::kernel {
                                  ELEMENTS_PER_LOAD;
 
                 int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
-                int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD / 2;
+                int sm_col = thread_x * ELEMENTS_PER_LOAD / 2 + kk * (BLOCK_DIM_K / VEC_DIM_K) * ELEMENTS_PER_LOAD /
+                             2;
                 int offset = sm_row * (BLOCK_DIM_K / 2 + PAD_SIZE) + sm_col;
 #ifdef _SWIZZLE
                 int addr8 = swizzle<B, MBit, S>(offset);
@@ -326,9 +582,10 @@ namespace tff::kernel {
 
                 half2 val[ELEMENTS_PER_LOAD / 2];
                 if (dim0_base < dim) {
-                    const int actual_load = min(ELEMENTS_PER_LOAD / 2, ld - dim1);
+                    half *g_ptr = reinterpret_cast<half *>(global_mem[dim0_base * ld]);
+                    const int actual_load = min(ELEMENTS_PER_LOAD / 2, HIDDEN_DIM * NUM_KV_HEAD - dim1);
                     if (actual_load > 0) {
-                        load_vec<T, half2>(&global_mem[dim0_base * ld + dim1], &val[0], ELEMENTS_PER_LOAD / 2);
+                        load_vec<half, half2>(&g_ptr[dim1], &val[0], ELEMENTS_PER_LOAD / 2);
                         sm[addr8] = val[0];
                     }
                 } else {
@@ -344,11 +601,27 @@ namespace tff::kernel {
     }
 
 
-    template<typename T_KV, const int VEC_DIM_M, const int VEC_DIM_N,
-        const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int BLOCK_DIM_K, const int HIDDEN_DIM,
-        const int HEAD_NUM_PER_BLOCK, const int B, const int MBit, const int S,
-        const int PAD_SIZE_Q, const int PAD_SIZE_KV>
-    __device__ __forceinline__ void compute_tile_attention_gemm(const int N, const int k_size,
+    template
+    <
+        typename T_KV, const int
+        VEC_DIM_M, const int
+        VEC_DIM_N,
+
+        const int BLOCK_DIM_M,
+        const int BLOCK_DIM_N,
+        const int BLOCK_DIM_K,
+        const int HIDDEN_DIM,
+
+        const int HEAD_NUM_PER_BLOCK,
+        const int B,
+        const int MBit,
+        const int S,
+
+        const int PAD_SIZE_Q,
+        const int PAD_SIZE_KV
+    >
+    __device__ __forceinline__ void compute_tile_attention_gemm(const int max_seq_len,
+        const int M, const int N, const int k_size,
                                                                 const int thread_x,
                                                                 const int warp_id,
                                                                 const int start_m, const int start_n,
@@ -389,8 +662,11 @@ namespace tff::kernel {
 #endif
                         float2 k_rot = __half22float2(b_sm[k_addr]);
 
-                        const float mask_value = __ldg(&mask[(start_m + m_row_base) * N + start_n + n_row_base]);
-
+                        float mask_value = 0.0f;
+                        if (((start_m + m_row_base) < M) && ((start_n + n_row_base) < N)) {
+                            mask_value = __half2float(
+                                __ldg(&mask[(start_m + m_row_base) * max_seq_len + start_n + n_row_base]));
+                        }
                         c_reg[mm * reg_stride + nn + head_index * VEC_DIM_N] += fmaf(
                             q_rot.x, k_rot.x, fmaf(q_rot.y, k_rot.y,
                                                    mask_value));
@@ -400,9 +676,23 @@ namespace tff::kernel {
         }
     }
 
-    template<const int VEC_DIM_M, const int VEC_DIM_N, const int BLOCK_DIM_M, const int BLOCK_DIM_N, const int
-        BLOCK_DIM_K, const int HIDDEN_DIM, const int HEAD_NUM_PER_BLOCK, const int B, const int MBit, const int S
-        , const int PAD_SIZE_Q, const int PAD_SIZE_KV>
+    template
+    <
+        const int VEC_DIM_M,
+        const int VEC_DIM_N,
+        const int BLOCK_DIM_M,
+        const int BLOCK_DIM_N,
+        const int
+        BLOCK_DIM_K,
+        const int HIDDEN_DIM,
+        const int HEAD_NUM_PER_BLOCK,
+        const int B,
+        const int MBit,
+        const int S
+        ,
+        const int PAD_SIZE_Q,
+        const int PAD_SIZE_KV
+    >
     __device__ __forceinline__ void compute_softmax_pv(const int N, const int v_ld, const int start_m,
                                                        const int start_n,
                                                        const int start_d,
@@ -501,17 +791,25 @@ namespace tff::kernel {
         }
     }
 
-    template<const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K,
-        const int ELEMENTS_PER_LOAD, const int PAD_SIZE>
+    template
+    <
+        const int VEC_DIM_LD,
+        const int VEC_DIM_K,
+        const int BLOCK_DIM_LD,
+        const int BLOCK_DIM_K,
+
+        const int ELEMENTS_PER_LOAD,
+        const int PAD_SIZE
+    >
     __device__ __forceinline__ void init(
         const int thread_x, const int warp_id,
         half2 *sm, const float value) {
 #pragma unroll
         for (int j = 0; j < VEC_DIM_LD; ++j) {
-            //VEC_DIM_LD = 4;BLOCK_DIM_LD = 32;
+            //VEC_DIM_LD = 1;BLOCK_DIM_LD = 8;
             int sm_row = warp_id + j * (BLOCK_DIM_LD / VEC_DIM_LD);
             for (int kk = 0; kk < VEC_DIM_K / ELEMENTS_PER_LOAD; ++kk) {
-                //VEC_DIM_K = 2;BLOCK_DIM_K = 64
+                //VEC_DIM_K = 16;BLOCK_DIM_K = 512
                 int sm_col = thread_x + kk * (BLOCK_DIM_K / VEC_DIM_K);
                 int offset = sm_row * (BLOCK_DIM_K / 2 + PAD_SIZE) + sm_col;
                 sm[offset].x = __float2half(value);
@@ -520,8 +818,16 @@ namespace tff::kernel {
         }
     }
 
-    template<const int VEC_DIM_LD, const int VEC_DIM_K, const int BLOCK_DIM_LD, const int BLOCK_DIM_K, const int
-        ELEMENTS_PER_LOAD, const int PAD_SIZE>
+    template
+    <
+        const int VEC_DIM_LD,
+        const int VEC_DIM_K,
+        const int BLOCK_DIM_LD,
+        const int BLOCK_DIM_K,
+        const int
+        ELEMENTS_PER_LOAD,
+        const int PAD_SIZE
+    >
     __device__ __forceinline__ void store(const int M,
                                           const int ld,
                                           const int start_m,
@@ -538,7 +844,7 @@ namespace tff::kernel {
                                2;
                 for (int i = 0; i < ELEMENTS_PER_LOAD / 2; ++i) {
                     float2 out = __half22float2(output_sm[row_base * (BLOCK_DIM_K / 2 + PAD_SIZE) + col_base + i]);
-                    if ((start_m + row_base) < M) {
+                    if ((start_m + row_base) < M && (col_base + i) < BLOCK_DIM_K / 2) {
                         output_ptr[(start_m + row_base) * ld / 2 + col_base + i] = out;
                     }
                 }
@@ -546,21 +852,38 @@ namespace tff::kernel {
         }
     }
 
-    template<typename T_Q, typename T_KV, const int NUM_Q_HEAD, const int NUM_KV_HEAD, const int HIDDEN_DIM,
-        const int BLOCK_DIM_M, const int BLOCK_DIM_N,
+    template
+    <
+        typename T_Q, typename T_KV, const int
+        rope_flag, const int
+        rope_type, const int
+        NUM_Q_HEAD, const int
+        NUM_KV_HEAD, const int
+        HIDDEN_DIM,
+
+        const int BLOCK_DIM_M,
+        const int BLOCK_DIM_N,
+
         const int ELEMENTS_PER_LOAD,
-        const int rope_flag, const int B, const int MBit, const int S, const int HEAD_NUM_PER_BLOCK,
-        const int WARP_SIZE, const int THREAD_BLOCK>
-    __global__ void paged_flash_attention_fp16_8x32(const int M, const int N, const int D,
-                                              const int MAX_CTX,
-                                              const int q_ld, const int k_ld, const int v_ld,
-                                              const float scale,
-                                              const T_Q *__restrict__ q_global,
-                                              const T_KV *__restrict__ k_global,
-                                              const T_KV *__restrict__ v_global,
-                                              const T_KV *mask,
-                                              float *__restrict__ cos_sin_table,
-                                              float *out_put) {
+
+        const int B,
+        const int MBit,
+        const int S,
+        const int HEAD_NUM_PER_BLOCK,
+
+        const int WARP_SIZE,
+        const int THREAD_BLOCK
+    >
+    __global__ void paged_flash_attention_fp16_8x32(const int start_token_idx,
+        const int max_seq_len, const int M, const int N, const int D,
+                                                    const int q_ld, const int k_ld, const int v_ld,
+                                                    const float scale,
+                                                    const T_Q *__restrict__ q_global,
+                                                    const T_KV *__restrict__ k_global,
+                                                    const T_KV *__restrict__ v_global,
+                                                    const T_Q *mask,
+                                                    float *__restrict__ cos_sin_table,
+                                                    float *out_put) {
         const int thread_id = threadIdx.x + threadIdx.y * blockDim.x;
         const int thread_x = thread_id % WARP_SIZE;
         const int warp_id = thread_id / WARP_SIZE;
@@ -586,8 +909,8 @@ namespace tff::kernel {
         const int q_stride = NUM_Q_HEAD * q_ld;
 
         const T_Q *q_ptr = q_global + (blockIdx.z * NUM_Q_HEAD) * M * D + head_index * D;
-        const T_KV *k_ptr = k_global + (blockIdx.z * NUM_KV_HEAD) * N * D + kv_group_start_index * D;
-        const T_KV *v_ptr = v_global + (blockIdx.z * NUM_KV_HEAD) * N * D + kv_group_start_index * D;
+        const T_KV *k_ptr = k_global + (blockIdx.z * NUM_KV_HEAD) * max_seq_len + kv_group_start_index;
+        const T_KV *v_ptr = v_global + (blockIdx.z * NUM_KV_HEAD) * max_seq_len + kv_group_start_index;
         float *output = out_put + (blockIdx.z * NUM_Q_HEAD) * M * D + head_index * D;
 
         constexpr int shared_mem_block_size = (BLOCK_DIM_K_KV / 2 + PAD_SIZE_KV) * (BLOCK_DIM_N);
@@ -604,24 +927,40 @@ namespace tff::kernel {
 
 
         int flip_flag = 0;
-        load_tile_kv<T_KV, VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
+        load_tile_kv<T_KV, NUM_KV_HEAD, HIDDEN_DIM, VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
             PAD_SIZE_KV>(
             kv_stride, N, thread_x, warp_id, 0, 0,
             k_ptr, &sm[(flip_flag) * shared_mem_block_size]);
 
-        load_tile_q<T_Q, VEC_DIM_M, VEC_DIM_K_Q, BLOCK_DIM_M, BLOCK_DIM_K_Q, ELEMENTS_PER_LOAD, B, MBit, S, PAD_SIZE_Q>(
+        load_tile_q<T_Q, VEC_DIM_M, VEC_DIM_K_Q, BLOCK_DIM_M, BLOCK_DIM_K_Q, ELEMENTS_PER_LOAD, B, MBit, S,
+            PAD_SIZE_Q>(
             q_stride, M, thread_x, warp_id, start_m, 0,
             q_ptr, &q_sm[0]);
-
+        //
         if constexpr (rope_flag == 1) {
-            rope_k<VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S, PAD_SIZE_KV>(
-                k_ld, MAX_CTX, thread_x, warp_id, 0, 0,
-                cos_sin_table, &sm[(flip_flag) * shared_mem_block_size]);
+            if constexpr (rope_type == 1) {
+                rope_k_neox<VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
+                    PAD_SIZE_KV>(
+                    D, N, thread_x, warp_id, 0, 0,
+                    cos_sin_table, &sm[(flip_flag) * shared_mem_block_size]);
 
-            rope_q<VEC_DIM_M, VEC_DIM_K_KV, BLOCK_DIM_M, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S, PAD_SIZE_Q,
-                HEAD_NUM_PER_BLOCK, HIDDEN_DIM>(
-                q_ld, MAX_CTX, thread_x, warp_id, start_m, 0,
-                cos_sin_table, &q_sm[0]);
+                rope_q_neox<VEC_DIM_M, VEC_DIM_K_KV, BLOCK_DIM_M, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
+                    PAD_SIZE_Q,
+                    HEAD_NUM_PER_BLOCK, HIDDEN_DIM>(
+                    D, M + start_token_idx, thread_x, warp_id, start_m + start_token_idx, 0,
+                    cos_sin_table, &q_sm[0]);
+            } else if constexpr (rope_type == 0) {
+                rope_k<VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
+                    PAD_SIZE_KV>(
+                    D, N, thread_x, warp_id, 0, 0,
+                    cos_sin_table, &sm[(flip_flag) * shared_mem_block_size]);
+
+                rope_q<VEC_DIM_M, VEC_DIM_K_KV, BLOCK_DIM_M, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
+                    PAD_SIZE_Q,
+                    HEAD_NUM_PER_BLOCK, HIDDEN_DIM>(
+                    D, M + start_token_idx, thread_x, warp_id, start_m + start_token_idx, 0,
+                    cos_sin_table, &q_sm[0]);
+            }
         }
 
         float max_value[VEC_DIM_M][HEAD_NUM_PER_BLOCK];
@@ -634,7 +973,6 @@ namespace tff::kernel {
                 sum_value[mm][head] = 0.0f;
             }
         }
-        //
 
         __syncthreads();
 
@@ -643,10 +981,7 @@ namespace tff::kernel {
 
 
         for (int n = 0; n < n_stage; n++) {
-            int n_start = n * BLOCK_DIM_N;
-            if (n_start > (start_m + BLOCK_DIM_M)) {
-                continue;
-            }
+            int start_n = n * BLOCK_DIM_N;
             float c_reg[VEC_DIM_M * VEC_DIM_N * HEAD_NUM_PER_BLOCK];
             for (int index = 0; index < HEAD_NUM_PER_BLOCK; index++) {
                 for (int mm = 0; mm < VEC_DIM_M; mm++) {
@@ -661,10 +996,11 @@ namespace tff::kernel {
 
             cp_async_wait_all();
 
-            compute_tile_attention_gemm<T_KV, VEC_DIM_M, VEC_DIM_N_CM, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K_Q,
+            compute_tile_attention_gemm<half, VEC_DIM_M, VEC_DIM_N_CM, BLOCK_DIM_M, BLOCK_DIM_N, BLOCK_DIM_K_Q,
                 HIDDEN_DIM,
                 HEAD_NUM_PER_BLOCK, B, MBit, S, PAD_SIZE_Q, PAD_SIZE_KV>(
-                N, k_size, thread_x, warp_id, start_m, n_start, q_sm, &sm[(flip_flag) * shared_mem_block_size],
+                max_seq_len, M + start_token_idx, N, k_size, thread_x, warp_id,
+                start_m + start_token_idx, start_n, q_sm, &sm[(flip_flag) * shared_mem_block_size],
                 mask, c_reg);
 
             //
@@ -672,23 +1008,33 @@ namespace tff::kernel {
             const int next_n = (n + 1) * BLOCK_DIM_N;
             if (next_n < N) {
                 //
-                load_tile_kv<T_KV, VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit,
+                load_tile_kv<T_KV, NUM_KV_HEAD, HIDDEN_DIM, VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B,
+                    MBit,
                     S, PAD_SIZE_KV>(
                     kv_stride, N, thread_x, warp_id, next_n, 0,
                     k_ptr, &sm[(1 - flip_flag) * shared_mem_block_size]);
                 if constexpr (rope_flag == 1) {
-                    //
-                    rope_k<VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
-                        PAD_SIZE_KV>(
-                        q_ld, MAX_CTX, thread_x, warp_id, next_n, 0,
-                        cos_sin_table, &sm[(1 - flip_flag) * shared_mem_block_size]);
+                    if constexpr (rope_type == 1) {
+                        rope_k_neox<VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B,
+                            MBit, S, PAD_SIZE_KV>(
+                            D, N, thread_x, warp_id, next_n, 0,
+                            cos_sin_table, &sm[(1 - flip_flag) * shared_mem_block_size]);
+                    } else if constexpr (rope_type == 0) {
+                        //
+                        rope_k<VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit,
+                            S,
+                            PAD_SIZE_KV>(
+                            D, N, thread_x, warp_id, next_n, 0,
+                            cos_sin_table, &sm[(1 - flip_flag) * shared_mem_block_size]);
+                    }
                 }
             }
             __syncthreads();
             //
-            load_tile_kv<T_KV, VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit, S,
+            load_tile_kv<T_KV, NUM_KV_HEAD, HIDDEN_DIM, VEC_DIM_N, VEC_DIM_K_KV, BLOCK_DIM_N, BLOCK_DIM_K_KV, ELEMENTS_PER_LOAD_KV, B, MBit,
+                S,
                 PAD_SIZE_KV>(
-                kv_stride, N, thread_x, warp_id, n_start, d,
+                kv_stride, N, thread_x, warp_id, start_n, d,
                 v_ptr, &sm[(flip_flag) * shared_mem_block_size]);
             __syncthreads();
 
@@ -697,8 +1043,9 @@ namespace tff::kernel {
                 B,
                 MBit
                 , S, PAD_SIZE_Q, PAD_SIZE_KV>(
-                N, q_stride, start_m, n_start, d, thread_x, warp_id, &max_value[0][0],
-                &sum_value[0][0], &sm[(flip_flag) * shared_mem_block_size], scale, &c_reg[0], &out_sm[0]);
+                N, q_stride, start_m, start_n, d, thread_x, warp_id, &max_value[0][0],
+                &sum_value[0][0], &sm[(flip_flag) * shared_mem_block_size], scale, &c_reg[0],
+                &out_sm[0]);
             flip_flag ^= 1;
         }
 
@@ -707,20 +1054,25 @@ namespace tff::kernel {
             M, q_stride, start_m, warp_id, thread_x, out_sm, output);
     }
 
+    template
+    <
+        typename T, const int
+        ROPE_FLAG, const int
+        ROPE_TYPE>
 
-    template<typename T, const int ROPE_FLAG>
-    void paged_flash_attention_128(const int max_ctx, const int batch, const int M, const int N, const int D,
-                             const int q_ld, const int k_ld, const int v_ld,
-                             const float scale,
-                             const int num_q_heads, const int num_kv_heads,
-                             const T *q_gpu,
-                             const T *k_gpu,
-                             const T *v_gpu,
-                             T *mask,
-                             float *cos_sin_table,
-                             float *out_put,
-                             std::shared_ptr<core::device::DeviceStream> &stream) {
-        if (std::is_same_v<T, half>) {
+    void paged_flash_attention_128(const int start_token_idx,
+        const int max_seq_len, const int batch, const int M, const int N, const int D,
+                                   const int q_ld, const int k_ld, const int v_ld,
+                                   const float scale,
+                                   const int num_q_heads, const int num_kv_heads,
+                                   const half *q_gpu,
+                                   const int64_t *k_gpu,
+                                   const int64_t *v_gpu,
+                                   half *mask,
+                                   float *cos_sin_table,
+                                   float *out_put,
+                                   std::shared_ptr<core::device::DeviceStream> &stream) {
+        if (std::is_same_v<T, float>) {
             if (num_q_heads == 32 && num_kv_heads == 8 && D == 128) {
                 constexpr int B = 4;
                 constexpr int MBit = 2;
@@ -734,14 +1086,14 @@ namespace tff::kernel {
                 constexpr int BLOCK_DIM_N = 32;
                 constexpr int BLOCK_DIM_M = 8;
 
-                dim3 grid((M + BLOCK_DIM_M - 1) / BLOCK_DIM_M, num_q_heads, batch);
+                dim3 grid((M + BLOCK_DIM_M - 1) / BLOCK_DIM_M, num_q_heads / HEAD_NUM_PER_BLOCK, batch);
                 dim3 block(THREAD_BLOCK_SIZE);
 
-                paged_flash_attention_fp16_8x32<half, half, 32, 8, HIDDEN_DIM, BLOCK_DIM_M, BLOCK_DIM_N,
-                            ELEMENTS_PER_LOAD, ROPE_FLAG, B, MBit, S, HEAD_NUM_PER_BLOCK, WARP_SIZE, THREAD_BLOCK_SIZE>
-                        <<<grid,
-                        block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
-                            M, N, D, max_ctx, D, D, D,
+                paged_flash_attention_fp16_8x32<half, int64_t, ROPE_FLAG, ROPE_TYPE, 32, 8, HIDDEN_DIM, BLOCK_DIM_M,
+                            BLOCK_DIM_N,
+                            ELEMENTS_PER_LOAD, B, MBit, S, HEAD_NUM_PER_BLOCK, WARP_SIZE, THREAD_BLOCK_SIZE>
+                        <<<grid, block, 0, static_cast<cudaStream_t>(stream->get_native_stream())>>>(
+                            start_token_idx, max_seq_len, M, N, D, q_ld, k_ld, v_ld,
                             scale,
                             q_gpu, k_gpu, v_gpu, mask, cos_sin_table, out_put);
             }
@@ -749,41 +1101,58 @@ namespace tff::kernel {
             //todo
         }
     }
+    template<typename T>
+    class PagedFlashAttn<T, core::device::GPUTag> : public base::OPCreatorBase<PagedFlashAttn<T,
+                    core::device::GPUTag>,
+                T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_FLASH_ATTN_PAGED;
+        }
+    };
 
     //
     template<typename T>
-    void tff::kernel::PagedFlashAttn<T>::compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
-        auto max_ctx = kernel::base::get_param_value<const int>(0, para_ptr);
-        auto q_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            1, para_ptr);
-        auto k_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            2, para_ptr);
-        auto v_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            3, para_ptr);
-        auto rope_table = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            4, para_ptr);
-        auto mask_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor>>(
-            5, para_ptr);
+    void tff::kernel::PagedFlashAttn<T, core::device::GPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto rope_type = kernel::base::get_param_value<int>(RopeBuilder::Params::RopeType, para_ptr);
+        auto q_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::Q, para_ptr);
+        auto k_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::K, para_ptr);
+        auto v_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::V, para_ptr);
+        auto rope_table = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PreRopeTableBuilder::Params::RopeTable, para_ptr);
+        auto mask_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::Mask, para_ptr);
         auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
-            6, para_ptr);
-
+            PagedFlashAttnBuilder::Params::Out, para_ptr);
+        auto start_token_idx = *kernel::base::get_param_value<int32_t*>(RopeBuilder::Params::TokenIdx,para_ptr);
         auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
-                        para_ptr->get_param_count() - 1, para_ptr);
+            kernel::builder::OpParamBuilderBase<PagedFlashAttnBuilder>::CommonParams::Stream, para_ptr);
 
 
-        if (q_tensor== nullptr || k_tensor == nullptr || v_tensor == nullptr || output_tensors == nullptr
-            || rope_table == nullptr || mask_tensor == nullptr) {
+        if (q_tensor == nullptr || k_tensor == nullptr || v_tensor == nullptr || output_tensors == nullptr
+            || mask_tensor == nullptr) {
             return;
         }
-        if (q_tensor->get_buffer() == nullptr || k_tensor->get_buffer() == nullptr || v_tensor->get_buffer() == nullptr ||
-            rope_table->get_buffer() == nullptr || mask_tensor->get_buffer() == nullptr) {
+        if (q_tensor->get_buffer() == nullptr || k_tensor->get_buffer() == nullptr || v_tensor->get_buffer() ==
+            nullptr ||
+            mask_tensor->get_buffer() == nullptr) {
+            return;
+        }
+        if (rope_table != nullptr && rope_table->get_buffer() == nullptr) {
+            tff::log::Logger::error("PagedFlashAttn param rope_table is null");
             return;
         }
         auto &output = output_tensors;
-        const int num_q_heads = q_tensor->get_shape()[2];
-        const int num_kv_heads = k_tensor->get_shape()[2];
-        const int M = q_tensor->get_shape()[1];
-        const int N = k_tensor->get_shape()[1];
+        const int num_q_heads = q_tensor->get_shape()[1];
+        const int num_kv_heads = k_tensor->get_shape()[1];
+        const int M = q_tensor->get_shape()[2];
+        const int N = M + start_token_idx;
         const int D = q_tensor->get_shape()[0];
         const int B = q_tensor->get_shape()[3];
         const float scale = 1.0f / std::sqrt(static_cast<float>(D));
@@ -791,13 +1160,120 @@ namespace tff::kernel {
             case 128: {
                 auto *cos_sin_table = static_cast<float *>(rope_table->get_buffer()->ptr());
                 if (rope_table != nullptr) {
-                    paged_flash_attention_128<T, 1>(max_ctx, B, M, N, D, D, D, D, scale, num_q_heads, num_kv_heads,
-                                              static_cast<T *>(q_tensor->get_buffer()->ptr()),
-                                              static_cast<T *>(k_tensor->get_buffer()->ptr()),
-                                              static_cast<T *>(v_tensor->get_buffer()->ptr()),
-                                              static_cast<T *>(mask_tensor->get_buffer()->ptr()),
-                                              cos_sin_table,
-                                              static_cast<float *>(output->get_buffer()->ptr()), stream);
+                    if (rope_type == 1) {
+                        paged_flash_attention_128<T, 1, 1>(start_token_idx, mask_tensor->get_shape()[0],B, M, N, D, D,
+                                                           k_tensor->get_shape()[0], v_tensor->get_shape()[0],
+                                                           scale,
+                                                           num_q_heads, num_kv_heads,
+                                                           static_cast<half *>(q_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(k_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(v_tensor->get_buffer()->ptr()),
+                                                           static_cast<half *>(mask_tensor->get_buffer()->ptr()),
+                                                           cos_sin_table,
+                                                           static_cast<T *>(output->get_buffer()->ptr()), stream);
+                    } else {
+                        paged_flash_attention_128<T, 1, 0>(start_token_idx, mask_tensor->get_shape()[0],B, M, N, D, D,
+                                                           k_tensor->get_shape()[0], v_tensor->get_shape()[0],
+                                                           scale,
+                                                           num_q_heads, num_kv_heads,
+                                                           static_cast<half *>(q_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(k_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(v_tensor->get_buffer()->ptr()),
+                                                           static_cast<half *>(mask_tensor->get_buffer()->ptr()),
+                                                           cos_sin_table,
+                                                           static_cast<T *>(output->get_buffer()->ptr()), stream);
+                    }
+                }
+                break;
+            }
+            case 64:
+                break;
+            case 256:
+                break;
+            default:
+                break;
+        }
+    }
+
+    template<typename T>
+    class PagedFlashAttnRope<T, core::device::GPUTag> : public base::OPCreatorBase<PagedFlashAttnRope<T,
+                    core::device::GPUTag>,
+                T, core::device::GPUTag> {
+    public:
+        static void compute(std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr);
+
+        inline static core::graph::TffOpType op_type() {
+            return core::graph::TffOpType::TFF_OP_FLASH_ATTN_PAGED_ROPE;
+        }
+    };
+
+    //
+    template<typename T>
+    void tff::kernel::PagedFlashAttnRope<T, core::device::GPUTag>::compute(
+        std::shared_ptr<tff::core::global::ParamBaseObject> &para_ptr) {
+        auto rope_type = kernel::base::get_param_value<int>(RopeBuilder::Params::RopeType, para_ptr);
+        auto q_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::Q, para_ptr);
+        auto k_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::K, para_ptr);
+        auto v_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::V, para_ptr);
+        auto rope_table = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PreRopeTableBuilder::Params::RopeTable, para_ptr);
+        auto mask_tensor = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::Mask, para_ptr);
+        auto output_tensors = kernel::base::get_param_value<std::shared_ptr<tff::core::memory::Tensor> >(
+            PagedFlashAttnBuilder::Params::Out, para_ptr);
+        auto start_token_idx = kernel::base::get_param_value<int>(RopeBuilder::Params::TokenIdx,para_ptr);
+        auto stream = kernel::base::get_param_value<std::shared_ptr<core::device::DeviceStream> >(
+            kernel::builder::OpParamBuilderBase<PagedFlashAttnBuilder>::CommonParams::Stream, para_ptr);
+
+
+        if (q_tensor == nullptr || k_tensor == nullptr || v_tensor == nullptr || output_tensors == nullptr
+            || rope_table == nullptr || mask_tensor == nullptr) {
+            return;
+        }
+        if (q_tensor->get_buffer() == nullptr || k_tensor->get_buffer() == nullptr || v_tensor->get_buffer() ==
+            nullptr
+            ||
+            rope_table->get_buffer() == nullptr || mask_tensor->get_buffer() == nullptr) {
+            return;
+        }
+        auto &output = output_tensors;
+        const int num_q_heads = q_tensor->get_shape()[1];
+        const int num_kv_heads = k_tensor->get_shape()[1];
+        const int M = q_tensor->get_shape()[2];
+        const int N = k_tensor->get_shape()[2];
+        const int D = q_tensor->get_shape()[0];
+        const int B = q_tensor->get_shape()[3];
+        const float scale = 1.0f / std::sqrt(static_cast<float>(D));
+        switch (D) {
+            case 128: {
+                auto *cos_sin_table = static_cast<float *>(rope_table->get_buffer()->ptr());
+                if (rope_table != nullptr) {
+                    if (rope_type == 1) {
+                        paged_flash_attention_128<T, 1, 1>(start_token_idx, mask_tensor->get_shape()[0],B, M, N, D, D,
+                                                           k_tensor->get_shape()[0], v_tensor->get_shape()[0],
+                                                           scale,
+                                                           num_q_heads, num_kv_heads,
+                                                           static_cast<half *>(q_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(k_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(v_tensor->get_buffer()->ptr()),
+                                                           static_cast<half *>(mask_tensor->get_buffer()->ptr()),
+                                                           cos_sin_table,
+                                                           static_cast<T *>(output->get_buffer()->ptr()), stream);
+                    } else {
+                        paged_flash_attention_128<T, 1, 0>(start_token_idx,mask_tensor->get_shape()[0],B, M, N, D, D,
+                                                           k_tensor->get_shape()[0], v_tensor->get_shape()[0],
+                                                           scale,
+                                                           num_q_heads, num_kv_heads,
+                                                           static_cast<half *>(q_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(k_tensor->get_buffer()->ptr()),
+                                                           static_cast<int64_t *>(v_tensor->get_buffer()->ptr()),
+                                                           static_cast<half *>(mask_tensor->get_buffer()->ptr()),
+                                                           cos_sin_table,
+                                                           static_cast<T *>(output->get_buffer()->ptr()), stream);
+                    }
                 }
                 break;
             }
@@ -811,6 +1287,11 @@ namespace tff::kernel {
     }
 
 
-    template class tff::kernel::FlashAttn<half>;
-    REGISTER_OP_OBJECT(FlashAttn, half);
+    template
+    class tff::kernel::PagedFlashAttnRope<float, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(PagedFlashAttnRope, float, core::device::GPUTag);
+
+    template
+    class tff::kernel::PagedFlashAttn<float, core::device::GPUTag>;
+    REGISTER_OP_OBJECT_DEVICE(PagedFlashAttn, float, core::device::GPUTag);
 }

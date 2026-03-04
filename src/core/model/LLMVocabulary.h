@@ -16,22 +16,41 @@
 #include <queue>
 
 namespace tff::core::model {
-    class LLMLLaMaVocabulary : public tff::module::ModuleObject {
+    /**
+     * @brief 词表 类
+     */
+    class LLMVocabulary : public tff::module::ModuleObject {
     public:
-        LLMLLaMaVocabulary() : _n_token_types(0), _vaocabulary_type(tff::core::model::VocabType::TFF_VOCAB_TYPE_BPE),
-                               _add_bos(false), _add_space_prefix(false), _add_eos(false), _add_sep(false),
-                               _ignore_merges(false), _clean_spaces(false), _remove_extra_whitespaces(false),
-                               _escape_whitespaces(false), _treat_whitespace_as_suffix(false) {
+        LLMVocabulary() : _n_token_types(0), _vaocabulary_type(tff::core::model::VocabType::TFF_VOCAB_TYPE_BPE),
+                          _add_bos(false), _add_space_prefix(false), _add_eos(false), _add_sep(false),
+                          _ignore_merges(false), _clean_spaces(false), _remove_extra_whitespaces(false),
+                          _escape_whitespaces(false), _treat_whitespace_as_suffix(false) {
         };
 
-        ~LLMLLaMaVocabulary() override = default;
+        ~LLMVocabulary() override = default;
 
     public:
-        bool load_vocabulary(const std::shared_ptr<tff::core::model::ModelLoaderBase> &_model_loader);
+        /**
+         * @brief 加载词表
+         * @param model_loader 模型加载器
+         * @return
+         */
+        bool load_vocabulary(const std::shared_ptr<tff::core::model::ModelLoaderBase> &model_loader);
 
+        /**
+         * @brief 获取词表大小
+         * @param token_left 左侧token
+         * @param token_right 右侧token
+         * @return 词信息排名
+         */
         int32_t get_rank(const std::string &token_left, const std::string &token_right) const;
-        //
-        inline int32_t text_to_token(const std::string & text) const {
+
+        /**
+         * @brief 获取token
+         * @param text 文本
+         * @return token
+         */
+        inline int32_t text_to_token(const std::string &text) const {
             auto it = this->_token_to_id.find(text);
             if (it != this->_token_to_id.end()) {
                 return (*it).second;
@@ -40,35 +59,83 @@ namespace tff::core::model {
         }
 
     public:
+        /**
+         * @brief 加载BPE
+         * @return
+         */
         bool load_bpe();
 
-        //
+        /**
+         * @brief 加载token数据
+         * @return
+         */
         bool load_token_data();
 
-        //
+        /**
+         * @brief 分词
+         * @param raw_text 原始文本
+         * @param token_vec token结果
+         * @param add_special 是否添加特殊token
+         * @param parse_special 是否解析特殊token
+         */
         void tokenize(const std::string &raw_text,
                       std::vector<int32_t> &token_vec,
                       bool add_special = false, bool parse_special = false) const;
-        //
+
+        /**
+         * @brief 处理特殊token
+         */
         void process_special_tokens();
-        //
+
+        /**
+         * @brief 处理EOG token
+         */
         void process_eog_tokens();
-        //
+
+        /**
+         * @brief 处理用户自定义token
+         */
         void process_user_defined_tokens();
 
+        /**
+         * @brief token转string
+         * @param token token
+         * @param special 是否特殊token
+         * @return string
+         */
         std::string token_to_string(const int32_t &token, bool special);
 
-        //
+        /**
+         * @brief token转string
+         * @param token token
+         * @param buf buf
+         * @param length length
+         * @param lstrip lstrip
+         * @param special 是否特殊token
+         * @return
+         */
         int32_t token_to_string(int32_t token, char *buf, int32_t length, int32_t lstrip, bool special = true);
-        //
+
+        /**
+         * @brief 获取EOS token
+         * @return EOS token
+         */
         inline std::vector<int32_t> get_eos_tokens() const {
             return this->_eos_tokens;
         }
-        //
+
+        /**
+         * @brief 获取EOG token
+         * @return EOG token
+         */
         inline std::vector<int32_t> get_eog_tokens() const {
             return this->_eog_tokens;
         }
-        //
+
+        /**
+         * @brief 获取vocab size
+         * @return vocab size
+         */
         inline int get_vocab_size() const {
             return this->_id_to_token.size();
         };
@@ -107,7 +174,7 @@ namespace tff::core::model {
 
         //
         int32_t _linefeed_id;
-        std::set<uint32_t> _special_eog_ids;
+        std::set<int32_t> _special_eog_ids;
         std::vector<int32_t> _eog_tokens;
         std::vector<int32_t> _eos_tokens;
         //
@@ -115,10 +182,9 @@ namespace tff::core::model {
         std::vector<std::string> _cache_token_to_piece;
 
     private:
-
     };
 
-    REGISTER_MODULE_OBJECT(LLMLLaMaVocabulary, tff::module::ModuleObject, "VOCAB", "LLAMA")
+    REGISTER_MODULE_OBJECT(LLMVocabulary, tff::module::ModuleObject, "VOCAB", "LLAMA")
 }
 
 

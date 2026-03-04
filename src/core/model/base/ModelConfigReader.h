@@ -14,6 +14,9 @@
 
 using json = nlohmann::json;
 namespace tff::core::model {
+    /**
+     * 模型配置文件读取器
+     */
     class ModelConfigReader {
     public:
         struct Config {
