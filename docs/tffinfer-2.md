@@ -25,7 +25,7 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 ---
 
-## 3. 运行时如何「接上」加载器（总览）
+## 3. 运行时如何「接上」加载器
 
 推理侧入口是 `LLMInferRuntime::load_model`（`InferRuntime.cu`）：
 
@@ -55,7 +55,7 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 这是 **顺序解析 GGUF 文件** 的基础。
 
-### 4.2 `FileMMap`（可选）
+### 4.2 `FileMMap`
 
 当 `ModelConfig::_use_mmap` 为真时，`GGUFLoader::load` 会为每个模型文件构造 `FileMMap`：
 
@@ -158,20 +158,15 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 ---
 
-## 7. 权重字节何时进内存 / 设备（与第一节的边界）
+## 7. 权重字节何时进内存 / 设备
 
 `GGUFLoader` 中还实现了 `load_tensor_data`：在成员 `_alloc` 为真时，通过工厂创建 CPU 内存分配器，一次性分配 `_size` 字节，`fread` 整块数据区，再对每个 `Tensor` `set_buffer_data`。
 
 在当前仓库的默认路径里，`load()` **没有**调用 `load_tensor_data`，且 `_alloc` 默认为 `false`。实际推理中，`LLMInferRuntime::init_runtime_context` 会调用 `load_tensor_data()`，其实现是 **构建 IO 类型的 Taskflow 任务并执行**（`InferRuntime.cu`），把权重搬运与设备侧分配放到调度图里完成。
 
-**第一节只需建立概念**：
-
-- **解析阶段**（本节）：魔数、头、KV、张量元数据、`weight_map` —— 已基本完成；
-- **搬运阶段**（后续「内存 / IO 图」课程）：按图任务把数据从文件或 mmap 拷到 CPU/GPU buffer。
-
 ---
 
-## 8. 学习本节时建议打开的源码文件
+## 8. 源码文件
 
 
 | 文件                                          | 建议关注点                                                     |
@@ -187,7 +182,7 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 ---
 
-## 9. 自测与思考题
+## 9.思考
 
 1. 若 GGUF 文件魔数正确但 version 为 1，`check_version` 会如何表现？对上层 `load_from_file` 返回值有何影响？
 2. `load_tensor_info` 中为何在读完所有张量元数据后还要 `file_aligned`？若省略可能造成什么问题？
@@ -199,10 +194,6 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 ## 10. 下一节预告
 
 **第 2 节** 建议主题：**`ModelCreator` 与计算图构建** —— 在已有 `ModelConfig` 与 `weight_map` 的前提下，如何按架构（如 Qwen3）实例化各层算子节点，并把权重绑定到图上。
-
----
-
-**相关：** 分模块、分层可直接渲染的架构图（Mermaid + ASCII）见同目录 [`course-01-architecture-diagrams.md`](course-01-architecture-diagrams.md)；PPT 页序与要点提纲见 [`course-01-ppt-architecture-outline.md`](course-01-ppt-architecture-outline.md)。
 
 ---
 
