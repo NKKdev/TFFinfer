@@ -1,0 +1,6 @@
+<map id="tff::core::runtime::LLMMemManager::release_memory" name="tff::core::runtime::LLMMemManager::release_memory">
+<area shape="rect" id="Node000001" title="释放内存" alt="" coords="5,22,208,77"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#a45fe03ae877389010d85eb50cf4e252c" title="释放内存(异步)" alt="" coords="256,29,504,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="208,47,242,47,242,52,208,52"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="330,30,327,20,335,10,353,5,380,3,411,5,429,13,427,18,410,11,380,8,354,10,338,15,332,21,335,28"/>
+</map>

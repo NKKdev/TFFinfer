@@ -1,0 +1,59 @@
+<map id="tff::core::graph::GraphNode" name="tff::core::graph::GraphNode">
+<area shape="rect" id="Node000001" title="节点类" alt="" coords="248,845,447,870"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1graph_1_1op_1_1AddNode.html" title=" " alt="" coords="523,5,665,45"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="347,831,358,675,383,442,402,322,426,211,456,119,474,83,493,56,506,44,522,35,524,40,509,48,497,59,478,86,461,121,431,212,407,323,388,443,363,675,353,831"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1graph_1_1op_1_1BinaryOPNode.html" title=" " alt="" coords="523,69,665,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="348,831,360,685,387,472,406,362,430,261,459,177,475,145,493,120,506,108,522,99,525,104,509,112,497,123,479,147,463,179,435,262,411,363,392,473,365,686,353,831"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1graph_1_1op_1_1ConvertNode.html" title=" " alt="" coords="523,133,665,173"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="348,831,362,696,391,503,410,403,434,311,461,236,476,206,493,184,506,172,522,164,524,168,509,176,497,187,481,209,466,238,439,313,415,404,396,504,368,697,354,831"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1graph_1_1op_1_1EmbeddingNode.html" title=" " alt="" coords="523,197,665,237"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="349,830,365,707,395,533,414,444,437,362,463,294,478,268,493,247,522,228,525,232,497,251,482,271,468,296,442,363,419,445,400,534,370,708,354,831"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1graph_1_1op_1_1FlashAttnNode.html" title=" " alt="" coords="523,261,665,301"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="350,831,368,719,399,564,418,485,441,412,466,353,493,311,522,292,525,297,497,315,470,355,446,414,424,486,404,565,373,720,355,832"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1core_1_1graph_1_1op_1_1GatherNode.html" title=" " alt="" coords="523,325,665,365"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="346,831,351,744,359,686,371,623,390,557,415,491,449,430,493,375,522,357,524,361,496,379,454,433,420,494,395,558,377,624,364,687,357,745,351,831"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1graph_1_1op_1_1GetOfRowsOPNode.html" title=" " alt="" coords="517,389,671,429"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="347,831,356,755,379,650,398,593,422,538,454,486,493,439,515,424,518,428,496,443,458,489,427,540,403,595,384,651,362,755,353,831"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1graph_1_1op_1_1MapCPUBufferNode.html" title=" " alt="" coords="515,453,673,493"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="349,831,362,765,387,677,406,631,430,584,458,541,493,503,513,490,516,494,496,507,463,545,434,587,411,633,392,679,367,766,355,832"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1core_1_1graph_1_1op_1_1MaskOPNode.html" title=" " alt="" coords="523,517,665,557"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="352,830,368,776,396,705,437,631,463,597,493,567,522,550,525,555,496,571,467,601,441,634,401,707,373,777,357,832"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1core_1_1graph_1_1op_1_1MatMulNode.html" title=" " alt="" coords="523,581,665,621"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="356,831,376,788,405,734,444,679,468,654,493,631,522,615,525,620,496,636,471,657,448,682,410,737,380,790,361,833"/>
+<area shape="rect" id="Node000013" href="$classtff_1_1core_1_1graph_1_1op_1_1MemCpyNode.html" title=" " alt="" coords="523,645,665,685"/>
+<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="363,831,415,764,452,727,493,695,522,681,524,685,496,700,456,731,419,768,367,835"/>
+<area shape="rect" id="Node000014" href="$classtff_1_1core_1_1graph_1_1op_1_1MemOptNode.html" title=" " alt="" coords="523,709,665,749"/>
+<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="374,834,428,797,493,759,522,747,524,752,496,764,431,801,377,838"/>
+<area shape="rect" id="Node000015" href="$classtff_1_1core_1_1graph_1_1op_1_1MemRefNode.html" title=" " alt="" coords="523,773,665,813"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="410,838,522,809,524,814,411,844"/>
+<area shape="rect" id="Node000016" href="$classtff_1_1core_1_1graph_1_1op_1_1MulNode.html" title=" " alt="" coords="523,837,665,877"/>
+<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="461,855,523,855,523,860,461,860"/>
+<area shape="rect" id="Node000017" href="$classtff_1_1core_1_1graph_1_1op_1_1PagedFlashAttnNode.html" title=" " alt="" coords="511,901,677,941"/>
+<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="411,871,517,899,515,904,410,876"/>
+<area shape="rect" id="Node000018" href="$classtff_1_1core_1_1graph_1_1op_1_1PagedFlashAttnRopeNode.html" title=" " alt="" coords="495,965,693,1005"/>
+<area shape="poly" id="edge17_Node000001_Node000018" title=" " alt="" coords="377,876,431,914,496,951,524,963,522,968,493,956,428,918,374,881"/>
+<area shape="rect" id="Node000019" href="$classtff_1_1core_1_1graph_1_1op_1_1PreRopeTableNode.html" title=" " alt="" coords="518,1029,670,1069"/>
+<area shape="poly" id="edge18_Node000001_Node000019" title=" " alt="" coords="367,880,419,947,456,984,496,1015,519,1027,516,1032,493,1020,452,988,415,951,363,883"/>
+<area shape="rect" id="Node000020" href="$classtff_1_1core_1_1graph_1_1op_1_1QuantAlignedNode.html" title=" " alt="" coords="518,1093,670,1133"/>
+<area shape="poly" id="edge19_Node000001_Node000020" title=" " alt="" coords="361,882,380,924,410,978,448,1032,471,1057,496,1079,519,1093,516,1097,493,1083,468,1061,444,1036,405,981,376,927,356,884"/>
+<area shape="rect" id="Node000021" href="$classtff_1_1core_1_1graph_1_1op_1_1QuantMatMulNode.html" title=" " alt="" coords="518,1157,670,1197"/>
+<area shape="poly" id="edge20_Node000001_Node000021" title=" " alt="" coords="357,883,373,937,401,1007,441,1080,467,1114,496,1143,519,1158,516,1162,493,1147,463,1117,437,1083,396,1010,368,939,352,884"/>
+<area shape="rect" id="Node000022" href="$classtff_1_1core_1_1graph_1_1op_1_1QuantNode.html" title=" " alt="" coords="523,1221,665,1261"/>
+<area shape="poly" id="edge21_Node000001_Node000022" title=" " alt="" coords="355,883,367,948,392,1035,411,1082,434,1127,463,1170,496,1207,525,1225,522,1229,493,1211,458,1173,430,1130,406,1084,387,1037,362,950,349,884"/>
+<area shape="rect" id="Node000023" href="$classtff_1_1core_1_1graph_1_1op_1_1RMSNormNode.html" title=" " alt="" coords="523,1285,665,1325"/>
+<area shape="poly" id="edge22_Node000001_Node000023" title=" " alt="" coords="353,883,362,959,384,1063,403,1119,427,1174,458,1226,496,1271,525,1289,522,1294,493,1275,454,1229,422,1177,398,1121,379,1065,356,960,347,884"/>
+<area shape="rect" id="Node000024" href="$classtff_1_1core_1_1graph_1_1op_1_1RMSNormWNode.html" title=" " alt="" coords="523,1349,665,1389"/>
+<area shape="poly" id="edge23_Node000001_Node000024" title=" " alt="" coords="351,884,357,970,364,1028,377,1091,395,1156,420,1221,454,1282,496,1335,524,1353,521,1358,493,1339,449,1285,415,1223,390,1158,371,1092,359,1028,351,970,346,884"/>
+<area shape="rect" id="Node000025" href="$classtff_1_1core_1_1graph_1_1op_1_1ReshapeNode.html" title=" " alt="" coords="523,1413,665,1453"/>
+<area shape="poly" id="edge24_Node000001_Node000025" title=" " alt="" coords="355,883,373,994,404,1149,424,1228,446,1301,470,1360,497,1399,525,1418,522,1423,493,1403,466,1362,441,1302,418,1230,399,1151,368,995,350,884"/>
+<area shape="rect" id="Node000026" href="$classtff_1_1core_1_1graph_1_1op_1_1RopeNode.html" title=" " alt="" coords="523,1477,665,1517"/>
+<area shape="poly" id="edge25_Node000001_Node000026" title=" " alt="" coords="354,884,370,1006,400,1181,419,1270,442,1351,468,1418,482,1444,497,1463,525,1482,522,1487,493,1467,478,1447,463,1421,437,1353,414,1271,395,1182,365,1007,349,884"/>
+<area shape="rect" id="Node000027" href="$classtff_1_1core_1_1graph_1_1op_1_1SetOfRowsOPNode.html" title=" " alt="" coords="517,1541,671,1581"/>
+<area shape="poly" id="edge26_Node000001_Node000027" title=" " alt="" coords="354,883,368,1018,396,1211,415,1311,439,1402,466,1477,481,1506,497,1527,519,1544,515,1548,493,1531,476,1508,461,1479,434,1403,410,1312,391,1212,362,1018,348,884"/>
+<area shape="rect" id="Node000028" href="$classtff_1_1core_1_1graph_1_1op_1_1UnaryOPNode.html" title=" " alt="" coords="523,1605,665,1645"/>
+<area shape="poly" id="edge27_Node000001_Node000028" title=" " alt="" coords="353,883,365,1029,392,1241,411,1351,435,1452,463,1535,479,1567,497,1592,509,1603,525,1611,522,1615,506,1607,493,1595,475,1570,459,1537,430,1454,406,1352,387,1242,360,1029,348,884"/>
+<area shape="rect" id="Node000029" href="$classtff_1_1core_1_1graph_1_1op_1_1ViewNode.html" title=" " alt="" coords="523,1669,665,1709"/>
+<area shape="poly" id="edge28_Node000001_Node000029" title=" " alt="" coords="353,883,363,1040,388,1272,407,1392,431,1503,461,1594,478,1629,497,1656,509,1667,524,1675,522,1679,506,1671,493,1659,474,1632,456,1596,426,1504,402,1393,383,1272,358,1040,347,884"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,837,200,877"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="214,855,248,855,248,860,214,860"/>
+</map>

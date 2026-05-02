@@ -1,0 +1,21 @@
+<map id="tff::log::Logger::warning" name="tff::log::Logger::warning">
+<area shape="rect" id="Node000001" title=" " alt="" coords="829,221,1005,246"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1FileMMap.html#ab9fc12a90bab1ef99d6d56dfb5186a3b" title=" " alt="" coords="572,5,764,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="901,210,882,176,855,135,820,94,780,60,758,48,761,43,783,55,824,90,859,132,887,173,906,207"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1runtime_1_1LLMBatchManager.html#a4ae70a4d21aef7c5295bcc68020f9283" title="初始化" alt="" coords="579,69,757,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="893,213,844,168,813,144,780,124,753,112,755,107,783,119,816,140,847,163,897,209"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorCUDA.html#aba979bf630b490a6a841e15cf60367bd" title=" " alt="" coords="569,134,767,189"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="859,219,762,191,764,186,860,214"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a6510d75a505f2cd0f080bac3ab7a9cef" title="处理EOG token" alt="" coords="555,213,781,253"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="816,236,781,236,781,231,816,231"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1core_1_1model_1_1FileLock.html#a0a0505d293e1c35a8e276e62042ed0bf" title=" " alt="" coords="577,277,759,317"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="854,252,747,280,746,275,853,247"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1model_1_1FileMMap.html#a739bafb919ee372313f7de1eb11bc3de" title=" " alt="" coords="572,341,764,381"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="893,257,844,295,783,332,753,344,751,339,780,327,841,290,890,253"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorCUDA.html#a9e95186c6d7f9763505819c6d433ada1" title=" " alt="" coords="563,406,773,461"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="904,259,855,326,822,363,783,396,761,408,759,403,780,391,818,359,851,323,899,256"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a3fda8902fa2966f401a81ef4b5a038eb" title="处理特殊token" alt="" coords="280,213,507,253"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="541,236,507,236,507,231,541,231"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a7f3f08a14d49958578cdd859ebf2582f" title="加载token数据" alt="" coords="5,213,232,253"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="266,236,232,236,232,231,266,231"/>
+</map>

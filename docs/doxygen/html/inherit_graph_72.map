@@ -1,0 +1,117 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classtff_1_1kernel_1_1builder_1_1IParamBuilder.html" title="Parameter builder interface." alt="" coords="5,1114,143,1154"/>
+<area shape="rect" id="Node000001" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,5,395,60"/>
+<area shape="poly" id="edge79_Node000000_Node000001" title=" " alt="" coords="74,1100,86,878,109,552,125,387,143,242,164,131,176,93,189,70,206,54,227,43,230,48,209,58,193,73,181,95,170,133,149,243,130,388,114,552,91,878,80,1100"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,84,395,139"/>
+<area shape="poly" id="edge81_Node000000_Node000003" title=" " alt="" coords="74,1100,87,893,112,591,127,440,146,307,166,205,177,170,189,148,206,133,227,122,229,127,209,137,193,152,182,172,171,206,151,307,133,441,117,592,93,893,80,1100"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,163,395,217"/>
+<area shape="poly" id="edge83_Node000000_Node000005" title=" " alt="" coords="72,1100,74,921,79,795,87,660,102,525,122,401,151,298,168,258,189,227,206,211,227,201,229,205,209,216,193,230,173,261,156,300,127,402,107,526,93,660,84,796,79,921,78,1100"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,241,395,296"/>
+<area shape="poly" id="edge85_Node000000_Node000007" title=" " alt="" coords="73,1100,77,934,92,697,106,575,127,463,154,370,170,334,189,306,206,290,227,279,230,284,209,294,193,309,175,336,159,372,132,464,112,576,97,698,82,935,78,1100"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="227,320,397,375"/>
+<area shape="poly" id="edge87_Node000000_Node000009" title=" " alt="" coords="73,1100,79,949,97,735,111,625,131,525,156,442,172,409,189,384,206,369,225,359,228,364,209,374,193,388,176,412,161,444,136,526,117,626,102,736,85,949,79,1100"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,399,395,453"/>
+<area shape="poly" id="edge89_Node000000_Node000011" title=" " alt="" coords="74,1100,82,963,101,773,116,676,136,587,159,514,173,485,189,463,207,448,227,437,230,442,209,452,193,466,178,488,164,516,141,588,122,677,107,774,88,963,79,1101"/>
+<area shape="rect" id="Node000013" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,477,395,532"/>
+<area shape="poly" id="edge91_Node000000_Node000013" title=" " alt="" coords="75,1100,85,977,106,811,121,726,140,649,162,586,189,542,206,527,227,516,229,521,209,531,193,545,167,588,145,651,127,727,112,812,91,978,80,1101"/>
+<area shape="rect" id="Node000015" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,556,395,611"/>
+<area shape="poly" id="edge93_Node000000_Node000015" title=" " alt="" coords="76,1100,89,992,112,849,127,777,145,712,165,658,189,620,207,605,227,595,230,600,210,610,193,624,170,660,150,713,132,778,117,850,94,993,81,1101"/>
+<area shape="rect" id="Node000017" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,635,395,689"/>
+<area shape="poly" id="edge95_Node000000_Node000017" title=" " alt="" coords="71,1100,74,1019,89,912,103,855,124,799,152,746,189,699,207,684,227,674,229,679,209,689,193,703,157,749,129,801,108,857,94,913,79,1020,77,1100"/>
+<area shape="rect" id="Node000019" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,713,395,768"/>
+<area shape="poly" id="edge97_Node000000_Node000019" title=" " alt="" coords="74,1100,81,1033,99,947,113,901,133,857,158,815,189,777,207,763,227,753,230,758,210,768,193,781,162,818,138,859,118,903,104,948,86,1034,79,1101"/>
+<area shape="rect" id="Node000021" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,792,395,847"/>
+<area shape="poly" id="edge99_Node000000_Node000021" title=" " alt="" coords="78,1100,89,1047,110,981,142,914,164,883,189,856,207,843,227,833,229,838,210,847,192,860,168,887,147,917,115,983,94,1048,83,1101"/>
+<area shape="rect" id="Node000023" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,871,395,925"/>
+<area shape="poly" id="edge101_Node000000_Node000023" title=" " alt="" coords="84,1100,99,1062,122,1017,152,973,189,935,227,913,230,918,192,939,156,976,126,1020,104,1064,89,1102"/>
+<area shape="rect" id="Node000025" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="226,949,398,1004"/>
+<area shape="poly" id="edge103_Node000000_Node000025" title=" " alt="" coords="96,1101,136,1056,162,1033,189,1013,225,996,227,1001,192,1018,165,1037,140,1060,100,1105"/>
+<area shape="rect" id="Node000027" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,1028,395,1083"/>
+<area shape="poly" id="edge105_Node000000_Node000027" title=" " alt="" coords="145,1107,190,1091,228,1079,229,1084,192,1097,146,1112"/>
+<area shape="rect" id="Node000029" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,1107,395,1161"/>
+<area shape="poly" id="edge107_Node000000_Node000029" title=" " alt="" coords="156,1131,229,1131,229,1137,156,1137"/>
+<area shape="rect" id="Node000031" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,1185,395,1240"/>
+<area shape="poly" id="edge109_Node000000_Node000031" title=" " alt="" coords="149,1156,192,1170,229,1183,227,1188,190,1175,147,1161"/>
+<area shape="rect" id="Node000033" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="213,1264,411,1319"/>
+<area shape="poly" id="edge111_Node000000_Node000033" title=" " alt="" coords="101,1163,141,1207,165,1230,192,1249,216,1262,213,1266,189,1254,162,1234,137,1211,97,1167"/>
+<area shape="rect" id="Node000035" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="219,1343,405,1397"/>
+<area shape="poly" id="edge113_Node000000_Node000035" title=" " alt="" coords="89,1166,105,1204,127,1247,156,1291,192,1328,220,1345,217,1349,189,1332,152,1294,122,1250,100,1206,84,1168"/>
+<area shape="rect" id="Node000037" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="219,1421,405,1476"/>
+<area shape="poly" id="edge115_Node000000_Node000037" title=" " alt="" coords="83,1167,94,1219,115,1284,147,1350,168,1380,192,1407,220,1425,217,1429,189,1411,164,1383,142,1352,110,1286,89,1221,78,1168"/>
+<area shape="rect" id="Node000039" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,1500,395,1555"/>
+<area shape="poly" id="edge117_Node000000_Node000039" title=" " alt="" coords="79,1168,86,1234,104,1319,119,1364,138,1408,162,1449,193,1485,210,1499,230,1509,227,1514,207,1503,189,1489,158,1452,133,1410,114,1366,99,1321,81,1235,74,1168"/>
+<area shape="rect" id="Node000041" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="219,1579,405,1633"/>
+<area shape="poly" id="edge119_Node000000_Node000041" title=" " alt="" coords="77,1168,80,1248,94,1354,109,1410,129,1466,157,1518,193,1564,220,1584,217,1588,189,1568,152,1521,125,1468,104,1412,89,1355,74,1248,72,1168"/>
+<area shape="rect" id="Node000043" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="191,1657,433,1712"/>
+<area shape="poly" id="edge121_Node000000_Node000043" title=" " alt="" coords="81,1167,94,1275,117,1417,132,1489,150,1554,170,1607,193,1643,207,1655,203,1659,189,1646,165,1609,145,1555,127,1490,112,1418,89,1276,76,1168"/>
+<area shape="rect" id="Node000045" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="215,1736,409,1791"/>
+<area shape="poly" id="edge123_Node000000_Node000045" title=" " alt="" coords="80,1168,91,1290,112,1456,127,1540,145,1616,167,1679,193,1722,217,1740,213,1744,189,1725,162,1681,140,1618,122,1541,107,1457,86,1291,75,1168"/>
+<area shape="rect" id="Node000047" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,1815,395,1869"/>
+<area shape="poly" id="edge125_Node000000_Node000047" title=" " alt="" coords="79,1168,88,1305,107,1494,122,1590,141,1678,165,1751,178,1779,193,1800,209,1815,230,1825,227,1830,206,1819,189,1804,173,1782,160,1753,136,1680,117,1591,102,1495,82,1305,74,1168"/>
+<area shape="rect" id="Node000049" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,1893,395,1948"/>
+<area shape="poly" id="edge127_Node000000_Node000049" title=" " alt="" coords="79,1167,85,1318,102,1531,117,1641,137,1740,162,1823,176,1855,193,1879,209,1894,230,1904,227,1909,206,1898,189,1882,172,1857,157,1825,131,1742,112,1641,97,1532,80,1319,73,1168"/>
+<area shape="rect" id="Node000051" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,1972,395,2027"/>
+<area shape="poly" id="edge129_Node000000_Node000051" title=" " alt="" coords="78,1168,82,1333,98,1569,112,1691,132,1803,159,1895,175,1930,193,1958,209,1972,229,1983,227,1988,206,1977,189,1961,170,1933,154,1897,127,1804,107,1692,92,1570,77,1333,73,1168"/>
+<area shape="rect" id="Node000053" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,2051,395,2105"/>
+<area shape="poly" id="edge131_Node000000_Node000053" title=" " alt="" coords="78,1168,80,1347,84,1472,93,1607,107,1741,128,1865,156,1967,173,2006,193,2036,209,2051,229,2062,227,2067,206,2056,189,2040,169,2009,151,1968,123,1866,102,1742,88,1607,79,1472,74,1347,72,1168"/>
+<area shape="rect" id="Node000055" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="229,2129,395,2184"/>
+<area shape="poly" id="edge133_Node000000_Node000055" title=" " alt="" coords="80,1168,93,1375,117,1676,133,1827,151,1961,171,2062,182,2096,193,2116,209,2131,229,2141,227,2146,206,2135,189,2120,177,2098,166,2063,146,1961,127,1828,112,1677,87,1375,74,1168"/>
+<area shape="rect" id="Node000057" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title="Parameter builder base class." alt="" coords="229,2208,395,2263"/>
+<area shape="poly" id="edge135_Node000000_Node000057" title=" " alt="" coords="80,1168,91,1390,114,1716,130,1880,149,2025,170,2135,181,2173,193,2195,209,2210,230,2220,227,2225,206,2214,189,2198,176,2175,164,2137,143,2026,125,1881,109,1716,86,1390,74,1168"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1kernel_1_1AddBuilder.html" title="Add算子参数构建器" alt="" coords="506,20,669,45"/>
+<area shape="poly" id="edge80_Node000001_Node000002" title=" " alt="" coords="409,30,506,30,506,35,409,35"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1kernel_1_1BinaryOPBuilder.html" title="BinaryOP算子参数构建器" alt="" coords="488,99,687,124"/>
+<area shape="poly" id="edge82_Node000003_Node000004" title=" " alt="" coords="409,109,488,109,488,114,409,114"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1kernel_1_1ConvertOPBuilder.html" title="ConvertOP算子参数构建器" alt="" coords="484,177,691,203"/>
+<area shape="poly" id="edge84_Node000005_Node000006" title=" " alt="" coords="409,187,484,187,484,193,409,193"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1kernel_1_1DeQuantBuilder.html" title="DeQuant算子参数构建器" alt="" coords="490,256,685,281"/>
+<area shape="poly" id="edge86_Node000007_Node000008" title=" " alt="" coords="409,266,490,266,490,271,409,271"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1kernel_1_1EmbeddingBuilder.html" title="Embedding算子参数构建器" alt="" coords="482,335,693,360"/>
+<area shape="poly" id="edge88_Node000009_Node000010" title=" " alt="" coords="411,345,482,345,482,350,411,350"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1kernel_1_1FlashAttnBuilder.html" title="FlashAttn算子参数构建器" alt="" coords="487,413,687,439"/>
+<area shape="poly" id="edge90_Node000011_Node000012" title=" " alt="" coords="409,423,487,423,487,429,409,429"/>
+<area shape="rect" id="Node000014" href="$classtff_1_1kernel_1_1GatherOPBuilder.html" title="GatherOP算子参数构建器" alt="" coords="487,492,687,517"/>
+<area shape="poly" id="edge92_Node000013_Node000014" title=" " alt="" coords="409,502,487,502,487,507,409,507"/>
+<area shape="rect" id="Node000016" href="$classtff_1_1kernel_1_1GetRowBuilder.html" title="GetRow算子参数构建器" alt="" coords="493,571,682,596"/>
+<area shape="poly" id="edge94_Node000015_Node000016" title=" " alt="" coords="409,581,493,581,493,586,409,586"/>
+<area shape="rect" id="Node000018" href="$classtff_1_1kernel_1_1Map2CpuBuilder.html" title="Map2gpu算子参数构建器" alt="" coords="488,649,687,675"/>
+<area shape="poly" id="edge96_Node000017_Node000018" title=" " alt="" coords="409,659,488,659,488,665,409,665"/>
+<area shape="rect" id="Node000020" href="$classtff_1_1kernel_1_1MaskOPBuilder.html" title="MaskOP算子参数构建器" alt="" coords="492,728,683,753"/>
+<area shape="poly" id="edge98_Node000019_Node000020" title=" " alt="" coords="409,738,492,738,492,743,409,743"/>
+<area shape="rect" id="Node000022" href="$classtff_1_1kernel_1_1MatMulBuilder.html" title="MatMul算子参数构建器" alt="" coords="494,807,681,832"/>
+<area shape="poly" id="edge100_Node000021_Node000022" title=" " alt="" coords="409,817,494,817,494,822,409,822"/>
+<area shape="rect" id="Node000024" href="$classtff_1_1kernel_1_1MemCpyBuilder.html" title="MemCpy算子参数构建器" alt="" coords="489,885,685,911"/>
+<area shape="poly" id="edge102_Node000023_Node000024" title=" " alt="" coords="409,895,489,895,489,901,409,901"/>
+<area shape="rect" id="Node000026" href="$classtff_1_1kernel_1_1MemOptOPBuilder.html" title="MemOptOP算子参数构建器" alt="" coords="481,964,693,989"/>
+<area shape="poly" id="edge104_Node000025_Node000026" title=" " alt="" coords="412,974,481,974,481,979,412,979"/>
+<area shape="rect" id="Node000028" href="$classtff_1_1kernel_1_1MemRefBuilder.html" title="MemRef算子参数构建器" alt="" coords="491,1043,684,1068"/>
+<area shape="poly" id="edge106_Node000027_Node000028" title=" " alt="" coords="409,1053,491,1053,491,1058,409,1058"/>
+<area shape="rect" id="Node000030" href="$classtff_1_1kernel_1_1MulBuilder.html" title="Mul算子参数构建器" alt="" coords="506,1121,669,1147"/>
+<area shape="poly" id="edge108_Node000029_Node000030" title=" " alt="" coords="409,1131,506,1131,506,1137,409,1137"/>
+<area shape="rect" id="Node000032" href="$classtff_1_1kernel_1_1NormBuilder.html" title="Norm算子参数构建器" alt="" coords="500,1200,675,1225"/>
+<area shape="poly" id="edge110_Node000031_Node000032" title=" " alt="" coords="409,1210,500,1210,500,1215,409,1215"/>
+<area shape="rect" id="Node000034" href="$classtff_1_1kernel_1_1PagedFlashAttnBuilder.html" title="PagedFlashAttn算子参数构建器" alt="" coords="491,1271,684,1311"/>
+<area shape="poly" id="edge112_Node000033_Node000034" title=" " alt="" coords="425,1289,491,1289,491,1294,425,1294"/>
+<area shape="rect" id="Node000036" href="$classtff_1_1kernel_1_1PreRopeTableBuilder.html" title="PreRopeTable算子参数构建器" alt="" coords="497,1350,677,1390"/>
+<area shape="poly" id="edge114_Node000035_Node000036" title=" " alt="" coords="419,1367,497,1367,497,1373,419,1373"/>
+<area shape="rect" id="Node000038" href="$classtff_1_1kernel_1_1QuantAlignedBuilder.html" title="QuantAligned算子参数构建器" alt="" coords="497,1429,677,1469"/>
+<area shape="poly" id="edge116_Node000037_Node000038" title=" " alt="" coords="419,1446,497,1446,497,1451,419,1451"/>
+<area shape="rect" id="Node000040" href="$classtff_1_1kernel_1_1QuantBuilder.html" title="Quant算子参数构建器" alt="" coords="499,1515,676,1540"/>
+<area shape="poly" id="edge118_Node000039_Node000040" title=" " alt="" coords="409,1525,498,1525,498,1530,409,1530"/>
+<area shape="rect" id="Node000042" href="$classtff_1_1kernel_1_1QuantMatMulBuilder.html" title="QuantMatMul算子参数构建器" alt="" coords="497,1586,677,1626"/>
+<area shape="poly" id="edge120_Node000041_Node000042" title=" " alt="" coords="419,1603,497,1603,497,1609,419,1609"/>
+<area shape="rect" id="Node000044" href="$classtff_1_1kernel_1_1QuantMatMulReshapeBuilder.html" title="QuantMatMulReshape算子参数构建器" alt="" coords="497,1665,677,1705"/>
+<area shape="poly" id="edge122_Node000043_Node000044" title=" " alt="" coords="447,1682,497,1682,497,1687,447,1687"/>
+<area shape="rect" id="Node000046" href="$classtff_1_1kernel_1_1QuantReshapeBuilder.html" title="QuantReshape算子参数构建器" alt="" coords="494,1743,681,1783"/>
+<area shape="poly" id="edge124_Node000045_Node000046" title=" " alt="" coords="422,1761,494,1761,494,1766,422,1766"/>
+<area shape="rect" id="Node000048" href="$classtff_1_1kernel_1_1ReshapeBuilder.html" title="Reshape算子参数构建器" alt="" coords="490,1829,685,1855"/>
+<area shape="poly" id="edge126_Node000047_Node000048" title=" " alt="" coords="409,1839,490,1839,490,1845,409,1845"/>
+<area shape="rect" id="Node000050" href="$classtff_1_1kernel_1_1RopeBuilder.html" title="Rope算子参数构建器" alt="" coords="502,1908,673,1933"/>
+<area shape="poly" id="edge128_Node000049_Node000050" title=" " alt="" coords="409,1918,502,1918,502,1923,409,1923"/>
+<area shape="rect" id="Node000052" href="$classtff_1_1kernel_1_1SetRowBuilder.html" title="SetRow算子参数构建器" alt="" coords="494,1987,681,2012"/>
+<area shape="poly" id="edge130_Node000051_Node000052" title=" " alt="" coords="409,1997,494,1997,494,2002,409,2002"/>
+<area shape="rect" id="Node000054" href="$classtff_1_1kernel_1_1UnaryOPBuilder.html" title="UnaryOP算子参数构建器" alt="" coords="490,2065,685,2091"/>
+<area shape="poly" id="edge132_Node000053_Node000054" title=" " alt="" coords="409,2075,490,2075,490,2081,409,2081"/>
+<area shape="rect" id="Node000056" href="$classtff_1_1kernel_1_1ViewOPBuilder.html" title="ViewOP算子参数构建器" alt="" coords="493,2144,681,2169"/>
+<area shape="poly" id="edge134_Node000055_Node000056" title=" " alt="" coords="409,2154,493,2154,493,2159,409,2159"/>
+</map>

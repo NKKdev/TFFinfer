@@ -1,0 +1,41 @@
+<map id="tff::module::ModuleObject" name="tff::module::ModuleObject">
+<area shape="rect" id="Node000001" title=" " alt="" coords="264,390,455,415"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1device_1_1DeviceBaseObject.html" title="设备属性" alt="" coords="556,69,697,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="364,376,379,322,405,252,445,181,471,148,501,119,527,104,555,94,557,99,529,109,504,123,475,151,450,184,410,255,384,324,369,377"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1device_1_1DeviceManager.html" title=" " alt="" coords="561,133,692,173"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="368,376,386,334,415,281,453,228,476,204,501,183,530,168,560,158,562,163,532,173,504,188,480,208,457,232,419,284,391,336,373,378"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorBaseObject.html" title="显式内存分配器基类" alt="" coords="513,197,740,237"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="374,377,426,313,461,278,501,248,529,235,531,240,504,253,465,282,430,316,379,380"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1model_1_1LLMTokenizerBase.html" title="LLMTokenizer." alt="" coords="503,262,751,287"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="383,378,435,337,467,315,502,298,539,285,541,290,504,302,470,320,438,341,386,383"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html" title="词表 类" alt="" coords="513,311,740,337"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="402,382,502,347,554,334,555,339,503,352,404,387"/>
+<area shape="rect" id="Node000013" href="$classtff_1_1core_1_1model_1_1ModelLoaderBase.html" title=" " alt="" coords="504,361,749,386"/>
+<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="468,388,510,383,511,389,468,393"/>
+<area shape="rect" id="Node000015" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html" title="图优化器" alt="" coords="560,411,693,451"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="469,411,560,421,560,426,468,417"/>
+<area shape="rect" id="Node000016" href="$classtff_1_1core_1_1runtime_1_1LLMBatchManager.html" title="大模型 batch 管理器" alt="" coords="551,475,702,515"/>
+<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="401,418,504,460,552,475,550,480,502,465,399,423"/>
+<area shape="rect" id="Node000017" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html" title="LLM内存管理器" alt="" coords="553,539,700,579"/>
+<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="382,423,434,475,468,501,504,524,554,543,552,548,501,529,465,506,431,479,378,427"/>
+<area shape="rect" id="Node000018" href="$classtff_1_1core_1_1runtime_1_1LLMTaskFlowManager.html" title="LLM任务调度管理器" alt="" coords="540,603,713,643"/>
+<area shape="poly" id="edge17_Node000001_Node000018" title=" " alt="" coords="375,426,395,463,424,507,460,551,504,588,541,606,539,611,501,593,457,555,419,510,390,466,370,429"/>
+<area shape="rect" id="Node000019" href="$classtff_1_1core_1_1runtime_1_1MemOptStrategyBase.html" title="内存优化策略" alt="" coords="540,667,713,707"/>
+<area shape="poly" id="edge18_Node000001_Node000019" title=" " alt="" coords="370,428,387,476,414,537,453,600,477,628,504,652,541,671,538,676,501,657,473,632,449,603,410,540,382,478,365,430"/>
+<area shape="rect" id="Node000020" href="$classtff_1_1schedule_1_1HybridScheduler.html" title="HybridScheduler." alt="" coords="518,731,735,757"/>
+<area shape="poly" id="edge19_Node000001_Node000020" title=" " alt="" coords="367,428,379,489,404,567,422,609,445,648,472,685,504,717,525,729,522,733,501,721,468,689,440,651,418,611,399,569,374,490,362,429"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,383,216,423"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="230,400,264,400,264,405,230,405"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1device_1_1cpu_1_1DeviceCPU.html" title=" " alt="" coords="854,5,985,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="710,69,853,37,854,42,711,74"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1device_1_1cuda_1_1DeviceCUDA.html" title=" " alt="" coords="847,69,991,109"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="711,87,847,87,847,92,711,92"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorCPU.html" title=" " alt="" coords="830,133,1009,173"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="731,192,829,170,830,175,733,197"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorCUDA.html" title=" " alt="" coords="824,197,1015,237"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="754,215,824,215,824,220,754,220"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1core_1_1model_1_1LLMTokenizerBPE.html" title="BPE." alt="" coords="799,262,1040,287"/>
+<area shape="poly" id="edge10_Node000010_Node000011" title=" " alt="" coords="764,272,799,272,799,277,764,277"/>
+<area shape="rect" id="Node000014" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html" title=" " alt="" coords="814,361,1025,386"/>
+<area shape="poly" id="edge13_Node000013_Node000014" title=" " alt="" coords="763,371,814,371,814,376,763,376"/>
+</map>

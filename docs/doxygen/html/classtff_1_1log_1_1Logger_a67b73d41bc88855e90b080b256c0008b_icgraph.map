@@ -1,0 +1,26 @@
+<map id="tff::log::Logger::info" name="tff::log::Logger::info">
+<area shape="rect" id="Node000001" title=" " alt="" coords="829,329,979,354"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#a40dbbd0e1f601db2be173a0d981899ac" title="检测是否可以融合" alt="" coords="569,5,767,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="896,315,885,262,864,192,849,156,830,121,807,88,780,59,763,48,766,43,783,55,811,85,834,118,854,154,869,190,891,260,902,314"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1kernel_1_1MemCpy_3_01T_00_01core_1_1device_1_1CPUTag_01_4.html#a0dd6a60c7f68682e3ac8addb5ccefeaf" title=" " alt="" coords="573,70,763,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="891,316,876,277,852,230,820,181,780,139,761,127,764,123,783,135,824,178,856,227,880,275,896,314"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1memory_1_1Tensor.html#ab9cf45c71a517559ac8ba99bf3274050" title="获取张量指针引用次数" alt="" coords="587,149,749,189"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="886,318,843,260,813,230,780,204,748,188,750,183,783,199,817,226,847,257,890,315"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1runtime_1_1LLMBatchManager.html#a4ae70a4d21aef7c5295bcc68020f9283" title="初始化" alt="" coords="579,213,757,253"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="873,323,830,295,780,268,749,256,751,251,782,263,833,290,876,318"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorCPU.html#acfa6aeef3edccebe7cdb552325932996" title=" " alt="" coords="575,278,761,333"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="815,331,761,322,762,317,816,325"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#a188ca06a5844a056b5195f277ea92b95" title="图优化" alt="" coords="569,357,767,397"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="816,357,768,365,767,360,815,352"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a6510d75a505f2cd0f080bac3ab7a9cef" title="处理EOG token" alt="" coords="555,421,781,461"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="873,364,831,388,782,412,749,424,748,419,780,407,828,384,870,359"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a3fda8902fa2966f401a81ef4b5a038eb" title="处理特殊token" alt="" coords="280,451,507,491"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="891,368,873,395,849,425,818,454,782,476,745,489,706,499,626,506,548,503,481,493,481,488,549,497,625,501,705,493,743,484,780,471,815,450,845,422,869,392,887,365"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1core_1_1runtime_1_1LLMBatchManager.html#aa94618bfb7dc30717f41ed803ca3d0d4" title="分割策略 3：每个 sequence 一个 batch" alt="" coords="560,536,776,576"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="894,368,852,442,821,484,783,519,750,538,747,534,780,515,817,480,848,439,889,365"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1core_1_1runtime_1_1LLMBatchManager.html#a50cbe1cb034f9893165c57bd4e83e241" title="分割策略 1：简单分组" alt="" coords="575,601,761,655"/>
+<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="899,368,886,415,863,475,829,536,808,565,783,590,763,604,760,600,780,586,803,561,824,533,858,472,881,414,894,367"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="541,458,507,461,507,456,541,452"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a7f3f08a14d49958578cdd859ebf2582f" title="加载token数据" alt="" coords="5,451,232,491"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="266,473,232,473,232,468,266,468"/>
+</map>

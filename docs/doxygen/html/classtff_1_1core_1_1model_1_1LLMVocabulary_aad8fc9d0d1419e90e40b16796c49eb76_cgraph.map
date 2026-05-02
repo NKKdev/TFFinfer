@@ -1,0 +1,9 @@
+<map id="tff::core::model::LLMVocabulary::load_vocabulary" name="tff::core::model::LLMVocabulary::load_vocabulary">
+<area shape="rect" id="Node000001" title="加载词表" alt="" coords="5,69,232,109"/>
+<area shape="rect" id="Node000002" href="$namespacetff_1_1core_1_1global.html#adc57d2dd35bd9287342f9ebba9c9c3ce" title=" " alt="" coords="311,5,465,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,67,297,44,298,49,204,72"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1LLMTokenizerBase.html#a4e6068242291673e5d95d0adc0afa8ab" title=" " alt="" coords="280,69,496,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="232,87,266,87,266,92,232,92"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="292,133,484,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="204,107,291,128,289,133,203,112"/>
+</map>

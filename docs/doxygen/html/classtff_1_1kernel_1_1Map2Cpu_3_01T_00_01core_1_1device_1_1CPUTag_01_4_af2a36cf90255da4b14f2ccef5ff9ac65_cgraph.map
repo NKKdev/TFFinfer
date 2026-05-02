@@ -1,0 +1,9 @@
+<map id="tff::kernel::Map2Cpu&lt; T, core::device::CPUTag &gt;::compute" name="tff::kernel::Map2Cpu&lt; T, core::device::CPUTag &gt;::compute">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,195,60"/>
+<area shape="rect" id="Node000002" href="$namespacetff_1_1kernel_1_1base.html#a1211295c2a8afeac1c8adef259f84ebc" title=" " alt="" coords="243,13,377,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,30,229,30,229,35,195,35"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="425,20,580,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="378,30,411,30,411,35,378,35"/>
+<area shape="rect" id="Node000004" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="628,20,695,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="580,30,614,30,614,35,580,35"/>
+</map>

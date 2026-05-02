@@ -1,0 +1,5 @@
+<map id="tff::core::device::cpu::CPUStream::set_name" name="tff::core::device::cpu::CPUStream::set_name">
+<area shape="rect" id="Node000001" title="设置设备流名称" alt="" coords="5,5,204,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1device_1_1cpu_1_1CPUStream.html#a5c77769967611c374413789c41717b1d" title="获取设备流名称" alt="" coords="252,5,424,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,23,238,23,238,28,204,28"/>
+</map>

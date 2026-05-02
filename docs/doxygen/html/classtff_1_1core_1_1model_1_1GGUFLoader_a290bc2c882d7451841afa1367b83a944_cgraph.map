@@ -1,0 +1,11 @@
+<map id="tff::core::model::GGUFLoader::get_model_tensor_type" name="tff::core::model::GGUFLoader::get_model_tensor_type">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,37,216,77"/>
+<area shape="rect" id="Node000002" href="$namespacetff_1_1core_1_1model.html#a11bf459d3d67c4007e415ad3337d228f" title=" " alt="" coords="277,5,437,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="216,41,263,35,263,40,217,46"/>
+<area shape="rect" id="Node000003" href="$namespacetff_1_1core_1_1model.html#a210454ba984f78dcc38d160977d75e85" title=" " alt="" coords="264,69,449,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="217,68,251,73,250,78,216,74"/>
+<area shape="rect" id="Node000004" href="$namespacetff_1_1core_1_1model.html#aa03db31a5bf6705030847de4080cff95" title=" " alt="" coords="506,40,646,80"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="450,74,492,69,492,74,450,80"/>
+<area shape="rect" id="Node000005" href="$namespacetff_1_1core_1_1model.html#af6b73f35bee72ae2becae3b64eb9ad75" title=" " alt="" coords="497,105,655,130"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="450,99,484,103,483,108,450,104"/>
+</map>

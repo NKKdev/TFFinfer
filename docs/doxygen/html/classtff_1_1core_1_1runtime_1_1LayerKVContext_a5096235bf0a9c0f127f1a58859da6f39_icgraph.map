@@ -1,0 +1,5 @@
+<map id="tff::core::runtime::LayerKVContext::get_location" name="tff::core::runtime::LayerKVContext::get_location">
+<area shape="rect" id="Node000001" title="获取一个 token 的位置信息" alt="" coords="256,5,420,60"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#ae9aafd7962f842d6b5d98c03ac90fb54" title="获取一个token的某层kv位置" alt="" coords="5,13,208,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="242,35,208,35,208,30,242,30"/>
+</map>

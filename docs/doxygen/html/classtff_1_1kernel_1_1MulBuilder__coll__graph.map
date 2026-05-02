@@ -1,0 +1,7 @@
+<map id="tff::kernel::MulBuilder" name="tff::kernel::MulBuilder">
+<area shape="rect" id="Node000001" title="Mul算子参数构建器" alt="" coords="7,196,170,221"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="5,93,172,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="91,162,91,196,86,196,86,162"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1kernel_1_1builder_1_1IParamBuilder.html" title="Parameter builder interface." alt="" coords="20,5,157,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="91,59,91,93,86,93,86,59"/>
+</map>

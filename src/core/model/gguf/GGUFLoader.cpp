@@ -110,7 +110,7 @@ namespace tff::core::model {
             tff::core::model::GGUFType meta_type = TFF_GGUF_TYPE_UNKNOWN;
             bool is_array = false;
             bRet &= file_loader->read(key);
-            //tff::log::Logger::info("kv key: %s \n", key.c_str());
+            tff::log::Logger::info("kv key: %s \n", key.c_str());
             for (size_t j = 0; j < gguf_ctx->_kv.size(); j++) {
                 if (gguf_ctx->_kv.contains(key)) {
                     tff::log::Logger::error("%s: key '%s' already exists\n", __func__, key.c_str());
@@ -146,7 +146,7 @@ namespace tff::core::model {
             tff::core::model::GGUFTensorInfo tensor_info;
             file_loader->read(tensor_info._name);
             //
-            //tff::log::Logger::info("tensor info name:%s", tensor_info._name.c_str());
+            tff::log::Logger::info("tensor info name:%s", tensor_info._name.c_str());
             for (auto &j: gguf_ctx->_tensor_info) {
                 if (tensor_info._name == j._name) {
                     bRet &= false;

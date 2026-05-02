@@ -1,0 +1,20 @@
+<map id="tff::core::model::LLMVocabulary::process_special_tokens" name="tff::core::model::LLMVocabulary::process_special_tokens">
+<area shape="rect" id="Node000001" title="处理特殊token" alt="" coords="5,61,232,101"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a67b73d41bc88855e90b080b256c0008b" title=" " alt="" coords="568,12,717,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="157,59,214,34,279,15,351,5,424,3,555,10,554,16,424,8,352,11,281,20,216,39,159,63"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a6510d75a505f2cd0f080bac3ab7a9cef" title="处理EOG token" alt="" coords="280,29,507,69"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="232,65,266,61,267,67,233,71"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#a73e2fc7068e3039296ee1b8be14f2013" title="处理用户自定义token" alt="" coords="280,93,507,133"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="233,92,267,96,266,101,232,97"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#ad617fea0138e0a2177cfa2ab44fff64d" title="分词" alt="" coords="280,157,507,197"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="167,99,281,143,305,151,304,156,279,148,165,104"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="779,62,845,87"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="692,35,731,47,766,57,765,62,730,52,691,40"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="507,36,554,31,555,36,507,41"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1log_1_1Logger.html#a6d544c7e1f469bec26bd33dd0401a14b" title=" " alt="" coords="555,62,731,87"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="507,58,541,62,541,67,507,63"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="731,72,765,72,765,77,731,77"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="565,126,720,151"/>
+<area shape="poly" id="edge9_Node000007_Node000008" title=" " alt="" coords="506,157,551,150,552,155,507,162"/>
+<area shape="poly" id="edge10_Node000008_Node000003" title=" " alt="" coords="676,123,765,89,767,94,678,128"/>
+</map>

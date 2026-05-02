@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="Node000000" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html" title="模型计算图创建器基类" alt="" coords="5,31,255,56"/>
+<area shape="rect" id="Node000001" href="$classtff_1_1core_1_1model_1_1LLAMACreator.html" title=" " alt="" coords="303,5,525,31"/>
+<area shape="poly" id="edge71_Node000000_Node000001" title=" " alt="" coords="268,28,302,25,303,31,268,34"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html" title=" " alt="" coords="303,55,525,80"/>
+<area shape="poly" id="edge72_Node000000_Node000002" title=" " alt="" coords="268,52,303,55,302,61,268,58"/>
+</map>

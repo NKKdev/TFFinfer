@@ -1,0 +1,11 @@
+<map id="tff::core::device::MemBufferAllocatorCUDA::memcopy" name="tff::core::device::MemBufferAllocatorCUDA::memcopy">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,48,196,103"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="254,5,409,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,49,265,31,267,37,197,54"/>
+<area shape="rect" id="Node000004" href="$namespacetff_1_1core_1_1device.html#a7223f23d7fe8ea15a77b3341308956a4" title=" " alt="" coords="244,55,419,95"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="196,73,230,73,230,78,196,78"/>
+<area shape="rect" id="Node000005" href="$namespacetff_1_1core_1_1device.html#ae7d2e941a8270d8a157d85728ddc3d3a" title=" " alt="" coords="251,119,411,159"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="197,99,246,113,245,118,195,104"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="467,5,533,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="409,15,453,15,453,21,409,21"/>
+</map>

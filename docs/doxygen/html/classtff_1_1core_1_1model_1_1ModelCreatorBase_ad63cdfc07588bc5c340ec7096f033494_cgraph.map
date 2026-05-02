@@ -1,0 +1,7 @@
+<map id="tff::core::model::ModelCreatorBase::build_mask_node" name="tff::core::model::ModelCreatorBase::build_mask_node">
+<area shape="rect" id="Node000001" title="创建mask节点" alt="" coords="5,49,223,89"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1device_1_1DeviceBaseObject.html#a33e81cc1dfd8a04052407672253e3d11" title="获取设备列表" alt="" coords="281,5,452,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="222,51,267,44,268,49,223,56"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="271,85,463,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="223,82,258,86,257,92,222,87"/>
+</map>

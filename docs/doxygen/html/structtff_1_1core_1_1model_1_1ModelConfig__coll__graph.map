@@ -1,0 +1,5 @@
+<map id="tff::core::model::ModelConfig" name="tff::core::model::ModelConfig">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,108,216,133"/>
+<area shape="rect" id="Node000002" href="$structtff_1_1core_1_1sampling_1_1SamplingConfig.html" title="采样配置" alt="" coords="41,5,181,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,59,113,108,108,108,108,59"/>
+</map>

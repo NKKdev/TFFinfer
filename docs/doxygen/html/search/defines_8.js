@@ -1,0 +1,21 @@
+var searchData=
+[
+  ['map_5fdata_5ftype_0',['MAP_DATA_TYPE',['../core_2mem_2BaseDefine_8h.html#a8e231a2d67dc3e6e62bde7e5a18eedb8',1,'BaseDefine.h']]],
+  ['map_5fgguf_5ftype_1',['MAP_GGUF_TYPE',['../GGUFDef_8h.html#a30210b9c32b8562d27b797c2300a5258',1,'GGUFDef.h']]],
+  ['mat_5fmul_5fnode_2',['MAT_MUL_NODE',['../OPDefine_8h.html#af180017cd9cb4e9969f20a922bf408ae',1,'OPDefine.h']]],
+  ['max_5fbatch_5fsize_3',['MAX_BATCH_SIZE',['../GlobalDefine_8h.html#a18373cd65e0761a3bd4e760a8e015baa',1,'GlobalDefine.h']]],
+  ['max_5fparam_5fbuffer_5fsize_4',['MAX_PARAM_BUFFER_SIZE',['../GlobalDefine_8h.html#ad37f4d4509fd26f8072e7dd7e016cff0',1,'GlobalDefine.h']]],
+  ['max_5fparam_5fcount_5',['MAX_PARAM_COUNT',['../GlobalDefine_8h.html#ad4c0d9b35e58f3d156664b7484af613c',1,'GlobalDefine.h']]],
+  ['max_5fprefetch_5fbuffer_5fsize_6',['MAX_PREFETCH_BUFFER_SIZE',['../GlobalDefine_8h.html#a47467c811c25bbfb17727cdd9c616114',1,'GlobalDefine.h']]],
+  ['max_5fseq_5flength_7',['MAX_SEQ_LENGTH',['../GlobalDefine_8h.html#a6f8cd06f001055fe10041006410420a9',1,'GlobalDefine.h']]],
+  ['max_5ftensor_5fdim_8',['MAX_TENSOR_DIM',['../GlobalDefine_8h.html#a2dba97f8890e1222a9505ffc3bba4f6a',1,'GlobalDefine.h']]],
+  ['max_5ftensor_5finputs_9',['MAX_TENSOR_INPUTS',['../GlobalDefine_8h.html#a782326b9f8293bb922b29bb5b5bc9b19',1,'GlobalDefine.h']]],
+  ['max_5ftokens_10',['MAX_TOKENS',['../KVCache_8h.html#a09886d6ba96e67553bf3c49ed8ade975',1,'KVCache.h']]],
+  ['mem_5fopt_5fstrategy_5fflag_11',['MEM_OPT_STRATEGY_FLAG',['../GlobalDefine_8h.html#a868ea54bb632558d9d35a3acbb84294e',1,'GlobalDefine.h']]],
+  ['memory_5fallocator_5fflag_12',['MEMORY_ALLOCATOR_FLAG',['../GlobalDefine_8h.html#ac64f4d6812acc8a637675fb8759628e1',1,'GlobalDefine.h']]],
+  ['model_5fcreator_5fflag_13',['MODEL_CREATOR_FLAG',['../GlobalDefine_8h.html#a84bee5add09aa6b3cbc106bf574e1fc1',1,'GlobalDefine.h']]],
+  ['model_5fdetector_5fflag_14',['MODEL_DETECTOR_FLAG',['../GlobalDefine_8h.html#a9d8aecdfcf74141ca89b5ea592fe1db9',1,'GlobalDefine.h']]],
+  ['model_5fhidden_5fdim_15',['MODEL_HIDDEN_DIM',['../GlobalDefine_8h.html#aaff16a41d1885fd54dfc4943cf5cf0ca',1,'GlobalDefine.h']]],
+  ['model_5floader_5fflag_16',['MODEL_LOADER_FLAG',['../GlobalDefine_8h.html#ac7d6e2cc969991022a8f84f02f450556',1,'GlobalDefine.h']]],
+  ['model_5freader_5fflag_17',['MODEL_READER_FLAG',['../GlobalDefine_8h.html#ac2a55416c2ded76d9ca9cb301020651a',1,'GlobalDefine.h']]]
+];

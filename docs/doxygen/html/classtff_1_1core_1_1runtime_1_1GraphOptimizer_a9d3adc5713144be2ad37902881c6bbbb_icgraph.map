@@ -1,0 +1,6 @@
+<map id="tff::core::runtime::GraphOptimizer::is_need_fuse_same_node" name="tff::core::runtime::GraphOptimizer::is_need_fuse_same_node">
+<area shape="rect" id="Node000001" title="是否需要融合相同节点" alt="" coords="223,29,401,84"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#a8e65a1f4b57e382c74113868aa7c769e" title="融合相同节点" alt="" coords="5,29,175,84"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="208,59,175,59,175,54,208,54"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="127,18,113,11,90,8,70,10,58,15,52,21,52,29,47,29,47,19,55,10,69,5,90,3,115,6,129,14"/>
+</map>

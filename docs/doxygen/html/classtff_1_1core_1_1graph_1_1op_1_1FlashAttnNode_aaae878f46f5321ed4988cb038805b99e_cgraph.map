@@ -1,0 +1,9 @@
+<map id="tff::core::graph::op::FlashAttnNode::shape_infer" name="tff::core::graph::op::FlashAttnNode::shape_infer">
+<area shape="rect" id="Node000001" title="形状推导" alt="" coords="5,35,216,75"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a37d5fcbc803aff8af17f16249dac5027" title="获取参数构建器" alt="" coords="264,5,463,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="216,40,250,36,251,41,217,45"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="286,70,441,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="217,64,272,70,272,75,216,69"/>
+<area shape="rect" id="Node000004" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="511,70,577,95"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="441,80,497,80,497,85,441,85"/>
+</map>

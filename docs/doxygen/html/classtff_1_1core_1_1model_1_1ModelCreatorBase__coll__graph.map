@@ -1,0 +1,5 @@
+<map id="tff::core::model::ModelCreatorBase" name="tff::core::model::ModelCreatorBase">
+<area shape="rect" id="Node000001" title="模型计算图创建器基类" alt="" coords="5,93,255,119"/>
+<area shape="rect" id="Node000002" href="$structtff_1_1core_1_1model_1_1GraphContext.html" title="计算图上下文" alt="" coords="21,5,239,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="133,45,133,93,127,93,127,45"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="tff::core::device::cpu::DeviceCPU::device_init" name="tff::core::device::cpu::DeviceCPU::device_init">
+<area shape="rect" id="Node000001" title="初始化设备" alt="" coords="5,13,209,53"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1device_1_1cpu_1_1DeviceCPU.html#a30044e7925e9902d3a25f63d742c9aa7" title="获取设备列表" alt="" coords="257,5,412,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,30,244,30,244,35,210,35"/>
+</map>

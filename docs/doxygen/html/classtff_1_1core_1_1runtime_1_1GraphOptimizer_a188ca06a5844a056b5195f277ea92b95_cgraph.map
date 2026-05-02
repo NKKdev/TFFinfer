@@ -1,0 +1,28 @@
+<map id="tff::core::runtime::GraphOptimizer::optimize" name="tff::core::runtime::GraphOptimizer::optimize">
+<area shape="rect" id="Node000001" title="图优化" alt="" coords="5,238,204,278"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#a325b3a34d44471cf56a6df931a3ba7b7" title="设备分配优化" alt="" coords="261,101,445,156"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="143,235,287,160,289,165,146,240"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#a6d01f71eac333fe31a2f2ee1473a0698" title="融合节点" alt="" coords="269,282,438,322"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="205,273,256,282,255,287,204,278"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1log_1_1Logger.html#a67b73d41bc88855e90b080b256c0008b" title=" " alt="" coords="279,347,428,372"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="140,276,193,304,253,332,280,340,278,345,251,336,190,309,138,280"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#ab7be7fcd3b26a11033c2dbe436166632" title="优化内存，这里指层间显存复用" alt="" coords="252,194,455,234"/>
+<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="204,238,238,232,239,237,205,243"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#aaa690d857638d8e2c2b1bd0f31840098" title="插入输入节点" alt="" coords="504,5,683,60"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="422,99,511,63,513,68,424,104"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="732,111,924,151"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="445,122,503,121,684,121,718,122,718,127,684,126,503,126,446,128"/>
+<area shape="rect" id="Node000005" href="$namespacetff_1_1core_1_1global.html#a1cf18d34b546aaf177086d7e4148f6ae" title=" " alt="" coords="529,135,657,175"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="446,136,516,144,515,149,445,142"/>
+<area shape="poly" id="edge8_Node000006_Node000006" title=" " alt="" coords="309,282,306,272,313,263,329,257,353,255,381,258,396,265,394,270,380,263,353,261,330,263,316,267,311,273,314,281"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="516,292,671,317"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="438,300,502,301,502,306,438,306"/>
+<area shape="rect" id="Node000008" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="795,317,861,343"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="672,310,781,322,780,328,671,316"/>
+<area shape="poly" id="edge10_Node000009_Node000008" title=" " alt="" coords="428,352,780,330,781,336,429,357"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1core_1_1runtime_1_1MemOptStrategyBase.html#aba1b318970b68c3820e5ecdd5a88387f" title="获取内存优化策略对象" alt="" coords="503,200,684,255"/>
+<area shape="poly" id="edge12_Node000010_Node000011" title=" " alt="" coords="455,217,489,219,489,224,455,222"/>
+<area shape="poly" id="edge13_Node000011_Node000004" title=" " alt="" coords="660,197,765,154,767,159,662,202"/>
+<area shape="rect" id="Node000012" href="$namespacetff_1_1core_1_1runtime.html#a6a21d6b6d9c0f046dfa6f35b573d94a9" title=" " alt="" coords="763,207,893,247"/>
+<area shape="poly" id="edge14_Node000011_Node000012" title=" " alt="" coords="684,225,749,225,749,230,684,230"/>
+</map>

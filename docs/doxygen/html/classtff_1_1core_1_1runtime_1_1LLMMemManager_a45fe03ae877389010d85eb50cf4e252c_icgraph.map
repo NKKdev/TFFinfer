@@ -1,0 +1,12 @@
+<map id="tff::core::runtime::LLMMemManager::reclaim_async" name="tff::core::runtime::LLMMemManager::reclaim_async">
+<area shape="rect" id="Node000001" title="释放内存(异步)" alt="" coords="661,53,909,93"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="832,41,816,34,785,31,759,33,743,38,737,44,740,51,735,53,732,43,740,34,758,28,785,26,817,29,834,36"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#adc7ded603cffbeb170205f23446a77c4" title="释放kv缓存" alt="" coords="411,5,613,60"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="647,55,613,50,614,45,648,50"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#aec7fbb2d83f3586a69b0a0ca7d4f7f67" title="释放内存" alt="" coords="411,84,613,139"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="648,95,614,100,613,94,647,90"/>
+<area shape="rect" id="Node000004" href="$namespacetff_1_1kernel_1_1base.html#abd43867a6b27062f41df885561c9191e" title=" " alt="" coords="232,91,363,131"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="397,114,363,114,363,109,397,109"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1kernel_1_1base_1_1OPCreatorBase.html#ad763f375733408f88a8bec2d0f63f405" title="注册OP对象" alt="" coords="5,84,184,139"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="218,114,184,114,184,109,218,109"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="tff::core::model::GGUFLoader::load_tensor_data" name="tff::core::model::GGUFLoader::load_tensor_data">
+<area shape="rect" id="Node000001" title="加载模型权重数据" alt="" coords="5,5,216,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="264,5,456,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="216,23,250,23,250,28,216,28"/>
+</map>

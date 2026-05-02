@@ -1,0 +1,5 @@
+<map id="tff::core::graph::op::MatMulNode::MatMulNode" name="tff::core::graph::op::MatMulNode::MatMulNode">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,209,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#ad3783d32539b102457ece9cc17283804" title="设置节点OP类型" alt="" coords="257,5,456,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="209,23,243,23,243,28,209,28"/>
+</map>

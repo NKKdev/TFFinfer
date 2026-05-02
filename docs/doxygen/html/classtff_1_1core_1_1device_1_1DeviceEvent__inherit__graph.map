@@ -1,0 +1,7 @@
+<map id="tff::core::device::DeviceEvent" name="tff::core::device::DeviceEvent">
+<area shape="rect" id="Node000001" title="设备事件" alt="" coords="84,5,215,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1device_1_1cpu_1_1CPUEvent.html" title=" " alt="" coords="5,93,136,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,57,90,95,86,91,121,54"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1device_1_1cuda_1_1CUDAEvent.html" title=" " alt="" coords="160,93,296,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="178,54,213,91,209,95,174,57"/>
+</map>

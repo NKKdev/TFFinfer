@@ -1,0 +1,17 @@
+<map id="tff::core::model::ModelCreatorBase::build_layer_node" name="tff::core::model::ModelCreatorBase::build_layer_node">
+<area shape="rect" id="Node000001" title="创建层节点" alt="" coords="5,69,223,109"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a942b4c704abf800ce8c2c35822f8f5be" title="创建内存对齐节点，用于量化类型内存对齐" alt="" coords="271,5,488,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="197,67,282,46,283,51,198,72"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aa020bce7f41b94f4019ec3c8076e8661" title="创建device节点" alt="" coords="271,133,488,173"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="198,107,283,128,282,133,197,112"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a5ffab338ac3eca31556fc44bf5b9b1ff" title="创建host节点" alt="" coords="271,69,488,109"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="223,87,257,87,257,92,223,92"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1device_1_1DeviceBaseObject.html#a33e81cc1dfd8a04052407672253e3d11" title="获取设备列表" alt="" coords="547,126,717,181"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="488,151,533,151,533,156,488,156"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="536,61,728,101"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="450,131,547,103,549,108,451,136"/>
+<area shape="rect" id="Node000006" href="$namespacetff_1_1core_1_1global.html#a1cf18d34b546aaf177086d7e4148f6ae" title=" " alt="" coords="568,205,696,245"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="451,171,556,201,554,206,450,176"/>
+<area shape="poly" id="edge7_Node000007_Node000004" title=" " alt="" coords="460,107,534,126,533,131,458,112"/>
+<area shape="poly" id="edge8_Node000007_Node000005" title=" " alt="" coords="488,83,522,82,522,87,488,89"/>
+</map>

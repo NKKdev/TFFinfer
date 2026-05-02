@@ -1,0 +1,7 @@
+<map id="tff::kernel::GatherOPBuilder" name="tff::kernel::GatherOPBuilder">
+<area shape="rect" id="Node000001" title="GatherOP算子参数构建器" alt="" coords="5,196,205,221"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="22,93,189,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="108,162,108,196,103,196,103,162"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1kernel_1_1builder_1_1IParamBuilder.html" title="Parameter builder interface." alt="" coords="37,5,174,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="108,59,108,93,103,93,103,59"/>
+</map>

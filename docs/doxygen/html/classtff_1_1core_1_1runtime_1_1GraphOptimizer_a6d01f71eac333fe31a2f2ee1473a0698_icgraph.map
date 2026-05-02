@@ -1,0 +1,6 @@
+<map id="tff::core::runtime::GraphOptimizer::fuse" name="tff::core::runtime::GraphOptimizer::fuse">
+<area shape="rect" id="Node000001" title="融合节点" alt="" coords="252,29,421,69"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="376,18,362,11,337,8,314,10,301,15,296,21,298,28,293,30,291,20,298,10,313,5,337,3,364,6,378,13"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#a188ca06a5844a056b5195f277ea92b95" title="图优化" alt="" coords="5,29,204,69"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="238,52,204,52,204,47,238,47"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="tff::utils::fp32_to_fp16" name="tff::utils::fp32_to_fp16">
+<area shape="rect" id="Node000001" title=" " alt="" coords="188,13,353,38"/>
+<area shape="rect" id="Node000002" href="$structtff_1_1core_1_1quant_1_1Q__8__1.html#a8c7ca44acbfdb9a3185ca38a43ae528b" title=" " alt="" coords="5,5,140,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="174,28,141,28,141,23,174,23"/>
+</map>

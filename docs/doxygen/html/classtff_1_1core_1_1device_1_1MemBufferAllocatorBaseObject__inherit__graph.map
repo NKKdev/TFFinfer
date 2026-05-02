@@ -1,0 +1,11 @@
+<map id="tff::core::device::MemBufferAllocatorBaseObject" name="tff::core::device::MemBufferAllocatorBaseObject">
+<area shape="rect" id="Node000001" title="显式内存分配器基类" alt="" coords="503,37,729,77"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorCPU.html" title=" " alt="" coords="783,5,962,45"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="743,39,783,34,783,39,743,44"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1device_1_1MemBufferAllocatorCUDA.html" title=" " alt="" coords="777,69,968,109"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="743,71,778,75,777,80,743,76"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1module_1_1ModuleObject.html" title=" " alt="" coords="264,45,455,70"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="469,55,503,55,503,60,469,60"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,37,216,77"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="230,55,264,55,264,60,230,60"/>
+</map>

@@ -299,7 +299,7 @@ namespace tff::core::runtime {
         if (!this->_prefill_graph_ptr) {
             this->init_graph(this->_prefill_graph_ptr);
         }
-        time_t t1 = clock();
+
         try {
             this->_task_manager->build_task_schedule(schedule::TaskType::TFF_TASK_TYPE_INFER,
                                                      this->_prefill_graph_ptr);
@@ -312,8 +312,7 @@ namespace tff::core::runtime {
 
         //
         ubatch->_tokens.push_back(this->sample_token());
-        time_t t2 = clock();
-        tff::log::Logger::info("prefill time: %lf s", double(t2 - t1) / CLOCKS_PER_SEC);
+
         ubatch->_n_tokens++;
         ubatch->_pos.push_back(ubatch->_tokens.size() - 1);
         ubatch->_token_seq_ids.push_back(ubatch->_token_seq_ids[ubatch->_token_seq_ids.size() - 1]);

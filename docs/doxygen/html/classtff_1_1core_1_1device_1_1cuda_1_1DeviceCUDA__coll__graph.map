@@ -1,0 +1,9 @@
+<map id="tff::core::device::cuda::DeviceCUDA" name="tff::core::device::cuda::DeviceCUDA">
+<area shape="rect" id="Node000001" title=" " alt="" coords="39,255,183,295"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1device_1_1DeviceBaseObject.html" title="设备属性" alt="" coords="40,167,181,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,221,113,254,108,254,108,221"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1module_1_1ModuleObject.html" title=" " alt="" coords="15,93,206,119"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="113,132,113,167,108,167,108,132"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,216,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="113,59,113,93,108,93,108,59"/>
+</map>

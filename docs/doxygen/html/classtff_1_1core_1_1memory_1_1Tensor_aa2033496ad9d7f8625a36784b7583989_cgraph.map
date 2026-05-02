@@ -1,0 +1,5 @@
+<map id="tff::core::memory::Tensor::set_memory_type" name="tff::core::memory::Tensor::set_memory_type">
+<area shape="rect" id="Node000001" title="设置张量内存类型" alt="" coords="5,5,196,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1memory_1_1Tensor.html#aee44b8f2cab1d38341c4a4e9c0a2c2b0" title="获取张量内存类型" alt="" coords="244,5,407,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,23,230,23,230,28,196,28"/>
+</map>

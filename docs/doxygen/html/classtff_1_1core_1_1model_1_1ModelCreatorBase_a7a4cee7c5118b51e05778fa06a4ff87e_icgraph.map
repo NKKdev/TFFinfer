@@ -1,0 +1,24 @@
+<map id="tff::core::model::ModelCreatorBase::build_mul_mat_node" name="tff::core::model::ModelCreatorBase::build_mul_mat_node">
+<area shape="rect" id="Node000001" title="创建矩阵乘法节点" alt="" coords="812,137,1029,177"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aa0c47bc47641ad1823026f594e2ed599" title="创建自注意力节点" alt="" coords="279,16,496,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="892,129,837,75,802,50,763,32,693,14,619,8,549,11,485,18,484,13,548,6,620,3,693,9,765,27,804,46,841,71,896,125"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aa72432de065a88097f9f5a5c88fc821b" title="创建FFN下采样节点" alt="" coords="547,41,764,81"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="861,134,763,96,727,84,729,79,765,91,863,129"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a86d59e5e08e7eda131b42f149ce72bdf" title="创建FFN门节点" alt="" coords="547,105,764,145"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="798,145,764,141,764,136,799,140"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a1bfd3990979fa551222c218484b8a26d" title="创建FFN节点" alt="" coords="547,169,764,209"/>
+<area shape="poly" id="edge8_Node000001_Node000007" title=" " alt="" coords="799,174,764,179,764,173,798,169"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a8a2d92c1974c0bb28e661cd6751dea6e" title=" " alt="" coords="276,181,499,221"/>
+<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="871,186,821,207,765,224,696,233,626,234,559,231,498,224,499,218,560,225,626,229,696,227,763,218,819,202,869,181"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a848ca3e144d9630169d7d76946e4d7a8" title="构建QKV节点" alt="" coords="276,256,499,296"/>
+<area shape="poly" id="edge12_Node000001_Node000009" title=" " alt="" coords="878,187,825,215,765,240,697,256,628,267,499,278,499,272,627,262,696,251,763,235,823,211,876,182"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#ad993a2beb8d384ed9eaa62e3cd0f49a7" title=" " alt="" coords="5,149,228,189"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="334,65,159,151,157,147,332,60"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a63f2f908a425c6e9d97b32cbc92ab595" title="创建FFN节点" alt="" coords="279,112,496,152"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="566,87,465,114,463,109,565,82"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="266,151,228,156,228,151,265,146"/>
+<area shape="poly" id="edge7_Node000006_Node000005" title=" " alt="" coords="533,131,496,132,496,126,533,125"/>
+<area shape="poly" id="edge9_Node000007_Node000005" title=" " alt="" coords="547,169,481,154,482,149,548,163"/>
+<area shape="poly" id="edge11_Node000008_Node000003" title=" " alt="" coords="262,189,228,185,228,180,263,184"/>
+<area shape="poly" id="edge13_Node000009_Node000003" title=" " alt="" coords="320,253,275,236,166,192,168,187,277,231,322,248"/>
+</map>

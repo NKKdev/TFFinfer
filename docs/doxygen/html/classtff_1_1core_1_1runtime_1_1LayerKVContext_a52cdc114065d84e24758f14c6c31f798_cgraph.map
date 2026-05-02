@@ -1,0 +1,5 @@
+<map id="tff::core::runtime::LayerKVContext::append_token" name="tff::core::runtime::LayerKVContext::append_token">
+<area shape="rect" id="Node000001" title="添加一个 token" alt="" coords="5,13,240,53"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LayerKVContext.html#a2d0eaa6008859cb275afb3b0c2dae73f" title="获取当前使用的 page的最大token数量" alt="" coords="288,5,452,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="240,30,275,30,275,35,240,35"/>
+</map>

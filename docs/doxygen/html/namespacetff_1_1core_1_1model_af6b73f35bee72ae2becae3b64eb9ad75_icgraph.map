@@ -1,0 +1,11 @@
+<map id="tff::core::model::split" name="tff::core::model::split">
+<area shape="rect" id="Node000001" title=" " alt="" coords="1015,13,1172,38"/>
+<area shape="rect" id="Node000002" href="$namespacetff_1_1core_1_1model.html#a210454ba984f78dcc38d160977d75e85" title=" " alt="" coords="781,5,967,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1001,28,967,28,967,23,1001,23"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a290bc2c882d7451841afa1367b83a944" title=" " alt="" coords="523,5,733,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="767,28,734,28,734,23,767,23"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a4c3cf9a3f22f68cf6e631a7f30052a02" title=" " alt="" coords="264,5,475,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="509,28,475,28,475,23,509,23"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a4797d5985bf93eb8af7d11d85f01ee09" title=" " alt="" coords="5,5,216,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="250,28,216,28,216,23,250,23"/>
+</map>

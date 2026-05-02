@@ -1,0 +1,9 @@
+<map id="tff::core::model::LLMVocabulary::get_rank" name="tff::core::model::LLMVocabulary::get_rank">
+<area shape="rect" id="Node000001" title="获取词表大小" alt="" coords="533,37,760,77"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1LLMTokenizerBPE.html#a0abbd6df769071ecd28d03be8d6cb35e" title="添加元组" alt="" coords="269,37,485,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="519,60,486,60,486,55,519,55"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1LLMTokenizerBPE.html#aa24386e981205364a2299f6614168bb5" title="生成元组" alt="" coords="5,5,221,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="256,45,221,41,222,36,256,40"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1model_1_1LLMTokenizerBPE.html#a075f2bbd597c19c00930ce292911062f" title="合并元组" alt="" coords="5,69,221,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="256,75,222,79,221,74,256,69"/>
+</map>

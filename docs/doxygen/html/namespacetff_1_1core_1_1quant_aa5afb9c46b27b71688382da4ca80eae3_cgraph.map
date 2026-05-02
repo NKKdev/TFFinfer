@@ -1,0 +1,7 @@
+<map id="tff::core::quant::make_quantize_wrapper" name="tff::core::quant::make_quantize_wrapper">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,37,167,77"/>
+<area shape="rect" id="Node000002" href="$structtff_1_1core_1_1quant_1_1QuantScheme.html#a55fcab09a17eed59e64ceac971642e20" title=" " alt="" coords="215,5,431,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="167,44,201,39,201,44,168,49"/>
+<area shape="rect" id="Node000003" href="$structtff_1_1core_1_1quant_1_1QuantScheme.html#a3d3a84d94e6494c1eaf3bca87c362ccd" title=" " alt="" coords="215,69,431,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="168,66,201,70,201,76,167,71"/>
+</map>

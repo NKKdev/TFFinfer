@@ -1,0 +1,7 @@
+<map id="tff::core::runtime::LLMBatchManager::split_seq" name="tff::core::runtime::LLMBatchManager::split_seq">
+<area shape="rect" id="Node000001" title="分割策略 3：每个 sequence 一个 batch" alt="" coords="5,5,221,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a67b73d41bc88855e90b080b256c0008b" title=" " alt="" coords="269,13,419,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="222,23,255,23,255,28,222,28"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="467,13,533,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="419,23,453,23,453,28,419,28"/>
+</map>

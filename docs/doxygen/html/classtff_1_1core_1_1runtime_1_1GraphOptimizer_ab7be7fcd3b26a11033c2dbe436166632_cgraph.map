@@ -1,0 +1,9 @@
+<map id="tff::core::runtime::GraphOptimizer::mem_opt" name="tff::core::runtime::GraphOptimizer::mem_opt">
+<area shape="rect" id="Node000001" title="优化内存，这里指层间显存复用" alt="" coords="5,37,208,77"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1MemOptStrategyBase.html#aba1b318970b68c3820e5ecdd5a88387f" title="获取内存优化策略对象" alt="" coords="256,30,437,85"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="208,55,242,55,242,60,208,60"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="485,5,677,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="437,42,471,38,472,43,438,48"/>
+<area shape="rect" id="Node000004" href="$namespacetff_1_1core_1_1runtime.html#a6a21d6b6d9c0f046dfa6f35b573d94a9" title=" " alt="" coords="516,69,647,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="438,67,503,76,502,81,437,72"/>
+</map>

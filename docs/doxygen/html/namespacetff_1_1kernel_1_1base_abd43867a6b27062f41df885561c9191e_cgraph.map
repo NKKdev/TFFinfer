@@ -1,0 +1,14 @@
+<map id="tff::kernel::base::op_after_hook" name="tff::kernel::base::op_after_hook">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,44,136,84"/>
+<area shape="rect" id="Node000002" href="$namespacetff_1_1kernel_1_1base.html#a1211295c2a8afeac1c8adef259f84ebc" title=" " alt="" coords="218,5,353,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="136,50,204,37,205,43,137,55"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#aec7fbb2d83f3586a69b0a0ca7d4f7f67" title="释放内存" alt="" coords="184,73,387,127"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="137,72,171,78,170,83,136,78"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="481,10,636,35"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="353,22,468,21,468,26,353,27"/>
+<area shape="rect" id="Node000004" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="731,10,797,35"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="636,20,717,20,717,25,636,25"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#a45fe03ae877389010d85eb50cf4e252c" title="释放内存(异步)" alt="" coords="435,84,683,124"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="387,99,421,99,421,105,387,104"/>
+<area shape="poly" id="edge6_Node000006_Node000006" title=" " alt="" coords="520,84,518,74,524,65,538,59,559,57,583,60,596,68,593,72,581,65,559,63,539,65,527,69,523,75,525,83"/>
+</map>

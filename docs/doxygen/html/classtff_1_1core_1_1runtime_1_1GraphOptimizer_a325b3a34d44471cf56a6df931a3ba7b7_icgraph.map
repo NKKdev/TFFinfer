@@ -1,0 +1,5 @@
+<map id="tff::core::runtime::GraphOptimizer::device_placement_opt" name="tff::core::runtime::GraphOptimizer::device_placement_opt">
+<area shape="rect" id="Node000001" title="设备分配优化" alt="" coords="252,5,436,60"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1GraphOptimizer.html#a188ca06a5844a056b5195f277ea92b95" title="图优化" alt="" coords="5,13,204,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,35,204,35,204,30,238,30"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="src/core/model/LLMTokenizerBase.h" name="src/core/model/LLMTokenizerBase.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="131,5,340,45"/>
+<area shape="rect" id="Node000002" href="$LLMTokenizerBase_8cpp.html" title=" " alt="" coords="5,167,215,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="214,58,127,168,123,165,210,54"/>
+<area shape="rect" id="Node000003" href="$LLMVocabulary_8h.html" title=" " alt="" coords="247,93,477,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="279,51,345,91,342,95,276,55"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="313,125,171,169,170,164,311,120"/>
+<area shape="rect" id="Node000004" href="$LLMVocabulary_8cpp.html" title=" " alt="" coords="239,174,485,199"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="365,132,365,174,359,174,359,132"/>
+<area shape="rect" id="Node000005" href="$BatchManager_8h.html" title=" " alt="" coords="509,174,746,199"/>
+<area shape="poly" id="edge5_Node000003_Node000005" title=" " alt="" coords="414,120,589,171,588,177,413,125"/>
+<area shape="rect" id="Node000007" href="$InferRuntime_8h.html" title=" " alt="" coords="669,255,898,280"/>
+<area shape="poly" id="edge8_Node000003_Node000007" title=" " alt="" coords="491,109,570,115,648,126,715,142,741,152,760,165,775,186,783,211,787,254,781,255,778,212,770,188,756,169,738,157,713,147,647,131,569,120,491,114"/>
+<area shape="rect" id="Node000006" href="$BatchManager_8cpp.html" title=" " alt="" coords="392,255,644,280"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="601,210,536,257,533,252,598,205"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="663,203,762,252,759,257,661,208"/>
+</map>

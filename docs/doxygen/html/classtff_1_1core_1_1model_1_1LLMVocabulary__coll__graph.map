@@ -1,0 +1,7 @@
+<map id="tff::core::model::LLMVocabulary" name="tff::core::model::LLMVocabulary">
+<area shape="rect" id="Node000001" title="词表 类" alt="" coords="5,167,232,192"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1module_1_1ModuleObject.html" title=" " alt="" coords="23,93,214,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="121,132,121,167,116,167,116,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="13,5,224,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="121,59,121,93,116,93,116,59"/>
+</map>

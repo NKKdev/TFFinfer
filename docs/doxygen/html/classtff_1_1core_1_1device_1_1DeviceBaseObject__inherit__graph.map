@@ -1,0 +1,11 @@
+<map id="tff::core::device::DeviceBaseObject" name="tff::core::device::DeviceBaseObject">
+<area shape="rect" id="Node000001" title="设备属性" alt="" coords="80,167,221,207"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1device_1_1cpu_1_1DeviceCPU.html" title=" " alt="" coords="5,255,136,295"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="126,219,90,256,86,253,122,215"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1device_1_1cuda_1_1DeviceCUDA.html" title=" " alt="" coords="160,255,304,295"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="180,215,216,253,212,256,176,219"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1module_1_1ModuleObject.html" title=" " alt="" coords="55,93,246,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="153,132,153,167,148,167,148,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="45,5,256,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="153,59,153,93,148,93,148,59"/>
+</map>

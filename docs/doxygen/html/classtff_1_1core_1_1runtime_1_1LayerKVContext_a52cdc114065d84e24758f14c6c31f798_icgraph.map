@@ -1,0 +1,5 @@
+<map id="tff::core::runtime::LayerKVContext::append_token" name="tff::core::runtime::LayerKVContext::append_token">
+<area shape="rect" id="Node000001" title="添加一个 token" alt="" coords="219,5,453,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#aa1fa677114b39a1d209e34e5a40cd5a8" title="设置一个token的kv，这里用于decode阶段更新kv上下文信息" alt="" coords="5,5,171,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,28,171,28,171,23,205,23"/>
+</map>

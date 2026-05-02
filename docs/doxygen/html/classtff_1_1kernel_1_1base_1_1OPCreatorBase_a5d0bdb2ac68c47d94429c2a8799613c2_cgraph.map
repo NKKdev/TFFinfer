@@ -1,0 +1,9 @@
+<map id="tff::kernel::base::OPCreatorBase::get_op_name" name="tff::kernel::base::OPCreatorBase::get_op_name">
+<area shape="rect" id="Node000001" title="获取OP名称" alt="" coords="5,30,221,70"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="291,5,446,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,34,277,27,278,32,222,39"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1kernel_1_1base_1_1OPCreatorBase.html#a4f9abd22cfd4f504b95c68ef850ad1b2" title="获取设备类型名称" alt="" coords="269,55,468,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="222,61,256,65,255,71,221,66"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="516,5,583,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="446,15,502,15,502,21,446,21"/>
+</map>

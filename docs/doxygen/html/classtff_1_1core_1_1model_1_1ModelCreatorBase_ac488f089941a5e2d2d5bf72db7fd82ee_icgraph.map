@@ -1,0 +1,7 @@
+<map id="tff::core::model::ModelCreatorBase::build_unary_op" name="tff::core::model::ModelCreatorBase::build_unary_op">
+<area shape="rect" id="Node000001" title="创建激活函数节点" alt="" coords="541,5,759,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a63f2f908a425c6e9d97b32cbc92ab595" title="创建FFN节点" alt="" coords="276,5,493,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="528,28,493,28,493,23,528,23"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#ad993a2beb8d384ed9eaa62e3cd0f49a7" title=" " alt="" coords="5,5,228,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="262,28,228,28,228,23,262,23"/>
+</map>

@@ -26,6 +26,9 @@ namespace tff::core::runtime {
             if (!node) {
                 continue;
             }
+            if (node->op_type() == graph::TFF_OP_ATTN_MASK) {
+                tff::log::Logger::info("layer node: %s build op callback\n", node->name().c_str());
+            }
             auto callable = node->forward();
             if (!callable) {
                 tff::log::Logger::error("layer node: %s has not op callback!", node->name().c_str());

@@ -1,0 +1,9 @@
+<map id="tff::core::model::QWen3Creator::build_offload_node" name="tff::core::model::QWen3Creator::build_offload_node">
+<area shape="rect" id="Node000001" title="构建数据卸载节点， GPU卸载结果到CPU" alt="" coords="5,27,228,67"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="295,5,449,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,32,281,26,281,31,228,37"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="276,55,468,95"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="228,57,263,61,262,66,228,62"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="516,5,583,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="449,15,502,15,502,21,449,21"/>
+</map>

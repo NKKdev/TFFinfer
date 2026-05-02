@@ -1,0 +1,13 @@
+<map id="tff::core::model::FileLoader::FileLoader" name="tff::core::model::FileLoader::FileLoader">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,25,201,65"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="493,33,648,58"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="180,22,249,11,347,3,446,11,518,26,517,31,445,16,347,8,250,16,181,28"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1model_1_1FileLoader.html#a35cc6f4d6a6e04a5b76a5c28bb3fe25d" title=" " alt="" coords="249,25,445,65"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="201,43,236,43,236,48,201,48"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1model_1_1FileLoader.html#af2a2bd1070d0d0751d38de96f59fed2f" title=" " alt="" coords="249,89,445,129"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="181,63,258,83,257,88,180,68"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="696,33,763,58"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="648,43,682,43,682,48,648,48"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="445,43,480,43,480,48,445,48"/>
+<area shape="poly" id="edge6_Node000005_Node000002" title=" " alt="" coords="417,87,511,59,513,64,419,92"/>
+</map>

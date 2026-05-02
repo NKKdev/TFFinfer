@@ -27,7 +27,7 @@ namespace tff::core::runtime {
 
         int _n_tokens = 0; // 当前已缓存的 token 数（写入位置）
         bool _is_used = false;
-        mutable std::mutex mutex; // 可选锁
+        mutable std::mutex mutex;
     };
 
     /**
@@ -415,7 +415,7 @@ namespace tff::core::runtime {
             const LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (ctx == nullptr) {
                 tff::log::Logger::error("current layer (%d) kv cache context is invalid!!", layer_id);
-                return std::shared_ptr<core::memory::Tensor>();
+                return {};
             }
             return ctx->_page_manager->get_k(page_id, event);
         }
@@ -433,7 +433,7 @@ namespace tff::core::runtime {
             const LayerKVContext *ctx = get_context(seq_id, layer_id);
             if (ctx == nullptr) {
                 tff::log::Logger::error("current layer (%d) kv cache context is invalid!!", layer_id);
-                return std::shared_ptr<core::memory::Tensor>();
+                return {};
             }
             return ctx->_page_manager->get_v(page_id, event);
         }

@@ -1,0 +1,9 @@
+var searchData=
+[
+  ['b_0',['b',['../structtff_1_1kernel_1_1QuantMatMulReshapeBuilder_1_1Params.html#af1fa4e38dd5c89e4bc6de0d8d378ff80',1,'tff::kernel::QuantMatMulReshapeBuilder::Params::B'],['../structtff_1_1kernel_1_1MatMulBuilder_1_1Params.html#a5d394704c3a70bb061d3f864d478adbd',1,'tff::kernel::MatMulBuilder::Params::B']]],
+  ['batchnum_1',['BatchNum',['../structtff_1_1kernel_1_1ReshapeBuilder_1_1Params.html#aa0d33c409070b05e82652a9e60646e8e',1,'tff::kernel::ReshapeBuilder::Params']]],
+  ['binarytype_2',['BinaryType',['../structtff_1_1kernel_1_1BinaryOPBuilder_1_1Params.html#aa32c742a753a30089415cb9c440786fa',1,'tff::kernel::BinaryOPBuilder::Params']]],
+  ['block_5fsize_3',['block_size',['../structtff_1_1core_1_1quant_1_1QuantScheme_3_01QuantType_00_01std_1_1enable__if__t_3_01is__quant_1bafd1a582bf9c765827718b0b62450f.html#a93c64311995f8edf95d3ca26a3d39032',1,'tff::core::quant::QuantScheme&lt; QuantType, std::enable_if_t&lt; is_quant_block_v&lt; QuantType &gt; &gt; &gt;::block_size'],['../structtff_1_1core_1_1quant_1_1Q__8__0.html#a991fb940e928057428daca9ad4cdf449',1,'tff::core::quant::Q_8_0::BLOCK_SIZE'],['../structtff_1_1core_1_1quant_1_1Q__8__0__ALIGNED.html#a0fb0120321a6b58d3702108108fe830e',1,'tff::core::quant::Q_8_0_ALIGNED::BLOCK_SIZE'],['../structtff_1_1core_1_1quant_1_1Q__8__1.html#a92a9c2de8bd72c758ef8996ff2c8cabb',1,'tff::core::quant::Q_8_1::BLOCK_SIZE'],['../structtff_1_1core_1_1quant_1_1QuantScheme.html#aa538fc7fbed74f0414b16c162cd93699',1,'tff::core::quant::QuantScheme::BLOCK_SIZE']]],
+  ['buffer_5ffrom_5fhost_5fptr_4',['buffer_from_host_ptr',['../structtff_1_1core_1_1device_1_1DeviceCaps.html#a6cfd4e18574a2dbb82d2d2eda15efefb',1,'tff::core::device::DeviceCaps']]],
+  ['buffer_5fsize_5',['BUFFER_SIZE',['../namespacetff_1_1core_1_1global.html#ad1201b20219cb7f14a3b76c449f16f04',1,'tff::core::global']]]
+];

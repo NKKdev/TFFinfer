@@ -1,0 +1,26 @@
+<map id="tff::kernel::base::OPCreatorBase::registry_function" name="tff::kernel::base::OPCreatorBase::registry_function">
+<area shape="rect" id="Node000001" title="注册OP对象" alt="" coords="5,94,184,149"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1kernel_1_1base_1_1OPCreatorBase.html#a5d0bdb2ac68c47d94429c2a8799613c2" title="获取OP名称" alt="" coords="232,5,448,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="148,91,231,55,252,47,254,52,233,60,151,96"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1factory_1_1FunctionFactory.html#a46dd32d63febcbf9a4f5a79ea6e22eff" title=" " alt="" coords="241,69,439,109"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="184,107,227,101,227,107,185,112"/>
+<area shape="rect" id="Node000007" href="$namespacetff_1_1kernel_1_1base.html#abd43867a6b27062f41df885561c9191e" title=" " alt="" coords="275,197,405,237"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="151,146,233,183,262,193,261,198,231,188,148,151"/>
+<area shape="rect" id="Node000011" href="$namespacetff_1_1kernel_1_1base.html#aac7840fb961c64a9b9bc2343979cad5b" title=" " alt="" coords="275,133,405,173"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="185,130,261,140,261,146,184,136"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="793,67,948,93"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="448,22,569,27,699,39,811,61,810,67,698,44,569,32,448,28"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1kernel_1_1base_1_1OPCreatorBase.html#a4f9abd22cfd4f504b95c68ef850ad1b2" title="获取设备类型名称" alt="" coords="498,54,697,109"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="433,43,485,54,484,59,432,48"/>
+<area shape="rect" id="Node000004" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="1043,67,1109,93"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="948,77,1029,77,1029,83,948,83"/>
+<area shape="rect" id="Node000008" href="$namespacetff_1_1kernel_1_1base.html#a1211295c2a8afeac1c8adef259f84ebc" title=" " alt="" coords="530,133,665,173"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="405,199,516,171,517,176,406,204"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#aec7fbb2d83f3586a69b0a0ca7d4f7f67" title="释放内存" alt="" coords="496,198,699,253"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="406,217,482,219,482,224,406,222"/>
+<area shape="poly" id="edge8_Node000008_Node000003" title=" " alt="" coords="664,133,808,94,810,99,666,138"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#a45fe03ae877389010d85eb50cf4e252c" title="释放内存(异步)" alt="" coords="747,205,995,245"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="699,223,733,223,733,228,699,228"/>
+<area shape="poly" id="edge11_Node000010_Node000010" title=" " alt="" coords="832,206,830,196,836,187,850,181,871,179,895,182,908,189,905,194,893,187,871,184,851,186,839,191,835,197,837,204"/>
+<area shape="poly" id="edge13_Node000011_Node000008" title=" " alt="" coords="406,151,517,151,517,156,406,156"/>
+</map>

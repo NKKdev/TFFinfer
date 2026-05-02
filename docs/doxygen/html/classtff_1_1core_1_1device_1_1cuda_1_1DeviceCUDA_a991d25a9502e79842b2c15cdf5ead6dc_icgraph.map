@@ -1,0 +1,7 @@
+<map id="tff::core::device::cuda::DeviceCUDA::get_device_type" name="tff::core::device::cuda::DeviceCUDA::get_device_type">
+<area shape="rect" id="Node000001" title=" " alt="" coords="284,34,457,89"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1device_1_1cuda_1_1DeviceCUDA.html#a0e1a67c87828e76a1fef897cb4f20630" title=" " alt="" coords="5,5,236,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="270,50,236,45,237,39,271,44"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1device_1_1cuda_1_1DeviceCUDA.html#a58fcf4508fa59efe7861cd88077de59b" title=" " alt="" coords="34,70,207,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="271,78,208,88,207,82,270,73"/>
+</map>

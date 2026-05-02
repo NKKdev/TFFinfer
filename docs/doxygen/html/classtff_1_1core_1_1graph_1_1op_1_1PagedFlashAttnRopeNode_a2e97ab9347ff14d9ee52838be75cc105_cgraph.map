@@ -1,0 +1,9 @@
+<map id="tff::core::graph::op::PagedFlashAttnRopeNode::shape_infer" name="tff::core::graph::op::PagedFlashAttnRopeNode::shape_infer">
+<area shape="rect" id="Node000001" title="形状推导" alt="" coords="5,27,204,82"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a37d5fcbc803aff8af17f16249dac5027" title="获取参数构建器" alt="" coords="252,5,451,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,40,238,36,239,41,205,46"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="274,70,429,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="204,63,260,70,260,75,204,69"/>
+<area shape="rect" id="Node000004" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="499,70,565,95"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="429,80,485,80,485,85,429,85"/>
+</map>

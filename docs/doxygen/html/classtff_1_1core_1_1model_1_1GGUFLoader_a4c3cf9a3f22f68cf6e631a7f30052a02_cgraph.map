@@ -1,0 +1,17 @@
+<map id="tff::core::model::GGUFLoader::load_tensor_info" name="tff::core::model::GGUFLoader::load_tensor_info">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,27,216,67"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="292,5,447,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="216,33,278,26,279,31,216,38"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a290bc2c882d7451841afa1367b83a944" title=" " alt="" coords="264,55,475,95"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="216,56,251,60,250,65,216,61"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="582,5,649,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="447,15,568,15,568,21,447,21"/>
+<area shape="rect" id="Node000005" href="$namespacetff_1_1core_1_1model.html#a11bf459d3d67c4007e415ad3337d228f" title=" " alt="" coords="535,55,695,95"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="475,73,521,73,521,78,475,78"/>
+<area shape="rect" id="Node000006" href="$namespacetff_1_1core_1_1model.html#a210454ba984f78dcc38d160977d75e85" title=" " alt="" coords="523,119,708,159"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="448,93,525,113,524,118,446,98"/>
+<area shape="rect" id="Node000007" href="$namespacetff_1_1core_1_1model.html#aa03db31a5bf6705030847de4080cff95" title=" " alt="" coords="765,90,905,130"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="708,124,750,119,751,124,709,130"/>
+<area shape="rect" id="Node000008" href="$namespacetff_1_1core_1_1model.html#af6b73f35bee72ae2becae3b64eb9ad75" title=" " alt="" coords="756,155,913,180"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="709,149,743,153,742,158,708,154"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="tff::core::global::get_tokenizer_name" name="tff::core::global::get_tokenizer_name">
+<area shape="rect" id="Node000001" title=" " alt="" coords="280,5,435,45"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1LLMVocabulary.html#aad8fc9d0d1419e90e40b16796c49eb76" title="加载词表" alt="" coords="5,5,232,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="266,28,232,28,232,23,266,23"/>
+</map>

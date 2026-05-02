@@ -1,0 +1,35 @@
+<map id="tff::core::model::GGUFLoader::load" name="tff::core::model::GGUFLoader::load">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,209,216,249"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a508d552b3736438a700737ec688d803a" title=" " alt="" coords="264,113,475,153"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="156,206,263,162,286,154,287,159,265,167,158,211"/>
+<area shape="rect" id="Node000005" href="$namespacetff_1_1core_1_1device.html#a66408389a04c64a7f8372dc4519af2c7" title="获取设备数量" alt="" coords="304,49,435,89"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="129,207,186,153,223,124,263,98,290,86,292,91,265,103,226,128,189,157,133,210"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#aa81bb8804274422114bc13a86b51eb75" title=" " alt="" coords="264,177,475,217"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="216,213,250,209,251,214,216,218"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a34806a8d261eefe6653a0b557b639654" title=" " alt="" coords="264,241,475,281"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="216,239,251,243,250,249,216,244"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a17d61835ac02f263fd5be4f83e9f9ab8" title=" " alt="" coords="264,305,475,345"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="158,246,265,290,287,298,286,303,263,295,156,251"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a4c3cf9a3f22f68cf6e631a7f30052a02" title=" " alt="" coords="264,369,475,409"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="133,247,189,300,226,329,265,354,279,361,277,366,263,359,223,334,186,304,129,251"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="551,248,705,273"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="446,150,476,162,544,200,600,238,597,242,541,204,474,167,444,155"/>
+<area shape="rect" id="Node000004" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="841,248,907,273"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="706,258,827,258,827,263,706,263"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1device_1_1DeviceBaseObject.html#a33e81cc1dfd8a04052407672253e3d11" title="获取设备列表" alt="" coords="543,5,713,60"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="435,57,529,44,529,49,436,62"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="532,85,724,125"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="436,75,519,87,518,92,435,80"/>
+<area shape="poly" id="edge9_Node000009_Node000003" title=" " alt="" coords="475,258,537,258,537,263,475,263"/>
+<area shape="poly" id="edge12_Node000011_Node000003" title=" " alt="" coords="444,366,474,354,541,317,597,279,600,284,544,321,476,359,446,371"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a290bc2c882d7451841afa1367b83a944" title=" " alt="" coords="523,369,733,409"/>
+<area shape="poly" id="edge13_Node000011_Node000012" title=" " alt="" coords="475,386,509,386,509,391,475,391"/>
+<area shape="rect" id="Node000013" href="$namespacetff_1_1core_1_1model.html#a11bf459d3d67c4007e415ad3337d228f" title=" " alt="" coords="794,337,954,377"/>
+<area shape="poly" id="edge14_Node000012_Node000013" title=" " alt="" coords="733,372,780,366,781,371,734,378"/>
+<area shape="rect" id="Node000014" href="$namespacetff_1_1core_1_1model.html#a210454ba984f78dcc38d160977d75e85" title=" " alt="" coords="781,401,967,441"/>
+<area shape="poly" id="edge15_Node000012_Node000014" title=" " alt="" coords="734,400,768,404,768,410,733,405"/>
+<area shape="rect" id="Node000015" href="$namespacetff_1_1core_1_1model.html#aa03db31a5bf6705030847de4080cff95" title=" " alt="" coords="1023,371,1163,411"/>
+<area shape="poly" id="edge16_Node000014_Node000015" title=" " alt="" coords="967,406,1009,400,1010,405,968,411"/>
+<area shape="rect" id="Node000016" href="$namespacetff_1_1core_1_1model.html#af6b73f35bee72ae2becae3b64eb9ad75" title=" " alt="" coords="1015,436,1172,461"/>
+<area shape="poly" id="edge17_Node000014_Node000016" title=" " alt="" coords="968,430,1001,434,1001,440,967,435"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="tff::core::model::ModelCreatorBase::build_add_node" name="tff::core::model::ModelCreatorBase::build_add_node">
+<area shape="rect" id="Node000001" title="创建加法节点" alt="" coords="547,35,764,75"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a02cc542c17a2968f6633352144630c63" title="构建FFN输入节点" alt="" coords="276,5,499,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="533,44,499,40,499,35,533,39"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#ad993a2beb8d384ed9eaa62e3cd0f49a7" title=" " alt="" coords="5,35,228,75"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="533,60,499,60,276,60,228,59,228,54,276,55,499,55,533,54"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="263,42,228,45,228,40,262,36"/>
+</map>

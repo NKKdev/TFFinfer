@@ -1,0 +1,20 @@
+var searchData=
+[
+  ['kcolmajor_0',['kColMajor',['../namespacetff_1_1kernel_1_1base.html#ac44f23a10c25f877f1db87314dcddb2faf093768651925b22c4d08e33641f38f1',1,'tff::kernel::base']]],
+  ['kconjugate_1',['kConjugate',['../namespacetff_1_1kernel_1_1base.html#a09fd63953a0894000b868ee52677fd6fa8be1522542c86e700b5e787b1aabc70b',1,'tff::kernel::base']]],
+  ['kconvolution_2',['kConvolution',['../namespacetff_1_1kernel_1_1base.html#a344162e6c1befc877f6208b478f4d20da8d09343c3d122e69113b3c6dd6ef5b5b',1,'tff::kernel::base']]],
+  ['kcrosscorrelation_3',['kCrossCorrelation',['../namespacetff_1_1kernel_1_1base.html#a344162e6c1befc877f6208b478f4d20da87b96ed490c94e688f776ef79af26066',1,'tff::kernel::base']]],
+  ['kleft_4',['kLeft',['../namespacetff_1_1kernel_1_1base.html#a3280a342f8f2be7b0694a41ed0ce0b10a2d5fde1d924910a2a01ecd8e70a87c28',1,'tff::kernel::base']]],
+  ['klower_5',['kLower',['../namespacetff_1_1kernel_1_1base.html#ad2e3ce5ea2121c2931736c532b94362ba3c0539ce8799b67a3434374200981edb',1,'tff::kernel::base']]],
+  ['kno_6',['kNo',['../namespacetff_1_1kernel_1_1base.html#a09fd63953a0894000b868ee52677fd6fa8cc8e60acfa3ae6089df773013fd73a2',1,'tff::kernel::base']]],
+  ['knonunit_7',['kNonUnit',['../namespacetff_1_1kernel_1_1base.html#af835f697af1f1fb2f7cb4eceecdf97b2abe7a3e5f9d33a48e636bdf4ac1675445',1,'tff::kernel::base']]],
+  ['knotowned_8',['kNotOwned',['../namespacetff_1_1kernel_1_1base.html#a7db607d92d816328f9610002484d60e6a3719c3d35c0da2e292ffa3b3133223bd',1,'tff::kernel::base']]],
+  ['kreadonly_9',['kReadOnly',['../namespacetff_1_1kernel_1_1base.html#a7db607d92d816328f9610002484d60e6a8c7550dddc8f118f7a5b328d292d5a4d',1,'tff::kernel::base']]],
+  ['kreadwrite_10',['kReadWrite',['../namespacetff_1_1kernel_1_1base.html#a7db607d92d816328f9610002484d60e6af34c23f2eed93c9645e1aa681c77bec5',1,'tff::kernel::base']]],
+  ['kright_11',['kRight',['../namespacetff_1_1kernel_1_1base.html#a3280a342f8f2be7b0694a41ed0ce0b10a2dd2b017192f8a09367d48c7648213c9',1,'tff::kernel::base']]],
+  ['krowmajor_12',['kRowMajor',['../namespacetff_1_1kernel_1_1base.html#ac44f23a10c25f877f1db87314dcddb2fa1ebc644af759b214a70279505401a0b9',1,'tff::kernel::base']]],
+  ['kunit_13',['kUnit',['../namespacetff_1_1kernel_1_1base.html#af835f697af1f1fb2f7cb4eceecdf97b2a4383f9f429063405fc69bdc8ff4b7ee8',1,'tff::kernel::base']]],
+  ['kupper_14',['kUpper',['../namespacetff_1_1kernel_1_1base.html#ad2e3ce5ea2121c2931736c532b94362ba47ea365ae543cb59618f5940400548cf',1,'tff::kernel::base']]],
+  ['kwriteonly_15',['kWriteOnly',['../namespacetff_1_1kernel_1_1base.html#a7db607d92d816328f9610002484d60e6a2b034ffa59939174b7c1c42a7179196a',1,'tff::kernel::base']]],
+  ['kyes_16',['kYes',['../namespacetff_1_1kernel_1_1base.html#a09fd63953a0894000b868ee52677fd6fa1ea590aa4a64767508460736ac0edaa9',1,'tff::kernel::base']]]
+];

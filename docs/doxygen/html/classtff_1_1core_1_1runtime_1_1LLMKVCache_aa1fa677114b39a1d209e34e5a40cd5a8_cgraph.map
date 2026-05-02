@@ -1,0 +1,13 @@
+<map id="tff::core::runtime::LLMKVCache::set_kv" name="tff::core::runtime::LLMKVCache::set_kv">
+<area shape="rect" id="Node000001" title="设置一个token的kv，这里用于decode阶段更新kv上下文信息" alt="" coords="5,83,171,123"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LayerKVContext.html#a52cdc114065d84e24758f14c6c31f798" title="添加一个 token" alt="" coords="219,15,453,55"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="161,81,249,56,250,61,162,86"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#aff491c70ac04efd9fdc029aec5e646c7" title="获取一个token的层上下文指针" alt="" coords="237,83,435,123"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="171,101,223,101,223,106,171,106"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1runtime_1_1LayerKVContext.html#ac90e1829747c60b4655b02f535df00e5" title="获取当前使用的 token 的数量" alt="" coords="254,148,418,203"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="158,121,241,145,240,150,157,126"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1runtime_1_1LayerKVContext.html#a2d0eaa6008859cb275afb3b0c2dae73f" title="获取当前使用的 page的最大token数量" alt="" coords="513,5,677,60"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="454,31,500,31,500,36,454,37"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#a3ca333b10a806d0481a1d203cda19009" title="获取一个token的层Key" alt="" coords="501,85,689,125"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="435,101,487,101,487,107,435,107"/>
+</map>

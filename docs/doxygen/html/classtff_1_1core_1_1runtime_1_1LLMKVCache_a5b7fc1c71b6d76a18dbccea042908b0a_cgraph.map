@@ -1,0 +1,11 @@
+<map id="tff::core::runtime::LLMKVCache::build_layer_kvcache_context" name="tff::core::runtime::LLMKVCache::build_layer_kvcache_context">
+<area shape="rect" id="Node000001" title="构建kvCache上下为" alt="" coords="5,20,184,75"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="254,5,409,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,34,240,27,240,32,185,39"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#aff491c70ac04efd9fdc029aec5e646c7" title="获取一个token的层上下文指针" alt="" coords="232,55,431,95"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="185,55,219,59,218,65,184,61"/>
+<area shape="rect" id="Node000003" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="539,5,606,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="409,15,526,15,526,21,409,21"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#a3ca333b10a806d0481a1d203cda19009" title="获取一个token的层Key" alt="" coords="479,55,667,95"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="431,73,465,73,465,78,431,78"/>
+</map>

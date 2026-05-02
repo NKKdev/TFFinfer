@@ -1,0 +1,83 @@
+<map id="tff::core::model::QWen3Creator::build_graph" name="tff::core::model::QWen3Creator::build_graph">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,681,228,721"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a5d706a9b1ae34d80258577029af6c394" title="创建加法节点" alt="" coords="568,108,785,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,680,136,569,168,408,190,326,215,251,243,191,258,168,274,151,308,129,346,112,385,102,426,96,507,94,580,103,579,108,507,100,427,101,387,107,348,117,311,133,278,155,262,171,247,193,220,253,195,327,173,410,141,570,123,681"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aa0c47bc47641ad1823026f594e2ed599" title="创建自注意力节点" alt="" coords="568,630,785,670"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="228,685,276,680,554,656,554,662,276,685,228,690"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#ad0431a2a40edd2fba018ff1f46d1e45c" title="创建reshape节点" alt="" coords="839,630,1056,670"/>
+<area shape="poly" id="edge47_Node000001_Node000010" title=" " alt="" coords="228,701,484,700,636,693,788,680,847,671,848,676,788,685,637,698,484,705,228,707"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#ae7500731fe0d1d7f33caaf18ac553b92" title="创建张量转换节点" alt="" coords="288,1018,505,1058"/>
+<area shape="poly" id="edge13_Node000001_Node000011" title=" " alt="" coords="125,720,142,775,172,850,193,890,217,929,245,966,278,998,296,1010,293,1015,274,1002,241,969,213,932,188,893,167,852,137,777,120,722"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a63f2f908a425c6e9d97b32cbc92ab595" title="创建FFN节点" alt="" coords="288,356,505,396"/>
+<area shape="poly" id="edge14_Node000001_Node000012" title=" " alt="" coords="133,679,367,405,371,408,137,683"/>
+<area shape="rect" id="Node000017" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a02cc542c17a2968f6633352144630c63" title="构建FFN输入节点" alt="" coords="285,165,508,205"/>
+<area shape="poly" id="edge27_Node000001_Node000017" title=" " alt="" coords="123,680,179,536,223,439,274,342,321,272,367,214,371,218,325,275,278,345,227,441,184,538,128,682"/>
+<area shape="rect" id="Node000018" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#ad1a66a0e6dacbed39dd29e10e6cae9be" title="构建输入节点" alt="" coords="836,713,1059,753"/>
+<area shape="poly" id="edge30_Node000001_Node000018" title=" " alt="" coords="229,713,276,717,570,730,822,732,822,737,570,735,276,722,228,718"/>
+<area shape="rect" id="Node000019" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a6b3a9c77c5d6ef11aafcde6467790d64" title="创建KV缓存加载节点" alt="" coords="279,789,515,829"/>
+<area shape="poly" id="edge32_Node000001_Node000019" title=" " alt="" coords="161,719,277,768,317,782,316,787,275,773,159,724"/>
+<area shape="rect" id="Node000020" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a35bbfa350232e0edf2b23fc0bfaffdf3" title="创建KV缓存存储节点" alt="" coords="276,904,517,944"/>
+<area shape="poly" id="edge34_Node000001_Node000020" title=" " alt="" coords="132,720,155,755,189,799,230,844,277,883,302,896,299,901,275,887,226,848,185,802,151,758,128,723"/>
+<area shape="rect" id="Node000021" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aeab21a5eb29ffded03b2b9cd6a12df81" title="创建归一化节点" alt="" coords="568,44,785,84"/>
+<area shape="poly" id="edge36_Node000001_Node000021" title=" " alt="" coords="118,680,134,561,166,386,187,297,212,215,241,148,257,123,274,104,305,83,338,66,373,54,410,45,484,38,554,41,554,46,485,44,411,50,375,59,340,71,307,87,278,108,261,126,246,151,217,217,192,298,171,387,139,562,123,681"/>
+<area shape="rect" id="Node000023" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#ab2561d032ef765293f0325682b182ef2" title="构建数据卸载节点， GPU卸载结果到CPU" alt="" coords="836,961,1059,1001"/>
+<area shape="poly" id="edge40_Node000001_Node000023" title=" " alt="" coords="126,721,143,771,173,836,193,870,217,902,245,930,277,953,319,970,376,982,444,989,520,993,679,993,822,987,823,993,679,999,520,999,444,995,375,987,318,975,275,958,242,934,213,905,189,873,168,839,138,773,121,722"/>
+<area shape="rect" id="Node000024" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a8a2d92c1974c0bb28e661cd6751dea6e" title=" " alt="" coords="565,516,788,556"/>
+<area shape="poly" id="edge43_Node000001_Node000024" title=" " alt="" coords="131,679,156,650,189,617,229,584,275,559,344,537,416,525,487,520,552,521,552,526,487,525,416,530,345,542,277,564,232,589,193,621,159,654,135,683"/>
+<area shape="rect" id="Node000025" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a848ca3e144d9630169d7d76946e4d7a8" title="构建QKV节点" alt="" coords="285,573,508,613"/>
+<area shape="poly" id="edge45_Node000001_Node000025" title=" " alt="" coords="159,679,275,629,316,615,317,620,277,634,161,684"/>
+<area shape="rect" id="Node000026" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#adcf46203c2a8f39a0352c7269930b4a5" title="构建Rope节点" alt="" coords="565,846,788,886"/>
+<area shape="poly" id="edge48_Node000001_Node000026" title=" " alt="" coords="135,720,159,748,193,782,232,814,277,839,345,860,416,872,487,877,552,876,552,882,487,882,416,878,344,865,275,844,229,818,189,786,156,752,131,723"/>
+<area shape="rect" id="Node000028" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#ab0d92a3e67aba3e7e01add8a812f2fb2" title="创建权重节点" alt="" coords="288,1082,505,1122"/>
+<area shape="poly" id="edge53_Node000001_Node000028" title=" " alt="" coords="123,721,135,788,162,882,182,933,208,982,240,1029,278,1069,283,1073,280,1077,274,1072,236,1032,204,985,178,935,157,884,130,789,118,722"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="1125,452,1280,478"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="785,109,852,108,924,113,995,131,1029,146,1060,164,1093,193,1121,227,1144,265,1162,304,1187,380,1200,438,1195,439,1182,381,1157,306,1139,267,1117,230,1089,197,1057,169,1026,150,993,136,923,119,852,113,785,115"/>
+<area shape="rect" id="Node000004" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="1347,452,1413,478"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="1280,462,1333,462,1333,468,1280,468"/>
+<area shape="poly" id="edge12_Node000005_Node000003" title=" " alt="" coords="771,628,931,590,1005,570,1058,552,1121,519,1172,484,1175,488,1123,523,1060,557,1006,575,932,595,772,633"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#ad63cdfc07588bc5c340ec7096f033494" title="创建mask节点" alt="" coords="839,1025,1056,1065"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="695,670,741,740,768,786,790,833,799,861,804,886,805,930,811,970,821,990,838,1011,842,1015,838,1019,834,1015,816,993,806,972,800,930,798,886,794,862,786,835,763,788,737,743,691,672"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a7a4cee7c5118b51e05778fa06a4ff87e" title="创建矩阵乘法节点" alt="" coords="839,502,1056,542"/>
+<area shape="poly" id="edge8_Node000005_Node000009" title=" " alt="" coords="749,628,787,610,801,598,810,586,819,574,835,562,865,545,868,550,837,566,823,578,814,590,805,602,789,614,751,633"/>
+<area shape="poly" id="edge10_Node000005_Node000010" title=" " alt="" coords="785,648,825,648,825,653,785,653"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1device_1_1DeviceBaseObject.html#a33e81cc1dfd8a04052407672253e3d11" title="获取设备列表" alt="" coords="1117,1082,1288,1136"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="1029,1063,1105,1082,1103,1087,1027,1068"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="1107,1017,1299,1057"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="1056,1039,1093,1038,1093,1043,1056,1044"/>
+<area shape="poly" id="edge9_Node000009_Node000003" title=" " alt="" coords="1036,500,1132,478,1133,483,1038,505"/>
+<area shape="poly" id="edge11_Node000010_Node000003" title=" " alt="" coords="1002,628,1057,599,1093,572,1127,541,1180,486,1184,490,1131,545,1097,576,1060,603,1004,633"/>
+<area shape="poly" id="edge26_Node000012_Node000003" title=" " alt="" coords="437,353,496,329,565,309,627,300,676,298,788,309,866,319,927,330,986,348,1060,376,1123,408,1174,442,1172,447,1120,413,1058,381,985,353,926,336,866,324,788,314,676,303,628,305,566,314,498,334,439,358"/>
+<area shape="rect" id="Node000013" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aa72432de065a88097f9f5a5c88fc821b" title="创建FFN下采样节点" alt="" coords="568,324,785,364"/>
+<area shape="poly" id="edge15_Node000012_Node000013" title=" " alt="" coords="505,361,554,355,555,360,506,366"/>
+<area shape="rect" id="Node000014" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a86d59e5e08e7eda131b42f149ce72bdf" title="创建FFN门节点" alt="" coords="568,388,785,428"/>
+<area shape="poly" id="edge18_Node000012_Node000014" title=" " alt="" coords="506,386,555,391,554,396,505,391"/>
+<area shape="rect" id="Node000015" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a1bfd3990979fa551222c218484b8a26d" title="创建FFN节点" alt="" coords="568,452,785,492"/>
+<area shape="poly" id="edge21_Node000012_Node000015" title=" " alt="" coords="448,393,566,437,591,445,589,450,564,442,446,398"/>
+<area shape="rect" id="Node000016" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#ac488f089941a5e2d2d5bf72db7fd82ee" title="创建激活函数节点" alt="" coords="839,222,1056,262"/>
+<area shape="poly" id="edge24_Node000012_Node000016" title=" " alt="" coords="419,353,482,307,522,283,564,265,630,248,698,238,764,233,825,233,825,238,764,239,698,243,631,253,566,270,524,288,485,311,423,358"/>
+<area shape="poly" id="edge17_Node000013_Node000003" title=" " alt="" coords="786,359,917,385,1059,417,1153,446,1152,451,1058,422,916,390,785,365"/>
+<area shape="poly" id="edge16_Node000013_Node000009" title=" " alt="" coords="764,362,789,373,829,400,866,431,923,490,919,494,862,435,826,404,787,378,761,366"/>
+<area shape="poly" id="edge20_Node000014_Node000003" title=" " alt="" coords="786,417,1112,453,1111,458,786,422"/>
+<area shape="poly" id="edge19_Node000014_Node000009" title=" " alt="" coords="755,425,789,437,849,465,902,493,899,498,846,469,787,442,754,430"/>
+<area shape="poly" id="edge23_Node000015_Node000003" title=" " alt="" coords="786,468,1111,464,1112,469,786,473"/>
+<area shape="poly" id="edge22_Node000015_Node000009" title=" " alt="" coords="784,489,827,497,826,502,783,494"/>
+<area shape="poly" id="edge25_Node000016_Node000003" title=" " alt="" coords="1026,260,1060,279,1103,317,1140,361,1190,439,1186,442,1136,364,1099,321,1057,283,1023,265"/>
+<area shape="poly" id="edge28_Node000017_Node000002" title=" " alt="" coords="494,162,564,148,565,153,496,168"/>
+<area shape="poly" id="edge29_Node000017_Node000003" title=" " alt="" coords="508,174,650,167,811,166,889,170,958,178,1017,190,1060,208,1090,231,1116,259,1138,290,1156,323,1183,387,1198,438,1193,439,1178,388,1152,325,1134,293,1112,262,1087,235,1057,213,1015,195,958,183,888,176,811,172,651,173,508,179"/>
+<area shape="poly" id="edge31_Node000018_Node000003" title=" " alt="" coords="1007,711,1033,697,1057,680,1102,634,1139,581,1168,530,1188,490,1193,492,1173,533,1143,584,1106,637,1060,684,1036,702,1009,715"/>
+<area shape="poly" id="edge33_Node000019_Node000003" title=" " alt="" coords="515,812,658,815,817,812,892,806,960,796,1017,782,1057,763,1090,735,1117,702,1140,665,1158,626,1183,550,1195,491,1200,492,1188,552,1163,628,1145,667,1122,705,1094,739,1060,767,1018,787,961,801,893,811,817,817,658,821,515,818"/>
+<area shape="poly" id="edge35_Node000020_Node000003" title=" " alt="" coords="518,931,661,938,820,938,895,933,962,924,1018,909,1057,890,1100,848,1134,797,1159,741,1177,683,1188,626,1195,573,1199,492,1204,492,1200,573,1194,627,1182,684,1164,743,1139,800,1104,851,1060,894,1020,914,963,929,896,938,820,943,661,943,517,936"/>
+<area shape="poly" id="edge39_Node000021_Node000003" title=" " alt="" coords="726,41,797,19,885,4,931,3,977,8,1020,21,1060,43,1105,84,1139,134,1164,190,1182,248,1194,305,1201,358,1205,438,1199,439,1195,358,1189,306,1177,249,1159,192,1134,137,1101,88,1057,47,1018,26,975,14,931,9,885,10,799,24,728,46"/>
+<area shape="rect" id="Node000022" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a5ea6b40c499189804391bc39fbdd7d9f" title="创建乘法节点" alt="" coords="839,57,1056,97"/>
+<area shape="poly" id="edge37_Node000021_Node000022" title=" " alt="" coords="786,66,825,68,825,74,785,72"/>
+<area shape="poly" id="edge38_Node000022_Node000003" title=" " alt="" coords="1033,95,1060,114,1094,152,1122,195,1145,240,1164,287,1188,374,1201,438,1195,439,1183,375,1158,289,1140,243,1118,197,1090,155,1057,118,1030,100"/>
+<area shape="poly" id="edge41_Node000023_Node000003" title=" " alt="" coords="1031,959,1057,941,1099,887,1132,826,1156,762,1174,697,1186,634,1194,577,1199,491,1204,492,1199,577,1191,635,1179,698,1161,763,1136,828,1103,890,1061,944,1035,963"/>
+<area shape="poly" id="edge42_Node000023_Node000008" title=" " alt="" coords="1040,999,1098,1012,1097,1017,1039,1004"/>
+<area shape="poly" id="edge44_Node000024_Node000009" title=" " alt="" coords="788,528,825,526,825,531,788,533"/>
+<area shape="poly" id="edge46_Node000025_Node000009" title=" " alt="" coords="508,590,642,583,788,565,874,544,875,549,788,570,643,588,508,595"/>
+<area shape="poly" id="edge52_Node000026_Node000003" title=" " alt="" coords="788,881,854,883,925,877,995,859,1027,845,1057,826,1094,790,1125,748,1148,701,1166,653,1189,560,1197,491,1203,492,1194,561,1172,654,1153,703,1129,751,1098,794,1060,830,1030,849,997,864,926,883,855,889,788,887"/>
+<area shape="rect" id="Node000027" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a8582de7d7a51c8bd81e481fd67ea7c1c" title=" " alt="" coords="836,1089,1059,1129"/>
+<area shape="poly" id="edge49_Node000026_Node000027" title=" " alt="" coords="690,885,711,926,744,977,786,1030,838,1075,846,1080,844,1085,834,1079,783,1034,740,980,707,928,685,888"/>
+<area shape="poly" id="edge50_Node000027_Node000007" title=" " alt="" coords="1059,1106,1104,1106,1104,1112,1059,1112"/>
+<area shape="poly" id="edge51_Node000027_Node000008" title=" " alt="" coords="1018,1087,1117,1058,1119,1063,1020,1092"/>
+</map>

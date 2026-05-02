@@ -1,0 +1,9 @@
+<map id="tff::core::graph::op::RMSNormNode" name="tff::core::graph::op::RMSNormNode">
+<area shape="rect" id="Node000001" title=" " alt="" coords="148,183,289,223"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1graph_1_1GraphNode.html" title="节点类" alt="" coords="119,108,318,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,147,221,183,216,183,216,147"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="138,52,206,106,202,110,135,56"/>
+<area shape="rect" id="Node000004" href="$structtff_1_1core_1_1graph_1_1NodeMetadata.html" title="节点元数据" alt="" coords="224,13,445,38"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="312,48,235,110,231,106,308,44"/>
+</map>

@@ -38,10 +38,9 @@ int main(int argc, char *argv[]) {
     }
 
     std::string prompt0 = "你好，我是一个AI芯片公司的高性能计算程序员，主要负责大模型推理框架的迭代和优化，年底了，请帮我写一份年终总结大纲。要求尽可能全面。";
-    std::string prompt1 = "你的模型是什么？";
-    std::string prompt2 = "Hello my name is";
-    std::string prompt3 =
-            R"(Transcript of a never ending dialog, where the User interacts with an Assistant.
+    std::string prompt2 = "Hello my name is NKK";
+    std::string prompt4 = "你好，我是一个AI芯片公司的高性能计算程序员，主要负责大模型推理框架的迭代和优化";
+    std::string prompt3 =R"(Transcript of a never ending dialog, where the User interacts with an Assistant.
 The Assistant is helpful, kind, honest, good at writing, and never fails to answer the User's requests immediately and with precision.
 
 User:
@@ -53,14 +52,12 @@ Who is Richard Feynman?
 Assistant:
 Richard Feynman was an American physicist who is best known for his work in quantum mechanics and particle physics. He was awarded the Nobel Prize in Physics in 1965 for his contributions to the development of quantum electrodynamics. He was a popular lecturer and author, and he wrote several books, including "Surely You're Joking, Mr. Feynman!" and "What Do You Care What Other People Think?".
 )";
-    prompt3 += prompt3;
-    prompt3 += prompt3;
-    std::vector<std::string> prompt_pre{prompt3, prompt1, prompt2};
+    std::vector<std::string> prompt_pre{prompt0, prompt2, prompt4, prompt0};
     std::vector<std::string> names{"", "", "Wang Peng"};
     std::vector<std::string> prompt_batches;
     prompt_batches.resize(max_batches);
     for (int i = 0; i < max_batches; i++) {
-        prompt_batches[i] = prompt_pre[i] + " " + names[i];
+        prompt_batches[i] = prompt_pre[i];
         rtrim(prompt_batches[i]);
     }
     std::vector<std::string> respone_str;

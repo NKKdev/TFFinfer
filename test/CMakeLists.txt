@@ -41,7 +41,6 @@ if (NOT glog_FOUND)
     get_target_property(GLOG_INCLUDE_DIRS glog::glog INTERFACE_INCLUDE_DIRECTORIES)
     message(STATUS "Glog include directories: ${GLOG_INCLUDE_DIRS}")
 endif ()
-
 file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cu
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
@@ -49,17 +48,7 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
 message("-- tffInfer_test sources: " ${${PROJECT_NAME}_SOURCE_LIST})
 
 
-add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST}
-        flash_attention_rope_8*32_scalar.cu
-        flash_attention_rope_8*32_simd4.cu
-        flash_attention_rope_8*32_simd4_k_t.cu
-        swiglu.cu
-        quant_fp32_gemm.cu
-        varify_gemm_quant_q8_0.cu
-        set_of_rows.cu
-        fp32_to_fp16.cu
-        flash_attention_rope_neox.cu
-)
+add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE_LIST})
 #target_compile_options(${PROJECT_NAME}
 #        PRIVATE
 #        $<$<COMPILE_LANGUAGE:CUDA>:-O3>

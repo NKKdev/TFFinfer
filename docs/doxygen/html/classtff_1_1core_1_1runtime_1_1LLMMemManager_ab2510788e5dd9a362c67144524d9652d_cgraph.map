@@ -1,0 +1,5 @@
+<map id="tff::core::runtime::LLMMemManager::get_ptr_by_offset" name="tff::core::runtime::LLMMemManager::get_ptr_by_offset">
+<area shape="rect" id="Node000001" title="获取设备内存指针" alt="" coords="5,5,180,60"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LLMMemManager.html#af883a0f88b8f66e11231edfa71ddc755" title="获取设备内存引用" alt="" coords="228,5,423,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="180,30,215,30,215,35,180,35"/>
+</map>

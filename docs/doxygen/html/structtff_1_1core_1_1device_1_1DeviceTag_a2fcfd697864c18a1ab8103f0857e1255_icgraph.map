@@ -1,0 +1,7 @@
+<map id="tff::core::device::DeviceTag::is_cpu" name="tff::core::device::DeviceTag::is_cpu">
+<area shape="rect" id="Node000001" title=" " alt="" coords="251,41,389,81"/>
+<area shape="rect" id="Node000002" href="$structtff_1_1core_1_1device_1_1DeviceTag.html#af56bcf3e78c7a53176d11c6699c1abf6" title=" " alt="" coords="5,5,203,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="237,50,202,44,203,39,238,45"/>
+<area shape="rect" id="Node000003" href="$structtff_1_1core_1_1device_1_1DeviceTag.html#a765a2cffac9c47977f2bf81533655de1" title=" " alt="" coords="27,70,181,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="238,78,181,87,180,82,237,72"/>
+</map>

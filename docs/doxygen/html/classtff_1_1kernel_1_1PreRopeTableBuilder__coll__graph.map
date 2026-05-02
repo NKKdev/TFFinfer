@@ -1,0 +1,7 @@
+<map id="tff::kernel::PreRopeTableBuilder" name="tff::kernel::PreRopeTableBuilder">
+<area shape="rect" id="Node000001" title="PreRopeTable算子参数构建器" alt="" coords="9,196,189,236"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1kernel_1_1builder_1_1OpParamBuilderBase.html" title=" " alt="" coords="5,93,192,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="101,162,101,196,96,196,96,162"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1kernel_1_1builder_1_1IParamBuilder.html" title="Parameter builder interface." alt="" coords="30,5,167,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="101,59,101,93,96,93,96,59"/>
+</map>

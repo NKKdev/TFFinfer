@@ -1,0 +1,9 @@
+<map id="tff::core::runtime::LLMKVCache::get_kv_token_num" name="tff::core::runtime::LLMKVCache::get_kv_token_num">
+<area shape="rect" id="Node000001" title="获取一个token的某层历史token数量" alt="" coords="5,34,172,89"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#aff491c70ac04efd9fdc029aec5e646c7" title="获取一个token的层上下文指针" alt="" coords="220,5,419,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="172,46,206,40,207,46,173,51"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1runtime_1_1LayerKVContext.html#ac90e1829747c60b4655b02f535df00e5" title="获取当前使用的 token 的数量" alt="" coords="237,70,401,125"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="173,72,224,80,223,85,172,77"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#a3ca333b10a806d0481a1d203cda19009" title="获取一个token的层Key" alt="" coords="467,5,655,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="419,23,453,23,453,28,419,28"/>
+</map>

@@ -1,0 +1,29 @@
+<map id="tff::core::device::DeviceBaseObject::get_device_id" name="tff::core::device::DeviceBaseObject::get_device_id">
+<area shape="rect" id="Node000001" title="获取设备列表" alt="" coords="837,158,1008,213"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aa020bce7f41b94f4019ec3c8076e8661" title="创建device节点" alt="" coords="559,5,777,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="889,149,844,102,817,79,788,60,762,48,765,43,791,55,820,75,848,98,893,145"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#a5ffab338ac3eca31556fc44bf5b9b1ff" title="创建host节点" alt="" coords="559,69,777,109"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="857,154,788,124,752,112,754,107,790,119,859,149"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#ad63cdfc07588bc5c340ec7096f033494" title="创建mask节点" alt="" coords="559,133,777,173"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="823,176,776,170,777,164,824,170"/>
+<area shape="rect" id="Node000009" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a8582de7d7a51c8bd81e481fd67ea7c1c" title=" " alt="" coords="557,197,779,237"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="824,200,780,206,779,201,823,195"/>
+<area shape="rect" id="Node000011" href="$namespacetff_1_1core_1_1device.html#a66408389a04c64a7f8372dc4519af2c7" title="获取设备数量" alt="" coords="603,261,733,301"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="859,221,790,252,734,269,733,264,788,247,857,217"/>
+<area shape="rect" id="Node000013" href="$classtff_1_1core_1_1graph_1_1op_1_1MapCPUBufferNode.html#abcc88f7f0eb1f9f791cc5b66002a12a7" title="形状推导" alt="" coords="547,325,789,365"/>
+<area shape="poly" id="edge14_Node000001_Node000013" title=" " alt="" coords="893,225,848,273,820,296,791,316,765,328,762,323,788,311,817,292,844,269,889,222"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#af3d5accc95540c14d3fca98b1a9d7922" title="创建层节点" alt="" coords="279,69,496,109"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="567,51,476,72,475,67,566,46"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#a45f7e2b024609a20bd82dea429d19be0" title=" " alt="" coords="5,69,228,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="265,92,228,92,228,87,265,87"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="546,92,496,92,496,87,546,87"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html#aa0c47bc47641ad1823026f594e2ed599" title="创建自注意力节点" alt="" coords="279,133,496,173"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="546,156,496,156,496,151,546,151"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#ad993a2beb8d384ed9eaa62e3cd0f49a7" title=" " alt="" coords="5,165,228,205"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="266,170,228,175,228,170,265,165"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1model_1_1QWen3Creator.html#adcf46203c2a8f39a0352c7269930b4a5" title="构建Rope节点" alt="" coords="276,197,499,237"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="543,220,499,220,499,215,543,215"/>
+<area shape="poly" id="edge11_Node000010_Node000008" title=" " alt="" coords="262,205,228,201,228,196,263,200"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1core_1_1model_1_1GGUFLoader.html#a4797d5985bf93eb8af7d11d85f01ee09" title=" " alt="" coords="282,261,493,301"/>
+<area shape="poly" id="edge13_Node000011_Node000012" title=" " alt="" coords="589,284,493,284,493,279,589,279"/>
+</map>

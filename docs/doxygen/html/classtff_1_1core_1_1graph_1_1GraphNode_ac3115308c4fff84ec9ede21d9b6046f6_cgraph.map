@@ -1,0 +1,35 @@
+<map id="tff::core::graph::GraphNode::bind_devices" name="tff::core::graph::GraphNode::bind_devices">
+<area shape="rect" id="Node000001" title="绑定设备" alt="" coords="5,216,204,256"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#adfae4c368046f0fb13dc6bc61524a6bd" title="前向计算 负责静态计算形状推导以及显存分配等，真正的计算在调度器中完成" alt="" coords="252,216,451,256"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,242,238,242,238,248,204,248"/>
+<area shape="rect" id="Node000015" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a4c9df3558cd6d1613875f415a32afe48" title="获取节点名称" alt="" coords="252,280,451,320"/>
+<area shape="poly" id="edge18_Node000001_Node000015" title=" " alt="" coords="183,253,261,274,260,279,182,259"/>
+<area shape="poly" id="edge4_Node000002_Node000001" title=" " alt="" coords="252,230,218,230,218,224,252,224"/>
+<area shape="poly" id="edge8_Node000002_Node000002" title=" " alt="" coords="306,216,303,206,310,197,327,191,351,189,380,192,395,199,393,204,378,197,351,195,328,197,313,201,308,207,311,215"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a74520016fb33315b3faa89ce97dfa842" title="添加输入节点" alt="" coords="499,5,697,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="368,214,421,147,457,108,497,74,547,48,549,53,500,78,460,112,425,150,372,218"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1log_1_1Logger.html#a7a6b8109f79045b9b01b2de598b391f2" title=" " alt="" coords="767,86,922,111"/>
+<area shape="poly" id="edge5_Node000002_Node000004" title=" " alt="" coords="366,214,419,157,456,128,498,106,562,87,630,79,695,78,754,82,754,88,695,84,630,84,564,92,500,110,459,132,423,161,370,218"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#add40f7d460ad0bbd6c8262463693bc9c" title="获取当前节点绑定的设备事件" alt="" coords="499,120,697,160"/>
+<area shape="poly" id="edge7_Node000002_Node000006" title=" " alt="" coords="395,213,498,170,518,162,520,167,500,174,397,218"/>
+<area shape="rect" id="Node000007" href="$namespacetff_1_1kernel_1_1base.html#a0844ea9961f826a717e23d90dcdd92ef" title=" " alt="" coords="533,184,663,224"/>
+<area shape="poly" id="edge9_Node000002_Node000007" title=" " alt="" coords="451,220,519,211,520,217,451,226"/>
+<area shape="rect" id="Node000010" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a7bb4ff492d8e745e7cfe44cc75be0db8" title="获取当前节点的输入节点" alt="" coords="499,248,697,288"/>
+<area shape="poly" id="edge13_Node000002_Node000010" title=" " alt="" coords="451,246,485,251,485,256,451,252"/>
+<area shape="rect" id="Node000011" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="502,312,694,352"/>
+<area shape="poly" id="edge14_Node000002_Node000011" title=" " alt="" coords="423,254,452,266,476,282,500,298,516,305,513,309,497,302,473,286,449,270,421,259"/>
+<area shape="rect" id="Node000012" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a51d358bd0966a44c4e3dfed80d5c7e7d" title="获取节点OP类型" alt="" coords="499,376,697,416"/>
+<area shape="poly" id="edge15_Node000002_Node000012" title=" " alt="" coords="435,254,453,266,471,291,477,315,483,339,501,362,506,366,503,371,497,366,479,341,472,317,466,293,449,270,432,258"/>
+<area shape="rect" id="Node000013" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a1d7e4f0cbc21cf3dd198c41e4b3eee35" title="参数检查" alt="" coords="499,440,697,480"/>
+<area shape="poly" id="edge16_Node000002_Node000013" title=" " alt="" coords="437,254,453,266,468,287,475,307,477,348,479,388,486,407,501,426,505,430,501,434,497,430,481,409,474,389,472,348,470,308,463,289,449,270,434,258"/>
+<area shape="rect" id="Node000014" href="$classtff_1_1core_1_1graph_1_1GraphNode.html#a27888a74708621060e4610bfa1ea24b4" title="获取当前节点绑定的设备流" alt="" coords="499,504,697,544"/>
+<area shape="poly" id="edge17_Node000002_Node000014" title=" " alt="" coords="438,254,453,266,472,295,480,324,480,352,477,380,474,408,475,435,482,463,501,490,504,493,500,497,497,494,477,465,469,436,469,408,472,380,475,352,475,325,467,297,449,270,435,258"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="510,48,500,54,459,89,422,130,392,170,370,205,365,203,388,167,418,127,455,86,497,50,507,43"/>
+<area shape="rect" id="Node000005" href="$unicode_8h.html#a02a183e7437d98dac1d0d92d8dd1d95a" title=" " alt="" coords="992,86,1059,111"/>
+<area shape="poly" id="edge6_Node000004_Node000005" title=" " alt="" coords="922,96,978,96,978,101,922,101"/>
+<area shape="poly" id="edge10_Node000007_Node000004" title=" " alt="" coords="663,182,696,170,807,116,810,120,698,174,665,187"/>
+<area shape="rect" id="Node000008" href="$classtff_1_1factory_1_1FunctionFactory.html#a46dd32d63febcbf9a4f5a79ea6e22eff" title=" " alt="" coords="745,168,944,208"/>
+<area shape="poly" id="edge11_Node000007_Node000008" title=" " alt="" coords="663,197,731,193,732,198,664,202"/>
+<area shape="rect" id="Node000009" href="$structtff_1_1core_1_1device_1_1DeviceTag.html#ac0ca11ab7e935f894d990beeb16ce009" title=" " alt="" coords="777,232,912,272"/>
+<area shape="poly" id="edge12_Node000007_Node000009" title=" " alt="" coords="664,214,764,234,763,239,663,219"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="tff::core::model::QWen3Creator" name="tff::core::model::QWen3Creator">
+<area shape="rect" id="Node000001" title=" " alt="" coords="19,79,241,104"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1model_1_1ModelCreatorBase.html" title="模型计算图创建器基类" alt="" coords="5,5,255,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="133,44,133,79,127,79,127,44"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="tff::core::device::get_device_size" name="tff::core::device::get_device_size">
+<area shape="rect" id="Node000001" title="获取设备数量" alt="" coords="5,49,136,89"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1device_1_1DeviceBaseObject.html#a33e81cc1dfd8a04052407672253e3d11" title="获取设备列表" alt="" coords="195,5,365,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="136,55,181,47,181,52,137,60"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1factory_1_1ModuleFactory.html#a8e1af378f656e27db46e289d166f5e94" title=" " alt="" coords="184,85,376,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="137,77,171,83,170,88,136,82"/>
+</map>

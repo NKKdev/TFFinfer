@@ -1,0 +1,9 @@
+<map id="tff::core::model::LLMTokenizerBase" name="tff::core::model::LLMTokenizerBase">
+<area shape="rect" id="Node000001" title="LLMTokenizer." alt="" coords="121,181,369,207"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,93,245,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="167,139,229,179,226,183,164,143"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1module_1_1ModuleObject.html" title=" " alt="" coords="270,101,461,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="337,136,265,183,262,179,334,132"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="260,5,471,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="368,59,368,100,363,100,363,59"/>
+</map>

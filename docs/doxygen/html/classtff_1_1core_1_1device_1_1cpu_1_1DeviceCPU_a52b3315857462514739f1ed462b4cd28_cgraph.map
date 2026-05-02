@@ -1,0 +1,7 @@
+<map id="tff::core::device::cpu::DeviceCPU::get_device_mem" name="tff::core::device::cpu::DeviceCPU::get_device_mem">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,5,160,60"/>
+<area shape="rect" id="Node000002" href="$namespacetff_1_1core_1_1device_1_1cpu.html#a52a32fd6ea5e33c4af2d19e7bb80531a" title=" " alt="" coords="208,13,361,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,30,194,30,194,35,160,35"/>
+<area shape="rect" id="Node000003" href="$namespacetff_1_1core_1_1device_1_1cpu.html#adbe561f1c83761f7d84939af481d1834" title=" " alt="" coords="409,13,540,53"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="362,30,395,30,395,35,362,35"/>
+</map>

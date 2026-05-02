@@ -1,0 +1,4 @@
+<map id="tff::core::runtime::GraphOptimizer::fuse_same_node" name="tff::core::runtime::GraphOptimizer::fuse_same_node">
+<area shape="rect" id="Node000001" title="融合相同节点" alt="" coords="5,29,175,84"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="117,18,107,11,90,8,75,10,66,14,62,21,62,29,56,29,57,19,63,10,74,5,90,3,109,6,120,13"/>
+</map>

@@ -1,0 +1,12 @@
+<map id="tff::kernel::base::get_param_value" name="tff::kernel::base::get_param_value">
+<area shape="rect" id="Node000001" title=" " alt="" coords="469,85,604,125"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1kernel_1_1Map2Cpu_3_01T_00_01core_1_1device_1_1CPUTag_01_4.html#af2a36cf90255da4b14f2ccef5ff9ac65" title=" " alt="" coords="232,5,421,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="464,83,406,63,408,57,466,78"/>
+<area shape="rect" id="Node000003" href="$namespacetff_1_1kernel_1_1base.html#abd43867a6b27062f41df885561c9191e" title=" " alt="" coords="261,85,392,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="456,107,392,107,392,102,456,102"/>
+<area shape="rect" id="Node000005" href="$namespacetff_1_1kernel_1_1base.html#aac7840fb961c64a9b9bc2343979cad5b" title=" " alt="" coords="261,149,392,189"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="458,131,393,151,391,146,456,126"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1kernel_1_1base_1_1OPCreatorBase.html#ad763f375733408f88a8bec2d0f63f405" title="注册OP对象" alt="" coords="5,109,184,164"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="248,118,185,127,184,122,247,113"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="247,160,184,152,185,146,248,155"/>
+</map>

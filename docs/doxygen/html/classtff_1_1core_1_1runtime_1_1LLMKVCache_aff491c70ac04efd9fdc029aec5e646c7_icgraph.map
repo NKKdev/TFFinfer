@@ -1,0 +1,15 @@
+<map id="tff::core::runtime::LLMKVCache::get_context" name="tff::core::runtime::LLMKVCache::get_context">
+<area shape="rect" id="Node000001" title="获取一个token的层上下文指针" alt="" coords="256,193,455,233"/>
+<area shape="rect" id="Node000002" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#a5b7fc1c71b6d76a18dbccea042908b0a" title="构建kvCache上下为" alt="" coords="17,5,196,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="327,184,274,129,242,101,207,75,184,62,187,58,209,70,245,96,278,125,331,180"/>
+<area shape="rect" id="Node000003" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#a630e48d244ebe5ff7960b7936328322e" title="获取一个token的某层k张量" alt="" coords="27,85,186,125"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="306,188,207,139,175,127,177,122,209,134,309,183"/>
+<area shape="rect" id="Node000004" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#acff7874468551679a3fe532b729ed6c3" title="获取一个token的某层历史token数量" alt="" coords="23,149,190,204"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="242,199,190,191,191,186,243,194"/>
+<area shape="rect" id="Node000005" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#ae9aafd7962f842d6b5d98c03ac90fb54" title="获取一个token的某层kv位置" alt="" coords="5,229,208,269"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="243,232,209,237,208,231,242,226"/>
+<area shape="rect" id="Node000006" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#abd2e195bd5c0a3fa99bafddc96b65351" title="获取一个token的某层v张量" alt="" coords="27,293,186,333"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="303,241,209,283,175,295,174,290,207,278,301,236"/>
+<area shape="rect" id="Node000007" href="$classtff_1_1core_1_1runtime_1_1LLMKVCache.html#aa1fa677114b39a1d209e34e5a40cd5a8" title="设置一个token的kv，这里用于decode阶段更新kv上下文信息" alt="" coords="24,357,189,397"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="329,245,277,297,244,324,209,347,184,359,182,354,207,342,241,319,273,293,326,241"/>
+</map>
