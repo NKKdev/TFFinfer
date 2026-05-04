@@ -64,7 +64,7 @@ if (NOT nlohmann_json_FOUND)
     FetchContent_Declare(
             nlohmann_json
             GIT_REPOSITORY https://github.com/nlohmann/json.git
-            GIT_TAG v4.0.0
+            GIT_TAG v3.12.0
     )
     FetchContent_MakeAvailable(nlohmann_json)
     get_target_property(json_include_dirs nlohmann_json::nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)

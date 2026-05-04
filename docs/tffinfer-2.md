@@ -1,4 +1,4 @@
-# 十年 C++ 后端 GAP 六个月，写了一个近 3 万行的LLM-TFFInfer推理框架项目解析(三)
+# 十年 C++ 后端 GAP 六个月，写了一个近 3 万行的LLM-TFFInfer推理框架项目解析(三)-模型加载
 
 ## 1. 为什么第一节讲「模型加载」
 
@@ -25,7 +25,7 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 ---
 
-## 3. 运行时如何「接上」加载器（总览）
+## 3. 运行时如何「接上」加载器
 
 推理侧入口是 `LLMInferRuntime::load_model`（`InferRuntime.cu`）：
 
@@ -55,7 +55,7 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 这是 **顺序解析 GGUF 文件** 的基础。
 
-### 4.2 `FileMMap`（可选）
+### 4.2 `FileMMap`
 
 当 `ModelConfig::_use_mmap` 为真时，`GGUFLoader::load` 会为每个模型文件构造 `FileMMap`：
 
@@ -187,7 +187,7 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 ---
 
-## 9. 自测与思考题
+## 9. 思考
 
 1. 若 GGUF 文件魔数正确但 version 为 1，`check_version` 会如何表现？对上层 `load_from_file` 返回值有何影响？
 2. `load_tensor_info` 中为何在读完所有张量元数据后还要 `file_aligned`？若省略可能造成什么问题？
@@ -196,14 +196,11 @@ TFFInfer 在 `GGUFDef.h` 中定义了与 GGUF 规范对齐的魔数、默认版�
 
 ---
 
-## 10. 下一节预告
+## 10. 预告
 
 **第 2 节** 建议主题：**`ModelCreator` 与计算图构建** —— 在已有 `ModelConfig` 与 `weight_map` 的前提下，如何按架构（如 Qwen3）实例化各层算子节点，并把权重绑定到图上。
 
----
-
-**相关：** 分模块、分层可直接渲染的架构图（Mermaid + ASCII）见同目录 [`course-01-architecture-diagrams.md`](course-01-architecture-diagrams.md)；PPT 页序与要点提纲见 [`course-01-ppt-architecture-outline.md`](course-01-ppt-architecture-outline.md)。
-
----
+11. 测试代码
+    https://github.com/NKKdev/TFFinfer/tree/main/example/load_model
 
 *文档版本：与仓库 `GGUFLoader`、`InferRuntime` 当前实现对齐；若代码变更请以源码为准。*
