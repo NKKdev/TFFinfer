@@ -29,4 +29,17 @@ file(GLOB ${PROJECT_NAME}_SOURCE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.cu)
 message(" -- ${PROJECT_NAME} sources : " ${${PROJECT_NAME}_SOURCE_LIST})
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_SOURCE_LIST})
-target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart Taskflow)
+target_include_directories(${PROJECT_NAME}
+        PUBLIC
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/3rdparty
+        ${CMAKE_SOURCE_DIR}/src/log
+        ${CMAKE_SOURCE_DIR}/src/core
+        ${CMAKE_SOURCE_DIR}/src/model
+        ${CMAKE_SOURCE_DIR}/src/factory
+        ${CMAKE_SOURCE_DIR}/src/kernel
+        ${CMAKE_SOURCE_DIR}/src/utils
+        ${CMAKE_SOURCE_DIR}/src/taskgraph/include
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE CUDA::cudart Taskflow glog::glog)
