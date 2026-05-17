@@ -1,7 +1,6 @@
 //
 // Created by nkk on 2025/12/17.
 //
-#include "../../../../../../../../../usr/local/cuda/include/cuda/__ptx/ptx_dot_variants.h"
 #include "device/cuda/cudaInc.h"
 #include "kernel/include/TFFOPCreator.h"
 #include "kernel/include/kernel_util.h"
