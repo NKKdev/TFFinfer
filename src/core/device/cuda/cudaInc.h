@@ -12,6 +12,14 @@
 #include "driver_functions.h"
 #include <cuda_fp16.h>
 #include "driver_types.h"
+// CUDA version compatibility: ptx_dot_variants.h path changed in CUDA 13
+#if defined(__CUDACC__)
+#if defined(CUDART_VERSION) && CUDART_VERSION >= 13000
+#include <cccl/cuda/__ptx/ptx_dot_variants.h>
+#else
+#include <cuda/__ptx/ptx_dot_variants.h>
+#endif
+#endif
 #include <pthread.h>
 #include <csignal>
 #include "Logger.h"

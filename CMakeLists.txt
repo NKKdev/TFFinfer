@@ -7,9 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BUILD_SHARED_LIBS ON)
-set(CMAKE_CUDA_ARCHITECTURES "120")
 enable_language(CUDA)
 find_package(CUDAToolkit REQUIRED)
+
+# Auto-detect CUDA architecture from GPU, fallback to a reasonable default
+include(cmake/detect_cuda_arch.cmake)
+if(NOT CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES "80" CACHE STRING "CUDA architectures")
+    message(STATUS "No GPU detected, using default CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
+endif()
 
 
 include(FetchContent)
@@ -108,7 +114,7 @@ target_link_libraries(${PROJECT_NAME}
         CUDA::cudart
         CUDA::cuda_driver
         glog::glog
+        nlohmann_json::nlohmann_json
 )
-
 
 

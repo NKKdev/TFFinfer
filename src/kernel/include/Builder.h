@@ -4,8 +4,6 @@
 
 #ifndef TFFINFER_BUILDER_H
 #define TFFINFER_BUILDER_H
-#include <nlohmann/thirdparty/hedley/hedley.hpp>
-
 #include "global/ParamBaseObject.h"
 
 namespace tff::core::device {
